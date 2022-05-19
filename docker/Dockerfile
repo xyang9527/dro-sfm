@@ -17,6 +17,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Set default shell to /bin/bash
 SHELL ["/bin/bash", "-cu"]
 
+# https://blog.csdn.net/weixin_47343723/article/details/124592797
+#   Get:23 http://archive.ubuntu.com/ubuntu bionic-backports/universe amd64 Packages [12.9 kB]
+#   Reading package lists...
+#   W: GPG error: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64  InRelease: The following signatures couldn't be verified because the public key is not available: NO_PUBKEY A4B469963BF863CC
+#   E: The repository 'https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64  InRelease' is not signed.
+#   The command '/bin/bash -cu apt-get clean && cd /var/lib/apt && mv lists lists.old && mkdir -p lists/partial && apt-get clean && apt-get update' returned a non-zero code: 100
+#   make: *** [Makefile:67: docker-build] Error 100
+RUN rm /etc/apt/sources.list.d/cuda.list
+
 RUN apt-get clean && cd /var/lib/apt && mv lists lists.old && mkdir -p lists/partial && apt-get clean && apt-get update
 
 RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-packages --no-install-recommends \
@@ -75,7 +84,20 @@ RUN if [[ "${PYTHON_VERSION}" == "3.6" ]]; then \
 
 RUN ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python
 
-RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
+# RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
+#     python get-pip.py && \
+#     rm get-pip.py
+
+# Step 22/33 : RUN curl -O https://bootstrap.pypa.io/get-pip.py &&     python get-pip.py &&     rm get-pip.py
+#  ---> Running in 62be957a303b
+#   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+#                                  Dload  Upload   Total   Spent    Left  Speed
+# 100 2617k  100 2617k    0     0   347k      0  0:00:07  0:00:07 --:--:--  652k
+# ERROR: This script does not work on Python 3.6 The minimum supported Python version is 3.7. Please use https://bootstrap.pypa.io/pip/3.6/get-pip.py instead.
+# The command '/bin/bash -cu curl -O https://bootstrap.pypa.io/get-pip.py &&     python get-pip.py &&     rm get-pip.py' returned a non-zero code: 1
+# make: *** [Makefile:67: docker-build] Error 1
+
+RUN curl -O https://bootstrap.pypa.io/pip/3.6/get-pip.py && \
     python get-pip.py && \
     rm get-pip.py
 
