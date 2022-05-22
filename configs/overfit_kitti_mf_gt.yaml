@@ -33,7 +33,7 @@ datasets:
     train:
         batch_size: 4   
         dataset: ['KITTI']
-        path: ['/data/datasets/kitti/KITTI_tiny']
+        path: ['/home/xuelian_yang/slam/KITTI_tiny']
         split: ['kitti_tiny.txt']
         depth_type: ['velodyne']
         repeat: [100]
@@ -41,14 +41,14 @@ datasets:
         back_context: 1
     validation:
         dataset: ['KITTI']
-        path: ['/data/datasets/kitti/KITTI_tiny']
+        path: ['/home/xuelian_yang/slam/KITTI_tiny']
         split: ['kitti_tiny.txt']
         depth_type: ['velodyne']
         forward_context: 1
         back_context: 1
     test:
         dataset: ['KITTI']
-        path: ['/data/datasets/kitti/KITTI_tiny']
+        path: ['/home/xuelian_yang/slam/KITTI_tiny']
         split: ['kitti_tiny.txt']
         depth_type: ['velodyne']
         forward_context: 1

@@ -5,6 +5,8 @@ try:
 except ImportError:
     HAS_HOROVOD = False
 
+HAS_HOROVOD = False
+
 def hvd_disable():
     global HAS_HOROVOD
     HAS_HOROVOD=False
@@ -48,4 +50,7 @@ def reduce_value(value, average, name):
     value : torch.Tensor
         reduced value
     """
-    return hvd.allreduce(value, average=average, name=name)
+    if HAS_HOROVOD:
+        return hvd.allreduce(value, average=average, name=name)
+    else:
+        return value

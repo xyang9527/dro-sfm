@@ -1,7 +1,7 @@
 
 import os
 import torch
-import horovod.torch as hvd
+# import horovod.torch as hvd
 from dro_sfm.trainers.base_trainer import BaseTrainer, sample_to_cuda
 from dro_sfm.utils.config import prep_logger_and_checkpoint
 from dro_sfm.utils.logging import print_config
@@ -12,9 +12,10 @@ class HorovodTrainer(BaseTrainer):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        hvd.init()
+        # hvd.init()
         torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 1)))
-        torch.cuda.set_device(hvd.local_rank())
+        # torch.cuda.set_device(hvd.local_rank())
+        torch.cuda.set_device('cuda:0')
         torch.backends.cudnn.benchmark = True
 
         self.avg_loss = AvgMeter(50)
@@ -23,11 +24,15 @@ class HorovodTrainer(BaseTrainer):
 
     @property
     def proc_rank(self):
-        return hvd.rank()
+        # return hvd.rank()
+        return 0
+        pass
 
     @property
     def world_size(self):
-        return hvd.size()
+        # return hvd.size()
+        return 1
+        pass
 
     def fit(self, module):
 
@@ -43,9 +48,10 @@ class HorovodTrainer(BaseTrainer):
         module.configure_optimizers()
 
         # Create distributed optimizer
-        compression = hvd.Compression.none
-        optimizer = hvd.DistributedOptimizer(module.optimizer,
-            named_parameters=module.named_parameters(), compression=compression)
+        # compression = hvd.Compression.none
+        # optimizer = hvd.DistributedOptimizer(module.optimizer,
+        #     named_parameters=module.named_parameters(), compression=compression)
+        optimizer = module.optimizer
         scheduler = module.scheduler
 
         # Get train and val dataloaders
