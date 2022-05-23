@@ -7,7 +7,8 @@ from yacs.config import CfgNode as CN
 ########################################################################################################################
 cfg = CN()
 cfg.name = ''       # Run name
-cfg.debug = False   # Debugging flag
+# cfg.debug = False   # Debugging flag
+cfg.debug = True
 ########################################################################################################################
 ### ARCH
 ########################################################################################################################
@@ -19,7 +20,7 @@ cfg.arch.max_epochs = 50                # Maximum number of epochs
 ### CHECKPOINT
 ########################################################################################################################
 cfg.checkpoint = CN()
-cfg.checkpoint.filepath = './results/mdoel'            # Checkpoint filepath to save data
+cfg.checkpoint.filepath = './results/model'            # Checkpoint filepath to save data
 cfg.checkpoint.save_top_k = 5           # Number of best models to save
 cfg.checkpoint.monitor = 'abs_rel_pp_gt'         # Metric to monitor for logging
 cfg.checkpoint.monitor_index = 0        # Dataset index for the metric to monitor
@@ -30,7 +31,7 @@ cfg.checkpoint.s3_frequency = 1         # How often to s3 sync
 ### SAVE
 ########################################################################################################################
 cfg.save = CN()
-cfg.save.folder = './results'                    # Folder where data will be saved
+cfg.save.folder = './results_matterport'                    # Folder where data will be saved
 cfg.save.depth = CN()
 cfg.save.depth.rgb = True               # Flag for saving rgb images
 cfg.save.depth.viz = True               # Flag for saving inverse depth map visualization

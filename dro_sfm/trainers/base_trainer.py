@@ -1,6 +1,7 @@
 
 import torch
 from tqdm import tqdm
+import logging
 from dro_sfm.utils.logging import prepare_dataset_prefix
 
 
@@ -20,6 +21,7 @@ def sample_to_cuda(data, dtype=None):
 class BaseTrainer:
     def __init__(self, min_epochs=0, max_epochs=50,
                  checkpoint=None, **kwargs):
+        logging.warning(f'__init__(..)')
 
         self.min_epochs = min_epochs
         self.max_epochs = max_epochs
@@ -40,6 +42,7 @@ class BaseTrainer:
         return self.proc_rank == 0
 
     def check_and_save(self, module, output):
+        logging.warning(f'check_and_save(..)')
         if self.checkpoint:
             self.checkpoint.check_and_save(module, output)
 

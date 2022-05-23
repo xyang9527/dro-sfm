@@ -3,6 +3,7 @@ import os
 import torch
 from datetime import datetime
 from yacs.config import CfgNode
+import logging
 
 from dro_sfm.utils.logging import s3_url, prepare_dataset_prefix
 from dro_sfm.utils.horovod import on_rank_0
@@ -25,6 +26,7 @@ def prep_dataset(config):
     config : CfgNode
         Updated dataset configuration
     """
+    logging.warning(f'prep_dataset(..)')
     # If there is no dataset, do nothing
     if len(config.path) == 0:
         return config
@@ -58,6 +60,7 @@ def set_name(config):
     name : str
         Updated run name
     """
+    logging.warning(f'set_name(..)')
     # If there is a name already, do nothing
     if config.name is not '':
         return config.name
@@ -83,6 +86,7 @@ def set_checkpoint(config):
     config : CfgNode
         Updated model configuration
     """
+    logging.warning(f'set_checkpoint(..)')
     # If checkpoint is enabled
     if config.checkpoint.filepath is not '':
         # Create proper monitor string
@@ -115,6 +119,7 @@ def prep_logger_and_checkpoint(model):
     model : nn.Module
         Module to update
     """
+    logging.warning(f'prep_logger_and_checkpoint(..)')
     # Change run name to be the wandb assigned name
     if model.logger and not model.config.wandb.dry_run:
         model.config.name = model.config.wandb.name = model.logger.run_name
@@ -136,6 +141,7 @@ def prep_logger_and_checkpoint(model):
 
 def get_default_config(cfg_default):
     """Get default configuration from file"""
+    logging.warning(f'get_default_config(..)')
     config = load_class('get_cfg_defaults',
                          paths=[cfg_default.replace('/', '.')],
                          concat=False)()
@@ -144,6 +150,7 @@ def get_default_config(cfg_default):
 
 def merge_cfg_file(config, cfg_file=None):
     """Merge configuration file"""
+    logging.warning(f'merge_cfg_file(..)')
     if cfg_file is not None:
         config.merge_from_file(cfg_file)
         config.merge_from_list(['config', cfg_file])
@@ -209,6 +216,7 @@ def parse_train_file(file, config):
     ckpt : str
         Parsed checkpoint file
     """
+    logging.warning(f'parse_train_file(..)')
     # If it's a .yaml configuration file
     if file.endswith('yaml'):
         cfg_default = 'configs/default_config'
@@ -247,6 +255,7 @@ def parse_train_config(cfg_default, cfg_file):
     config : CfgNode
         Parsed model configuration
     """
+    logging.warning(f'parse_train_config(..)')
     # Loads default configuration
     config = get_default_config(cfg_default)
     # Merge configuration file
@@ -269,6 +278,7 @@ def prepare_train_config(config):
     config : CfgNode
         Prepared model configuration
     """
+    logging.warning(f'prepare_train_config(..)')
     # If arguments have already been prepared, don't prepare
     if config.prepared:
         return config
@@ -311,6 +321,7 @@ def parse_test_file(ckpt_file, cfg_file=None):
     state_dict : dict
         Model state dict with pretrained weights
     """
+    logging.warning(f'parse_test_file(..)')
     assert ckpt_file.endswith('.ckpt') or ckpt_file.endswith('.pth.tar'), \
         'You need to provide a .ckpt or .pth.tar file for checkpoint, not {}'.format(ckpt_file)
     assert cfg_file is None or cfg_file.endswith('yaml'), \
@@ -340,6 +351,7 @@ def parse_test_config(ckpt_file, cfg_default, cfg_file):
     state_dict : dict
         Model state dict with pretrained weights
     """
+    logging.warning(f'parse_test_config(..)')
     if ckpt_file.endswith('.ckpt'):
         # Load checkpoint
         ckpt = torch.load(ckpt_file, map_location='cpu')
@@ -384,6 +396,7 @@ def prepare_test_config(config):
     config : CfgNode
         Prepared model configuration
     """
+    logging.warning(f'prepare_test_config(..)')
     # Remove train and validation datasets
     config.datasets.train.path = config.datasets.validation.path = []
     config.datasets.test = prep_dataset(config.datasets.test)

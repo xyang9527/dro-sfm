@@ -2,6 +2,8 @@
 import os
 import torch
 # import horovod.torch as hvd
+import logging
+
 from dro_sfm.trainers.base_trainer import BaseTrainer, sample_to_cuda
 from dro_sfm.utils.config import prep_logger_and_checkpoint
 from dro_sfm.utils.logging import print_config
@@ -10,6 +12,7 @@ from dro_sfm.utils.logging import AvgMeter
 
 class HorovodTrainer(BaseTrainer):
     def __init__(self, **kwargs):
+        logging.warning(f'__init__(..)')
         super().__init__(**kwargs)
 
         # hvd.init()
@@ -35,6 +38,7 @@ class HorovodTrainer(BaseTrainer):
         pass
 
     def fit(self, module):
+        logging.warning(f'fit({type(module)})')
 
         # Prepare module for training
         module.trainer = self
@@ -60,6 +64,7 @@ class HorovodTrainer(BaseTrainer):
 
         # Epoch loop
         for epoch in range(module.current_epoch, self.max_epochs):
+            logging.info(f'========== epoch: {epoch} start .. ==========')
             # Train
             self.train(train_dataloader, module, optimizer)
             # Validation
@@ -70,8 +75,10 @@ class HorovodTrainer(BaseTrainer):
             module.current_epoch += 1
             # Take a scheduler step
             scheduler.step()
+            logging.info(f'========== epoch: {epoch} done. ==========')
 
     def train(self, dataloader, module, optimizer):
+        logging.warning(f'train(..)')
         # Set module to train
         module.train()
         # Shuffle dataloader sampler
@@ -108,6 +115,7 @@ class HorovodTrainer(BaseTrainer):
         # return module.training_epoch_end(outputs)
 
     def validate(self, dataloaders, module):
+        logging.warning(f'validate(..)')
         # Set module to eval
         module.eval()
         # Start validation loop
@@ -131,6 +139,7 @@ class HorovodTrainer(BaseTrainer):
         return module.validation_epoch_end(all_outputs)
 
     def test(self, module):
+        logging.warning(f'test(..)')
         # Send module to GPU
         module = module.to('cuda', dtype=self.dtype)
         # Get test dataloaders
@@ -140,6 +149,7 @@ class HorovodTrainer(BaseTrainer):
 
     @torch.no_grad()
     def evaluate(self, dataloaders, module):
+        logging.warning(f'evaluate(..)')
         # Set module to eval
         module.eval()
         # Start evaluation loop

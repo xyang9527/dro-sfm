@@ -6,6 +6,7 @@ import random
 import numpy as np
 import torch
 from torch.utils.data import ConcatDataset, DataLoader
+import logging
 
 from dro_sfm.datasets.transforms import get_transforms
 from dro_sfm.utils.depth import inv2depth, post_process_inv_depth, compute_depth_metrics, compute_pose_metrics, compute_depth_metrics_demon
@@ -33,6 +34,7 @@ class ModelWrapper(torch.nn.Module):
     """
 
     def __init__(self, config, resume=None, logger=None, load_datasets=True):
+        logging.warning(f'__init__(.., load_datasets={load_datasets})')
         super().__init__()
 
         # Store configuration, checkpoint and logger
@@ -68,6 +70,7 @@ class ModelWrapper(torch.nn.Module):
 
     def prepare_model(self, resume=None):
         """Prepare self.model (incl. loading previous state)"""
+        logging.warning(f'prepare_model(..)')
         print0(pcolor('### Preparing Model', 'green'))
         self.model = setup_model(self.config.model, self.config.prepared)
         # Resume model if available
@@ -81,6 +84,7 @@ class ModelWrapper(torch.nn.Module):
 
     def prepare_datasets(self, validation_requirements, test_requirements):
         """Prepare datasets for training, validation and test."""
+        logging.warning(f'prepare_datasets(..)')
         # Prepare datasets
         print0(pcolor('### Preparing Datasets', 'green'))
 
@@ -101,16 +105,19 @@ class ModelWrapper(torch.nn.Module):
     @property
     def depth_net(self):
         """Returns depth network."""
+        logging.warning(f'depth_net()')
         return self.model.depth_net
 
     @property
     def pose_net(self):
         """Returns pose network."""
+        logging.warning(f'pose_net()')
         return self.model.pose_net
 
     @property
     def percep_net(self):
         """Returns perceptual network."""
+        logging.warning(f'percept_net()')
         return self.model.percep_net
     
     @property
@@ -132,6 +139,7 @@ class ModelWrapper(torch.nn.Module):
 
     def configure_optimizers(self):
         """Configure depth and pose optimizers and the corresponding scheduler."""
+        logging.warning(f'configure_optimizers()')
 
         params = []
         # Load optimizer
@@ -175,16 +183,19 @@ class ModelWrapper(torch.nn.Module):
 
     def train_dataloader(self):
         """Prepare training dataloader."""
+        logging.warning(f'train_dataloader()')
         return setup_dataloader(self.train_dataset,
                                 self.config.datasets.train, 'train')[0]
 
     def val_dataloader(self):
         """Prepare validation dataloader."""
+        logging.warning(f'val_dataloader()')
         return setup_dataloader(self.validation_dataset,
                                 self.config.datasets.validation, 'validation')
 
     def test_dataloader(self):
         """Prepare test dataloader."""
+        logging.warning(f'test_dataloader()')
         return setup_dataloader(self.test_dataset,
                                 self.config.datasets.test, 'test')
 
@@ -224,6 +235,7 @@ class ModelWrapper(torch.nn.Module):
 
     def training_epoch_end(self, output_batch):
         """Finishes a training epoch."""
+        logging.warning(f'training_epoch_end(..)')
         # Calculate and reduce average loss and metrics per GPU
         loss_and_metrics = average_loss_and_metrics(output_batch, 'avg_train')
         loss_and_metrics = reduce_dict(loss_and_metrics, to_item=True)
@@ -240,6 +252,7 @@ class ModelWrapper(torch.nn.Module):
 
     def validation_epoch_end(self, output_data_batch):
         """Finishes a validation epoch."""
+        logging.warning(f'validation_epoch_end(..)')
 
         # Reduce depth metrics
         metrics_data = all_reduce_metrics(
@@ -265,6 +278,7 @@ class ModelWrapper(torch.nn.Module):
 
     def test_epoch_end(self, output_data_batch):
         """Finishes a test epoch."""
+        logging.warning(f'test_epoch_end(..)')
 
         # Reduce depth metrics
         metrics_data = all_reduce_metrics(
@@ -426,6 +440,7 @@ def setup_depth_net(config, prepared, **kwargs):
     depth_net : nn.Module
         Create depth network
     """
+    logging.warning('setup_depth_net(..)')
     print0(pcolor('DepthNet: %s' % config.name, 'yellow'))
     depth_net = load_class_args_create(config.name,
         paths=['dro_sfm.networks.depth_pose',],
@@ -455,6 +470,7 @@ def setup_pose_net(config, prepared, **kwargs):
     pose_net : nn.Module
         Created pose network
     """
+    logging.warning(f'setup_pose_net(..)')
     print0(pcolor('PoseNet: %s' % config.name, 'yellow'))
     pose_net = load_class_args_create(config.name,
         paths=['dro_sfm.networks.pose',],
@@ -484,6 +500,7 @@ def setup_percep_net(config, prepared, **kwargs):
     depth_net : nn.Module
         Create depth network
     """
+    logging.warning(f'setup_percep_net(..)')
     print0(pcolor('PercepNet: %s' % config.name, 'yellow'))
     percep_net = load_class_args_create(config.name,
         paths=['dro_sfm.networks.layers',],
@@ -509,6 +526,7 @@ def setup_model(config, prepared, **kwargs):
     model : nn.Module
         Created model
     """
+    logging.warning(f'setup_model(..)')
     print0(pcolor('Model: %s' % config.name, 'yellow'))
     config.loss.min_depth = config.params.min_depth
     config.loss.max_depth = config.params.max_depth
@@ -552,6 +570,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
     dataset : Dataset
         Dataset class for that mode
     """
+    logging.warning(f'setup_dataset(..)')
     # If no dataset is given, return None
     if len(config.path) == 0:
         return None
@@ -701,6 +720,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
 
 def worker_init_fn(worker_id):
     """Function to initialize workers"""
+    # logging.warning(f'worker_init_fn({worker_id})')
     time_seed = np.array(time.time(), dtype=np.int32)
     np.random.seed(time_seed + worker_id)
 
@@ -730,6 +750,7 @@ def setup_dataloader(datasets, config, mode):
     dataloaders : list of Dataloader
         List of created dataloaders for each input dataset
     """
+    logging.warning(f'setup_dataloader(..)')
     return [(DataLoader(dataset,
                         batch_size=config.batch_size, shuffle=False,
                         pin_memory=True, num_workers=config.num_workers,

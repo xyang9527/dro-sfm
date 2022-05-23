@@ -23,6 +23,7 @@ def set_debug(debug):
     debug : bool
         Debugging flag (True to enable)
     """
+    logging.warning(f'set_debug({debug})')
     # Disable logging if requested
     if not debug:
         os.environ['NCCL_DEBUG'] = ''
@@ -94,6 +95,7 @@ def load_class(filename, paths, concat=True):
     method : Function
         Loaded method
     """
+    logging.warning(f'load_class({filename}, ..)')
     # for each path in paths
     for path in make_list(paths):
         # Create full path
@@ -106,6 +108,7 @@ def load_class(filename, paths, concat=True):
 
 def load_class_args_create(filename, paths, args={}, concat=True):
     """Loads a class (filename) and returns an instance with filtered arguments (args)"""
+    logging.warning(f'load_class_args_create(..)')
     class_type = load_class(filename, paths, concat)
     return filter_args_create(class_type, args)
 
@@ -128,6 +131,7 @@ def load_network(network, path, prefixes=''):
     network : nn.Module
         Updated network with pretrained weights
     """
+    logging.warning(f'load_network(..)')
     prefixes = make_list(prefixes)
     # If path is a string
     if is_str(path):
@@ -179,6 +183,7 @@ def backwards_state_dict(state_dict):
     state_dict : dict
         Updated model state dict with modified layer names
     """
+    logging.warning(f'backwards_state_dict(..)')
     # List of layer names to change
     changes = (('model.model', 'model'),
                ('pose_network', 'pose_net'),

@@ -1,6 +1,6 @@
 name: 'overfit_kitti_gt'
 arch:
-    max_epochs: 50
+    max_epochs: 3
 checkpoint:
     save_top_k: 10
     monitor: 'abs_rel_pp_gt'
