@@ -682,7 +682,35 @@ def setup_dataset(config, mode, requirements, **kwargs):
                 config.path[i], config.split[i],
                 **dataset_args, **dataset_args_i,
             )
-           
+
+        # ======================================================================
+        # Matterport dataset
+        elif config.dataset[i] == 'Matterport':
+            logging.info(f'  load dataset Matterport')
+            from dro_sfm.datasets.matterport_dataset import MatterportDataset
+            dataset = MatterportDataset(
+                config.path[i], config.split[i],
+                **dataset_args, **dataset_args_i,
+            )
+        # Matterport dataset
+        elif config.dataset[i] == 'MatterportTest':
+            logging.info(f'  load dataset MatterportTest')
+            from dro_sfm.datasets.matterport_test_dataset import MatterportTestDataset
+            dataset = MatterportTestDataset(
+                config.path[i], config.split[i],
+                **dataset_args, **dataset_args_i,
+            )
+            
+        # Matterport banet dataset
+        elif config.dataset[i] == 'MatterportBA':
+            logging.info(f'  load dataset MatterportBA')
+            from dro_sfm.datasets.matterport_banet_dataset import MatterportBADataset
+            dataset = MatterportBADataset(
+                config.path[i], config.split[i],
+                **dataset_args, **dataset_args_i,
+            )
+        # ======================================================================
+
         # Video dataset
         elif config.dataset[i] == 'Video':
             logging.info(f'  load dataset Video')
