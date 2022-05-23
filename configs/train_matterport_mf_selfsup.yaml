@@ -1,6 +1,5 @@
-name: 'scannet_gt_view2'
-save:
-    folder: './results'
+# ref: train_scannet_mf_selfsup_view3.yaml
+name: 'matterport_selfsup'
 arch:
     max_epochs: 100
 checkpoint:
@@ -8,7 +7,7 @@ checkpoint:
     monitor: 'abs_rel_pp_gt'
     monitor_index: 0
 model:
-    name: 'SupModelMF'
+    name: 'SelfSupModelMF'
     optimizer:
         name: 'Adam'
         depth:
@@ -31,31 +30,30 @@ model:
         max_depth: 10.0
 datasets:
     augmentation:
-        image_shape: (240, 320)
+        image_shape: (320, 512)
     train:
-        batch_size: 12
-        dataset: ['ScannetBA']
+        batch_size: 3
+        dataset: ['matterportBA']
         # path: ['/data/datasets/scannet/train']
-        path: ['/opt/slam/scannet/train']
+        path: ['/opt/slam/matterport/train']
         split: ['splits/train_all_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
         forward_context: 1
-        back_context: 0
-        num_workers: 32
+        back_context: 1
     validation:
-        dataset: ['ScannetTest']
+        dataset: ['matterportTest']
         # path: ['/data/datasets/scannet/test']
         path: ['/opt/slam/scannet/test']
         split: ['splits/test_split.txt']
         depth_type: ['groundtruth']
         forward_context: 1
-        back_context: 0
+        back_context: 1
     test:
-        dataset: ['ScannetTest']
+        dataset: ['matterportTest']
         # path: ['/data/datasets/scannet/test']
-        path: ['/opt/slam/scannet/test']
+        path: ['/opt/slam/matterport/test']
         split: ['splits/test_split.txt']
         depth_type: ['groundtruth']
         forward_context: 1
-        back_context: 0
+        back_context: 1

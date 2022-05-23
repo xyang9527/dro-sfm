@@ -160,7 +160,8 @@ class ScannetBADataset(Dataset):
                 self.files.extend([[k, fname] for fname in files])
 
             # save train list
-            fo = open(os.path.join(os.path.dirname(self.root_dir), "splits/train_balist_save.txt"), "w")
+            # fo = open(os.path.join(os.path.dirname(self.root_dir), "splits/train_balist_save.txt"), "w")
+            fo = open(os.path.join('/home/xuelian/slam/scannet_splits', "train_balist_save.txt"), "w")
             for session, fname in self.files:
                 idx = self.bafile_tree[session].index(fname)
                 context1 = self.bacontext1_tree[session][idx]

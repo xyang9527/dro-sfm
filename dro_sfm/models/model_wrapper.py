@@ -598,6 +598,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
 
         # KITTI dataset
         if config.dataset[i] == 'KITTI':
+            logging.info(f'  load dataset KITTI')
             from dro_sfm.datasets.kitti_dataset import KITTIDataset
             dataset = KITTIDataset(
                 config.path[i], path_split,
@@ -605,6 +606,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
             )
         # DGP dataset
         elif config.dataset[i] == 'DGP':
+            logging.info(f'  load dataset DGP')
             from dro_sfm.datasets.dgp_dataset import DGPDataset
             dataset = DGPDataset(
                 config.path[i], config.split[i],
@@ -613,6 +615,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
             )
         # NYU dataset
         elif config.dataset[i] == 'NYU':
+            logging.info(f'  load dataset NYU')
             from dro_sfm.datasets.nyu_dataset_processed import NYUDataset
             dataset = NYUDataset(
                 config.path[i], config.split[i],
@@ -620,6 +623,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
             )
         # NYU dataset
         elif config.dataset[i] == 'NYUtest':
+            logging.info(f'  load dataset NYUtest')
             from dro_sfm.datasets.nyu_dataset_test_processed import NYUDataset
             dataset = NYUDataset(
                 config.path[i], config.split[i],
@@ -627,6 +631,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
             )
         # Demon dataset
         elif config.dataset[i] == 'Demon':
+            logging.info(f'  load dataset Demon')
             from dro_sfm.datasets.demon_dataset import DemonDataset
             dataset = DemonDataset(
                 config.path[i], config.split[i],
@@ -635,6 +640,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
         
         # DemonMF dataset
         elif config.dataset[i] == 'DemonMF':
+            logging.info(f'  load dataset DemonMF')
             from dro_sfm.datasets.demon_mf_dataset import DemonDataset
             dataset = DemonDataset(
                 config.path[i], config.split[i],
@@ -644,6 +650,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
 
         # Scannet dataset
         elif config.dataset[i] == 'Scannet':
+            logging.info(f'  load dataset Scannet')
             from dro_sfm.datasets.scannet_dataset import ScannetDataset
             dataset = ScannetDataset(
                 config.path[i], config.split[i],
@@ -651,6 +658,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
             )
         # Scannet dataset
         elif config.dataset[i] == 'ScannetTest':
+            logging.info(f'  load dataset ScannetTest')
             from dro_sfm.datasets.scannet_test_dataset import ScannetTestDataset
             dataset = ScannetTestDataset(
                 config.path[i], config.split[i],
@@ -659,6 +667,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
 
         # Scannet dataset
         elif config.dataset[i] == 'ScannetTestMF':
+            logging.info(f'  load dataset ScannetTestMF')
             from dro_sfm.datasets.scannet_test_dataset_mf import ScannetTestDataset
             dataset = ScannetTestDataset(
                 config.path[i], config.split[i],
@@ -667,6 +676,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
             
         # Scannet banet dataset
         elif config.dataset[i] == 'ScannetBA':
+            logging.info(f'  load dataset ScannetBA')
             from dro_sfm.datasets.scannet_banet_dataset import ScannetBADataset
             dataset = ScannetBADataset(
                 config.path[i], config.split[i],
@@ -675,6 +685,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
            
         # Video dataset
         elif config.dataset[i] == 'Video':
+            logging.info(f'  load dataset Video')
             from dro_sfm.datasets.video_dataset import VideoDataset
             dataset = VideoDataset(
                 config.path[i], config.split[i],
@@ -683,6 +694,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
 
         # Video random sample dataset
         elif config.dataset[i] == 'Video_Random':
+            logging.info(f'  load dataset Video_Random')
             from dro_sfm.datasets.video_random_dataset import VideoRandomDataset
             dataset = VideoRandomDataset(
                 config.path[i], config.split[i],
@@ -691,6 +703,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
                          
         # Image dataset
         elif config.dataset[i] == 'Image':
+            logging.info(f'  load dataset Image')
             from dro_sfm.datasets.image_dataset import ImageDataset
             dataset = ImageDataset(
                 config.path[i], config.split[i],

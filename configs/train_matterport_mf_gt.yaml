@@ -1,4 +1,5 @@
-name: 'scannet_gt_view2'
+# ref: train_scannet_mf_gt_view2.yaml
+name: 'matterport_gt'
 save:
     folder: './results'
 arch:
@@ -34,9 +35,9 @@ datasets:
         image_shape: (240, 320)
     train:
         batch_size: 12
-        dataset: ['ScannetBA']
+        dataset: ['matterportBA']
         # path: ['/data/datasets/scannet/train']
-        path: ['/opt/slam/scannet/train']
+        path: ['/opt/slam/matterport/train']
         split: ['splits/train_all_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
@@ -44,17 +45,17 @@ datasets:
         back_context: 0
         num_workers: 32
     validation:
-        dataset: ['ScannetTest']
+        dataset: ['matterportTest']
         # path: ['/data/datasets/scannet/test']
-        path: ['/opt/slam/scannet/test']
+        path: ['/opt/slam/matterport/test']
         split: ['splits/test_split.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0
     test:
-        dataset: ['ScannetTest']
+        dataset: ['matterportTest']
         # path: ['/data/datasets/scannet/test']
-        path: ['/opt/slam/scannet/test']
+        path: ['/opt/slam/matterport/test']
         split: ['splits/test_split.txt']
         depth_type: ['groundtruth']
         forward_context: 1
