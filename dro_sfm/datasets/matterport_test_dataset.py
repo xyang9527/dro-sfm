@@ -4,6 +4,7 @@
 import re
 from collections import defaultdict
 import os
+import logging
 
 from torch.utils.data import Dataset
 import numpy as np
@@ -99,14 +100,14 @@ class MatterportTestDataset(Dataset):
         else:
             # =================== load from txt ====================
             self.file_tree = defaultdict(list)
-            with open(os.path.join(os.path.dirname(self.root_dir), "splits/test_all_list.txt"), "r") as f:
+            with open(os.path.join(self.root_dir, "splits/test_all_list.txt"), "r") as f:
                 split_data = f.readlines()
             for data in split_data:
                 scene, filename = data.split()
                 self.file_tree[scene].append(filename)
 
         # =================== load from txt ====================
-        with open(os.path.join(os.path.dirname(self.root_dir), self.split), "r") as f:
+        with open(os.path.join(self.root_dir, self.split), "r") as f:
             split_data = f.readlines()
         split_data1 = split_data[::2]
         split_data2 = split_data[1:][::2]
@@ -118,9 +119,10 @@ class MatterportTestDataset(Dataset):
         self.context3_files = []
         self.context4_files = []
         for d0, d1 in zip(files, context_files):
-            sce = d0.split('/color/')[0] + '/color'
-            id0 = d0.split('/color/')[1]
-            id1 = d1.split('/color/')[1]
+            sce = d0.split('/cam_left/')[0] + '/cam_left'
+            id0 = d0.split('/cam_left/')[1]
+            id1 = d1.split('/cam_left/')[1]
+
             if sce in self.file_tree.keys() and os.path.exists(os.path.join(self.root_dir, sce)):
                 if int(id1.split('.')[0]) > int(id0.split('.')[0]):
                     id2 = '{:06d}.jpg'.format(int(id0.split('.')[0]) - 5)

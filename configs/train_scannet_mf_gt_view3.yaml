@@ -35,7 +35,8 @@ datasets:
     train:
         batch_size: 8
         dataset: ['ScannetBA']
-        path: ['/data/datasets/scannet/train']
+        # path: ['/data/datasets/scannet/train']
+        path: ['/opt/slam/scannet/train']
         split: ['splits/train_all_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
@@ -43,14 +44,16 @@ datasets:
         back_context: 1
     validation:
         dataset: ['ScannetTest']
-        path: ['/data/datasets/scannet/test']
+        # path: ['/data/datasets/scannet/test']
+        path: ['/opt/slam/scannet/test']
         split: ['splits/test_split.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0
     test:
         dataset: ['ScannetTest']
-        path: ['/data/datasets/scannet/test']
+        # path: ['/data/datasets/scannet/test']
+        path: ['/opt/slam/scannet/test']
         split: ['splits/test_split.txt']
         depth_type: ['groundtruth']
         forward_context: 1

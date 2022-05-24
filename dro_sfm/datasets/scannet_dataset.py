@@ -2,6 +2,7 @@
 import re
 from collections import defaultdict
 import os
+import logging
 
 from torch.utils.data import Dataset
 import numpy as np
@@ -167,6 +168,8 @@ class ScannetDataset(Dataset):
         if self.depth_type in ['velodyne']:
             return read_npz_depth(depth_file, self.depth_type)
         elif self.depth_type in ['groundtruth']:
+            # logging.info(f'  depth_file: {depth_file}')
+            # exit(-1)
             return read_png_depth(depth_file)
         else:
             raise NotImplementedError(

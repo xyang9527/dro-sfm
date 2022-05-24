@@ -34,7 +34,8 @@ datasets:
         image_shape: (240, 320)
     train:
         batch_size: 12
-        dataset: ['ScannetBA']
+        # dataset: ['ScannetBA']
+        dataset: ['Scannet']
         # path: ['/data/datasets/scannet/train']
         path: ['/opt/slam/scannet/train']
         split: ['splits/train_all_list.txt']

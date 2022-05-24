@@ -33,7 +33,7 @@ datasets:
         image_shape: (320, 512)
     train:
         batch_size: 3
-        dataset: ['matterportBA']
+        dataset: ['MatterportBA']
         # path: ['/data/datasets/scannet/train']
         path: ['/opt/slam/matterport/train']
         split: ['splits/train_all_list.txt']
@@ -42,7 +42,7 @@ datasets:
         forward_context: 1
         back_context: 1
     validation:
-        dataset: ['matterportTest']
+        dataset: ['MatterportTest']
         # path: ['/data/datasets/scannet/test']
         path: ['/opt/slam/scannet/test']
         split: ['splits/test_split.txt']
@@ -50,7 +50,7 @@ datasets:
         forward_context: 1
         back_context: 1
     test:
-        dataset: ['matterportTest']
+        dataset: ['MatterportTest']
         # path: ['/data/datasets/scannet/test']
         path: ['/opt/slam/matterport/test']
         split: ['splits/test_split.txt']

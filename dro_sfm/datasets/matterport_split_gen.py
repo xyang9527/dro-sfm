@@ -60,7 +60,7 @@ def generate_split():
         raise ValueError(f'path not exist: {dir_root}')
         return
 
-    dir_save = osp.join(dir_root, 'split')
+    dir_save = osp.join(dir_root, 'splits')
     if not osp.exists(dir_save):
         os.mkdir(dir_save)
     
@@ -76,9 +76,9 @@ def generate_split():
     
     image_dir = 'cam_left'
     
-    with open(osp.join(dir_save, 'train.txt'), 'w') as f_train, \
-        open(osp.join(dir_save, 'val.txt'), 'w') as f_val, \
-        open(osp.join(dir_save, 'test.txt'), 'w') as f_test:
+    with open(osp.join(dir_save, 'train_all_list.txt'), 'w') as f_train, \
+        open(osp.join(dir_save, 'val_all_list.txt'), 'w') as f_val, \
+        open(osp.join(dir_save, 'test_all_list.txt'), 'w') as f_test:
             # test part
             case_dir = osp.join(dir_root, subdirs_test[0])
             if osp.exists(case_dir):
@@ -99,13 +99,13 @@ def generate_split():
                             image_names.append(item)
                     # train
                     for item in image_names[:-600]:
-                        f_train.write('{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
+                        f_train.write(f'{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
                     # val
                     for item in image_names[-600:-100]:
-                        f_val.write('{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
+                        f_val.write(f'{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
                     # test
                     for item in image_names[-100:]:
-                        f_test.write('{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
+                        f_test.write(f'{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
                     
                     pass
                 else:

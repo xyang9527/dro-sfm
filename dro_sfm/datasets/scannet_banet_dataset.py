@@ -2,6 +2,7 @@
 import re
 from collections import defaultdict
 import os
+import logging
 
 from torch.utils.data import Dataset
 import numpy as np
@@ -68,6 +69,7 @@ class ScannetBADataset(Dataset):
     def __init__(self, root_dir, split, data_transform=None,
                  forward_context=0, back_context=0, strides=(1,),
                  depth_type=None, **kwargs):
+        logging.warning(f'__init__({root_dir}, {split}, data_transform={data_transform},\n  {forward_context}, {back_context}, {strides}, {depth_type}, ..)')
         super().__init__()
         # Asserts
         # assert depth_type is None or depth_type == '', \

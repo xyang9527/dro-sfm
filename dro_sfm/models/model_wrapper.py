@@ -595,6 +595,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
             'depth_type': config.depth_type[i] if requirements['gt_depth'] else None,
             'with_pose': requirements['gt_pose'],
         }
+        logging.info(f'config.dataset[i]:    {config.dataset[i]}')
 
         # KITTI dataset
         if config.dataset[i] == 'KITTI':
@@ -674,7 +675,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
                 **dataset_args, **dataset_args_i,
             )
             
-        # Scannet banet dataset
+        # Scannet banet dataset - BA-Net: Dense Bundle Adjustment Networks
         elif config.dataset[i] == 'ScannetBA':
             logging.info(f'  load dataset ScannetBA')
             from dro_sfm.datasets.scannet_banet_dataset import ScannetBADataset

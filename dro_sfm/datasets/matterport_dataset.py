@@ -3,6 +3,7 @@
 import re
 from collections import defaultdict
 import os
+import logging
 
 from torch.utils.data import Dataset
 import numpy as np
@@ -69,6 +70,7 @@ class MatterportDataset(Dataset):
     def __init__(self, root_dir, split, data_transform=None,
                  forward_context=0, back_context=0, strides=(1,),
                  depth_type=None, **kwargs):
+        logging.warning(f'__init__({root_dir}, {split}, data_transform={data_transform},\n  {forward_context}, {back_context}, {strides},\n  depth_type={depth_type}, ..)')
         super().__init__()
         # Asserts
         # assert depth_type is None or depth_type == '', \
@@ -115,7 +117,7 @@ class MatterportDataset(Dataset):
         else:
             # =================== load from txt ====================
             self.file_tree = defaultdict(list)
-            with open(os.path.join(os.path.dirname(self.root_dir), self.split), "r") as f:
+            with open(os.path.join(self.root_dir, self.split), "r") as f:
                 split_data = f.readlines()
             for data in split_data:
                 scene, filename = data.split()
@@ -168,6 +170,7 @@ class MatterportDataset(Dataset):
         if self.depth_type in ['velodyne']:
             return read_npz_depth(depth_file, self.depth_type)
         elif self.depth_type in ['groundtruth']:
+            logging.info(f'  depth_file: {depth_file}')
             return read_png_depth(depth_file)
         else:
             raise NotImplementedError(
@@ -175,8 +178,12 @@ class MatterportDataset(Dataset):
 
     def _get_depth_file(self, image_file):
         """Get the corresponding depth file from an image file."""
-        depth_file = image_file.replace('color', 'depth').replace('image', 'depth')
+        logging.info(f'  image_file: {image_file}')
+        # depth_file = image_file.replace('color', 'depth').replace('image', 'depth')
+        depth_file = image_file.replace('cam_left', 'depth')
         depth_file = depth_file.replace('jpg', 'png')
+        # logging.info(f'  image_file: {image_file}')
+        # logging.info(f'  depth_file: {depth_file}')
         return depth_file
 
     def __getitem__(self, idx):
@@ -187,8 +194,47 @@ class MatterportDataset(Dataset):
             depth = self._read_depth(self._get_depth_file(os.path.join(self.root_dir, session, filename)))
             resized_depth = cv2.resize(depth, image.size, interpolation = cv2.INTER_NEAREST)
 
-        intr_path = os.path.join(self.root_dir, session, filename).split('color')[0] + 'intrinsic/intrinsic_color.txt'
-        intr = np.genfromtxt(intr_path)[:3, :3]
+        # intr_path = os.path.join(self.root_dir, session, filename).split('color')[0] + 'intrinsic/intrinsic_color.txt'
+        # intr = np.genfromtxt(intr_path)[:3, :3]
+
+        #
+        # scannet: 
+        #     color: 000000.jpg   1296x968
+        #     depth: 000000.png    640x480
+        #
+        #     pose:  000000.txt
+        #
+        #                0.344057 -0.251783 0.904561 3.861332
+        #                -0.937243 -0.034044 0.347011 2.690903
+        #                -0.056577 -0.967185 -0.247695 1.806742
+        #                0.000000 0.000000 0.000000 1.000000
+        #
+        #
+        #     intrinsic/intrinsic_color.txt
+        #
+        #                1170.187988 0.000000 647.750000 0.000000
+        #                0.000000 1170.187988 483.750000 0.000000
+        #                0.000000 0.000000 1.000000 0.000000
+        #                0.000000 0.000000 0.000000 1.000000
+        #
+        #
+        #     intrinsic/intrinsic_depth.txt
+        #
+        #                577.870605 0.000000 319.500000 0.000000
+        #                0.000000 577.870605 239.500000 0.000000
+        #                0.000000 0.000000 1.000000 0.000000
+        #                0.000000 0.000000 0.000000 1.000000
+        #
+        #
+        # matterport:
+        #     cam_left/001512072000000.jpg      640x480
+        #     depth/001512072000000.png         640x480
+
+        intr = np.array([[577.870605, 0.000000, 319.500000],
+                         [0.000000, 577.870605, 239.500000],
+                         [0.000000, 0.000000, 1.000000]])
+        logging.info(f'  intr: {type(intr)}, {intr.dtype}, {intr.shape}, {intr}')
+
 
         context_paths = self._get_context_file_paths(filename, self.file_tree[session])
         context_images = [load_image(os.path.join(self.root_dir, session, filename))

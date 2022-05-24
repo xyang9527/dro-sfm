@@ -35,9 +35,10 @@ datasets:
         image_shape: (240, 320)
     train:
         batch_size: 12
-        dataset: ['matterportBA']
+        # dataset: ['MatterportBA']
+        dataset: ['Matterport']
         # path: ['/data/datasets/scannet/train']
-        path: ['/opt/slam/matterport/train']
+        path: ['/opt/slam/matterport']
         split: ['splits/train_all_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
@@ -45,18 +46,20 @@ datasets:
         back_context: 0
         num_workers: 32
     validation:
-        dataset: ['matterportTest']
+        dataset: ['MatterportTest']
         # path: ['/data/datasets/scannet/test']
-        path: ['/opt/slam/matterport/test']
-        split: ['splits/test_split.txt']
+        path: ['/opt/slam/matterport']
+        # split: ['splits/test_split.txt']
+        split: ['splits/val_all_list.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0
     test:
-        dataset: ['matterportTest']
+        dataset: ['MatterportTest']
         # path: ['/data/datasets/scannet/test']
-        path: ['/opt/slam/matterport/test']
-        split: ['splits/test_split.txt']
+        path: ['/opt/slam/matterport']
+        # split: ['splits/test_split.txt']
+        split: ['splits/test_all_list.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0

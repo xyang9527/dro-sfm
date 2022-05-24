@@ -2,6 +2,7 @@
 import re
 from collections import defaultdict
 import os
+import logging
 
 from torch.utils.data import Dataset
 import numpy as np
@@ -119,6 +120,7 @@ class ScannetTestDataset(Dataset):
             sce = d0.split('/color/')[0] + '/color'
             id0 = d0.split('/color/')[1]
             id1 = d1.split('/color/')[1]
+
             if sce in self.file_tree.keys() and os.path.exists(os.path.join(self.root_dir, sce)):
                 if int(id1.split('.')[0]) > int(id0.split('.')[0]):
                     id2 = '{:06d}.jpg'.format(int(id0.split('.')[0]) - 5)
