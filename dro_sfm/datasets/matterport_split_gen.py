@@ -47,11 +47,49 @@
 15671 train.txt
 """
 
-import logging
 import os
 import os.path as osp
 import datetime
+import numpy as np
+
 import time
+import logging
+import datetime
+import os.path as osp
+
+
+def setup_log():
+    # Initialize logging
+    # simple_format = '%(levelname)s >>> %(message)s'
+    medium_format = (
+        '%(levelname)s : %(filename)s[%(lineno)d]'
+        ' >>> %(message)s'
+    )
+
+    # Reference:
+    #   http://59.125.118.185:8088/ALG/TestingTools/-/blob/master/model_performance_evaluation_tool/src/common/testingtools_log.py
+    formatter = logging.Formatter(
+                '[%(asctime)s] %(filename)s->%(funcName)s line:%(lineno)d [%(levelname)s]%(message)s')
+
+    medium_format_new = (
+        '[%(asctime)s] %(levelname)s : %(filename)s[%(lineno)d] %(funcName)s'
+        ' >>> %(message)s'
+    )
+
+    get_log_file = osp.join(osp.dirname(__file__), '../../train_kneron_split_gen.log')
+
+    logging.basicConfig(
+        filename=get_log_file,
+        filemode='w',
+        level=logging.INFO,
+        format=medium_format_new
+    )
+    logging.info('@{} created at {}'.format(
+        get_log_file,
+        datetime.datetime.now())
+    )
+    print('\n===== log_file: {}\n'.format(get_log_file))
+
 
 def generate_split():
     dir_root = '/opt/slam/matterport'
@@ -73,9 +111,90 @@ def generate_split():
     subdirs_test = [
         "test/matterport014_000"
     ]
+
+    # create pose file
+    subdirs_pose = []
+    for item in subdirs_train_val_test:
+        subdirs_pose.append(item)
+    for item in subdirs_test:
+        subdirs_pose.append(item)
+
+    for item in subdirs_pose:
+        cam_pose_file = osp.join(dir_root, item, 'cam_pose.txt')
+        if not osp.exists(cam_pose_file):
+            logging.warning(f'file not exist: {cam_pose_file}')
+            continue
+
+        pose_dir = osp.join(dir_root, item, 'pose')
+        if not osp.exists(pose_dir):
+            os.mkdir(pose_dir)
+
+        with open(cam_pose_file, 'r') as f_in:
+            lines = f_in.readlines()
+            for idx_line, line in enumerate(lines):
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+                # if idx_line < 5:
+                #    print(f'{line}')
+
+                if 'nan' in line:
+                    print(f'{line} @ line: {idx_line} @ {cam_pose_file}')
+                    continue
+
+                words = line.split()
+                if len(words) != 8:
+                    print(f'unexpected format: {words}')
+                params = [float(v) for v in words[1:]]
+                # x, y, z, qx, qy, qz, qw = params
+                x, y, z, r, i, j, k = params
+                with open(osp.join(pose_dir, words[0].zfill(15) + '.txt'), 'w') as f_ou:
+                    # ref: dro_sfm/geometry/pose_trans.py   def quaternion_to_matrix(quaternions)
+                    '''
+                    r, i, j, k = torch.unbind(quaternions, -1)
+                    two_s = 2.0 / (quaternions * quaternions).sum(-1)
+
+                    o = torch.stack(
+                        (
+                            1 - two_s * (j * j + k * k),
+                            two_s * (i * j - k * r),
+                            two_s * (i * k + j * r),
+                            two_s * (i * j + k * r),
+                            1 - two_s * (i * i + k * k),
+                            two_s * (j * k - i * r),
+                            two_s * (i * k - j * r),
+                            two_s * (j * k + i * r),
+                            1 - two_s * (i * i + j * j),
+                        ),
+                        -1,
+                    )
+                    return o.reshape(quaternions.shape[:-1] + (3, 3))
+                    '''
+                    # https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
+                    #     Maths - Conversion Quaternion to Matrix
+                    two_s = 2.0 / np.dot(np.array([r, i, j, k]), np.array([r, i, j, k]).transpose())
+                    mat = np.array([
+                            1 - two_s * (j * j + k * k),
+                            two_s * (i * j - k * r),
+                            two_s * (i * k + j * r),
+                            two_s * (i * j + k * r),
+                            1 - two_s * (i * i + k * k),
+                            two_s * (j * k - i * r),
+                            two_s * (i * k - j * r),
+                            two_s * (j * k + i * r),
+                            1 - two_s * (i * i + j * j)
+                            ])
+                    # print(f'two_s: {two_s}')
+                    f_ou.write(f'{mat[0]} {mat[1]} {mat[2]} {x}\n'
+                                '{mat[3]} {mat[4]} {mat[5]} {y}\n'
+                                '{mat[6]} {mat[7]} {mat[8]} {z}\n'
+                                '0.000000 0.000000 0.000000 1.000000\n')
+            pass
     
     image_dir = 'cam_left'
     
+    n_frame_missing_pose_info = 0
+
     with open(osp.join(dir_save, 'train_all_list.txt'), 'w') as f_train, \
         open(osp.join(dir_save, 'val_all_list.txt'), 'w') as f_val, \
         open(osp.join(dir_save, 'test_all_list.txt'), 'w') as f_test:
@@ -84,6 +203,13 @@ def generate_split():
             if osp.exists(case_dir):
                 for item in sorted(os.listdir(osp.join(case_dir, image_dir))):
                     if item.endswith('.jpg'):
+                        path_jpg = osp.join(dir_root, subdirs_test[0], image_dir, item)
+                        path_txt = path_jpg.replace('cam_left', 'pose').replace('.jpg', '.txt')
+                        if not osp.exists(path_txt):
+                            print(f'skip {item} {path_jpg} as missing {path_txt}')
+                            logging.info(f'skip {item} {path_jpg} as missing {path_txt}')
+                            n_frame_missing_pose_info += 1
+                            continue
                         f_test.write(f'{subdirs_test[0]}/{image_dir} {item}\n')
             else:
                 logging.warning(f'path not exist: {case_dir}')
@@ -96,6 +222,13 @@ def generate_split():
                     image_names = []
                     for item in sorted(os.listdir(osp.join(case_dir, image_dir))):
                         if item.endswith('.jpg'):
+                            path_jpg = osp.join(dir_root, subdirs_train_val_test[id_case], image_dir, item)
+                            path_txt = path_jpg.replace('cam_left', 'pose').replace('.jpg', '.txt')
+                            if not osp.exists(path_txt):
+                                print(f'skip {item} as missing {path_txt}')
+                                logging.info(f'skip {item} {path_jpg} as missing {path_txt}')
+                                n_frame_missing_pose_info += 1
+                                continue
                             image_names.append(item)
                     # train
                     for item in image_names[:-600]:
@@ -111,9 +244,12 @@ def generate_split():
                 else:
                     logging.warning(f'path not exist: {case_dir}')            
             pass
+    print(f'n_frame_missing_pose_info: {n_frame_missing_pose_info}')
     pass
 
+
 if __name__ == '__main__':
+    setup_log()
     time_beg_matterport_split_gen = time.time()
 
     generate_split()

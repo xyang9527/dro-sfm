@@ -239,9 +239,10 @@ class MatterportDataset(Dataset):
         context_paths = self._get_context_file_paths(filename, self.file_tree[session])
         context_images = [load_image(os.path.join(self.root_dir, session, filename))
                                 for filename in context_paths]
-        pose_path = os.path.join(self.root_dir, session, filename).replace('color', 'pose').replace('.jpg', '.txt')
+        # pose_path = os.path.join(self.root_dir, session, filename).replace('color', 'pose').replace('.jpg', '.txt')
+        pose_path = os.path.join(self.root_dir, session, filename).replace('cam_left', 'pose').replace('.jpg', '.txt')
         pose = np.genfromtxt(pose_path)
-        context_pose_paths = [os.path.join(self.root_dir, session, x).replace('color', 'pose').
+        context_pose_paths = [os.path.join(self.root_dir, session, x).replace('cam_left', 'pose').
                                 replace('.jpg', '.txt') for x in context_paths]
         context_poses = [np.genfromtxt(x) for x in context_pose_paths]
 
