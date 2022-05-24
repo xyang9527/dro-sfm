@@ -50,7 +50,7 @@ def read_png_depth(file):
     """Reads a .png depth map."""
     depth_png = np.array(load_image(file), dtype=int)
 
-    assert (np.max(depth_png) > 255), 'Wrong .png depth file'
+    # assert (np.max(depth_png) > 255), 'Wrong .png depth file'
     if (np.max(depth_png) > 255):
         depth = depth_png.astype(np.float) / 1000.
     else:
@@ -198,7 +198,7 @@ class MatterportTestDataset(Dataset):
 
     def _get_depth_file(self, image_file):
         """Get the corresponding depth file from an image file."""
-        depth_file = image_file.replace('color', 'depth').replace('image', 'depth')
+        depth_file = image_file.replace('cam_left', 'depth').replace('image', 'depth')
         depth_file = depth_file.replace('jpg', 'png')
         return depth_file
 
@@ -217,14 +217,19 @@ class MatterportTestDataset(Dataset):
         depth = self._read_depth(self._get_depth_file(os.path.join(self.root_dir, color_path)))
         resized_depth = cv2.resize(depth, image.size, interpolation = cv2.INTER_NEAREST)
 
-        intr_path = os.path.join(self.root_dir, color_path).split('color')[0] + 'intrinsic/intrinsic_color.txt'
-        intr = np.genfromtxt(intr_path)[:3, :3]
+        # intr_path = os.path.join(self.root_dir, color_path).split('color')[0] + 'intrinsic/intrinsic_color.txt'
+        # intr = np.genfromtxt(intr_path)[:3, :3]
+
+        intr = np.array([[577.870605, 0.000000, 319.500000],
+                    [0.000000, 577.870605, 239.500000],
+                    [0.000000, 0.000000, 1.000000]])
+        logging.info(f'  intr: {type(intr)}, {intr.dtype}, {intr.shape}, {intr}')
         
         context_images = [load_image(os.path.join(self.root_dir, filename))
                                 for filename in context_paths]
-        pose_path = os.path.join(self.root_dir, color_path).replace('color', 'pose').replace('.jpg', '.txt')
+        pose_path = os.path.join(self.root_dir, color_path).replace('cam_left', 'pose').replace('.jpg', '.txt')
         pose = np.genfromtxt(pose_path)
-        context_pose_paths = [os.path.join(self.root_dir, x).replace('color', 'pose').
+        context_pose_paths = [os.path.join(self.root_dir, x).replace('cam_left', 'pose').
                                 replace('.jpg', '.txt') for x in context_paths]
         context_poses = [np.genfromtxt(x) for x in context_pose_paths]
 
