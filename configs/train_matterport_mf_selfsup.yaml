@@ -33,27 +33,27 @@ datasets:
         image_shape: (320, 512)
     train:
         batch_size: 3
-        dataset: ['MatterportBA']
+        dataset: ['Matterport']
         # path: ['/data/datasets/scannet/train']
-        path: ['/opt/slam/matterport/train']
+        path: ['/home/xuelian_yang/slam/matterport']
         split: ['splits/train_all_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
         forward_context: 1
-        back_context: 1
+        back_context: 0
     validation:
         dataset: ['MatterportTest']
         # path: ['/data/datasets/scannet/test']
-        path: ['/opt/slam/scannet/test']
-        split: ['splits/test_split.txt']
+        path: ['/home/xuelian_yang/slam/matterport']
+        split: ['splits/val_all_list.txt']
         depth_type: ['groundtruth']
         forward_context: 1
-        back_context: 1
+        back_context: 0
     test:
         dataset: ['MatterportTest']
         # path: ['/data/datasets/scannet/test']
-        path: ['/opt/slam/matterport/test']
-        split: ['splits/test_split.txt']
+        path: ['/home/xuelian_yang/slam/matterport']
+        split: ['splits/test_all_list.txt']
         depth_type: ['groundtruth']
         forward_context: 1
-        back_context: 1
+        back_context: 0

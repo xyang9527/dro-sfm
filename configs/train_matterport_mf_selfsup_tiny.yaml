@@ -1,7 +1,5 @@
-# ref: train_scannet_mf_gt_view2.yaml
-name: 'matterport_gt'
-save:
-    folder: './results'
+# ref: train_scannet_mf_selfsup_view3.yaml
+name: 'matterport_selfsup'
 arch:
     max_epochs: 100
 checkpoint:
@@ -9,7 +7,7 @@ checkpoint:
     monitor: 'abs_rel_pp_gt'
     monitor_index: 0
 model:
-    name: 'SupModelMF'
+    name: 'SelfSupModelMF'
     optimizer:
         name: 'Adam'
         depth:
@@ -32,21 +30,20 @@ model:
         max_depth: 10.0
 datasets:
     augmentation:
-        image_shape: (240, 320)
+        image_shape: (320, 512)
     train:
-        batch_size: 12
+        batch_size: 3
         dataset: ['Matterport']
-        # xuelian_yang@badger
+        # path: ['/data/datasets/scannet/train']
         path: ['/home/xuelian_yang/slam/matterport']
         split: ['splits/train_tiny_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
         forward_context: 1
         back_context: 0
-        num_workers: 32
     validation:
         dataset: ['MatterportTest']
-        # xuelian_yang@badger
+        # path: ['/data/datasets/scannet/test']
         path: ['/home/xuelian_yang/slam/matterport']
         split: ['splits/val_tiny_list.txt']
         depth_type: ['groundtruth']
@@ -54,7 +51,7 @@ datasets:
         back_context: 0
     test:
         dataset: ['MatterportTest']
-        # xuelian_yang@badger
+        # path: ['/data/datasets/scannet/test']
         path: ['/home/xuelian_yang/slam/matterport']
         split: ['splits/test_tiny_list.txt']
         depth_type: ['groundtruth']

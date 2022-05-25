@@ -792,7 +792,7 @@ def setup_dataloader(datasets, config, mode):
     dataloaders : list of Dataloader
         List of created dataloaders for each input dataset
     """
-    logging.warning(f'setup_dataloader(..)')
+    logging.warning(f'setup_dataloader({datasets}, config.batch_size={config.batch_size}, config.num_works={config.num_workers}, {mode})')
     return [(DataLoader(dataset,
                         batch_size=config.batch_size, shuffle=False,
                         pin_memory=True, num_workers=config.num_workers,

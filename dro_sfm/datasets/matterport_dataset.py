@@ -27,14 +27,14 @@ def read_files(directory, ext=('.png', '.jpg', '.jpeg', '.ppm'), skip_empty=True
     for entry in os.scandir(directory):
         relpath = os.path.relpath(entry.path, directory)
         if entry.is_dir():
-            color_path = os.path.join(entry.path, 'color')
+            color_path = os.path.join(entry.path, 'cam_left')
             d_files = read_files(color_path, ext=ext, skip_empty=skip_empty)
             if skip_empty and not len(d_files):
                 continue
-            files[relpath + '/color'] = d_files[color_path]
+            files[relpath + '/cam_left'] = d_files[color_path]
         elif entry.is_file():
             if ext is None or entry.path.lower().endswith(tuple(ext)):
-                pose_path = entry.path.replace('color', 'pose').replace('.jpg', '.txt')
+                pose_path = entry.path.replace('cam_left', 'pose').replace('.jpg', '.txt')
                 pose = np.genfromtxt(pose_path)
                 if not np.isinf(pose).any():
                     files[directory].append(relpath)
@@ -101,7 +101,7 @@ class MatterportDataset(Dataset):
             self.file_tree = read_files(root_dir)
             # remove test scenes
             for scene in test_scenes:
-                key = scene + '/color'
+                key = scene + '/cam_left'
                 if key in self.file_tree:
                     self.file_tree.pop(key, None)
                     print('remove test scene:', scene)
@@ -233,8 +233,6 @@ class MatterportDataset(Dataset):
         intr = np.array([[577.870605, 0.000000, 319.500000],
                          [0.000000, 577.870605, 239.500000],
                          [0.000000, 0.000000, 1.000000]])
-        logging.info(f'  intr: {type(intr)}, {intr.dtype}, {intr.shape}, {intr}')
-
 
         context_paths = self._get_context_file_paths(filename, self.file_tree[session])
         context_images = [load_image(os.path.join(self.root_dir, session, filename))

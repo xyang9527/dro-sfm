@@ -49,6 +49,7 @@ def all_reduce_metrics(output_data_batch, datasets, name='depth'):
     # If there is only one dataset, wrap in a list
     if isinstance(output_data_batch[0], dict):
         output_data_batch = [output_data_batch]
+
     # Get metrics keys and dimensions
     names = [key for key in list(output_data_batch[0][0].keys()) if key.startswith(name)]
     dims = [output_data_batch[0][0][name].shape[0] for name in names]

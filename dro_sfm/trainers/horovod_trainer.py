@@ -78,7 +78,7 @@ class HorovodTrainer(BaseTrainer):
             logging.info(f'========== epoch: {epoch} done. ==========')
 
     def train(self, dataloader, module, optimizer):
-        logging.warning(f'train(..)')
+        logging.warning(f'train( {dataloader}, .. )')
         # Set module to train
         module.train()
         # Shuffle dataloader sampler
@@ -115,7 +115,7 @@ class HorovodTrainer(BaseTrainer):
         # return module.training_epoch_end(outputs)
 
     def validate(self, dataloaders, module):
-        logging.warning(f'validate(..)')
+        logging.warning(f'validate({dataloaders}, ..)')
         # Set module to eval
         module.eval()
         # Start validation loop
@@ -126,6 +126,7 @@ class HorovodTrainer(BaseTrainer):
             progress_bar = self.val_progress_bar(
                 dataloader, module.config.datasets.validation, n)
             outputs = []
+            # logging.info(f'  outputs: {outputs}, n: {n}, progress_bar: {progress_bar}')
             # For all batches
             for i, batch in progress_bar:
                 # Send batch to GPU and take a validation step
@@ -135,6 +136,9 @@ class HorovodTrainer(BaseTrainer):
                 outputs.append(output)
             # Append dataset outputs to list of all outputs
             all_outputs.append(outputs)
+
+        # logging.info(f'  all_output: {all_outputs}')
+
         # Return all outputs for epoch end
         return module.validation_epoch_end(all_outputs)
 

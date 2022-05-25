@@ -28,14 +28,14 @@ def read_files(directory, ext=('.png', '.jpg', '.jpeg', '.ppm'), skip_empty=True
     for entry in os.scandir(directory):
         relpath = os.path.relpath(entry.path, directory)
         if entry.is_dir():
-            color_path = os.path.join(entry.path, 'color')
+            color_path = os.path.join(entry.path, 'cam_left')
             d_files = read_files(color_path, ext=ext, skip_empty=skip_empty)
             if skip_empty and not len(d_files):
                 continue
-            files[relpath + '/color'] = d_files[color_path]
+            files[relpath + '/cam_left'] = d_files[color_path]
         elif entry.is_file():
             if ext is None or entry.path.lower().endswith(tuple(ext)):
-                pose_path = entry.path.replace('color', 'pose').replace('.jpg', '.txt')
+                pose_path = entry.path.replace('cam_left', 'pose').replace('.jpg', '.txt')
                 pose = np.genfromtxt(pose_path)
                 if not np.isinf(pose).any():
                     files[directory].append(relpath)
@@ -109,8 +109,10 @@ class MatterportTestDataset(Dataset):
         # =================== load from txt ====================
         with open(os.path.join(self.root_dir, self.split), "r") as f:
             split_data = f.readlines()
+
         split_data1 = split_data[::2]
         split_data2 = split_data[1:][::2]
+
         files = [x.replace(' ', '/').split()[0] for x in split_data1]
         context_files = [x.replace(' ', '/').split()[0] for x in split_data2]
         self.files = []
@@ -118,37 +120,71 @@ class MatterportTestDataset(Dataset):
         self.context2_files = []
         self.context3_files = []
         self.context4_files = []
-        for d0, d1 in zip(files, context_files):
-            sce = d0.split('/cam_left/')[0] + '/cam_left'
-            id0 = d0.split('/cam_left/')[1]
-            id1 = d1.split('/cam_left/')[1]
 
-            if sce in self.file_tree.keys() and os.path.exists(os.path.join(self.root_dir, sce)):
-                if int(id1.split('.')[0]) > int(id0.split('.')[0]):
-                    id2 = '{:06d}.jpg'.format(int(id0.split('.')[0]) - 5)
-                    id3 = '{:06d}.jpg'.format(int(id0.split('.')[0]) + 5)
-                    id4 = '{:06d}.jpg'.format(int(id0.split('.')[0]) - 10)
-                else:
-                    id2 = '{:06d}.jpg'.format(int(id0.split('.')[0]) + 5)
-                    id3 = '{:06d}.jpg'.format(int(id0.split('.')[0]) - 5)
-                    id4 = '{:06d}.jpg'.format(int(id0.split('.')[0]) + 10)
-                if self.forward_context == 1 and self.backward_context == 0:
-                    self.files.append(d0)
-                    self.context_files.append(d1)
-                if self.forward_context == 1 and self.backward_context == 1:
-                    if os.path.exists(os.path.join(self.root_dir, sce, id2)):
+        is_continuous_id = True
+
+        if is_continuous_id:
+            for d0, d1 in zip(files, context_files):
+                sce = d0.split('/cam_left/')[0] + '/cam_left'
+                id0 = d0.split('/cam_left/')[1]
+                id1 = d1.split('/cam_left/')[1]
+
+                # logging.info(f'  sce: {sce},  id0: {id0}, id1: {id1}')
+
+                if sce in self.file_tree.keys() and os.path.exists(os.path.join(self.root_dir, sce)):
+                    if int(id1.split('.')[0]) > int(id0.split('.')[0]):
+                        # id0    id1    id2    id3    id4
+                        # id0    id1    id0-5  id0+5  id0-10
+                        id2 = '{:06d}.jpg'.format(int(id0.split('.')[0]) - 5)
+                        id3 = '{:06d}.jpg'.format(int(id0.split('.')[0]) + 5)
+                        id4 = '{:06d}.jpg'.format(int(id0.split('.')[0]) - 10)
+                    else:
+                        # id1    id0    id2    id3    id4
+                        # id1    id0    id0+5  id0-5  id0+10
+                        id2 = '{:06d}.jpg'.format(int(id0.split('.')[0]) + 5)
+                        id3 = '{:06d}.jpg'.format(int(id0.split('.')[0]) - 5)
+                        id4 = '{:06d}.jpg'.format(int(id0.split('.')[0]) + 10)
+
+                    if self.forward_context == 1 and self.backward_context == 0:
                         self.files.append(d0)
                         self.context_files.append(d1)
-                        self.context2_files.append(os.path.join(sce, id2))
-                if self.forward_context == 2 and self.backward_context == 2:
-                    if os.path.exists(os.path.join(self.root_dir, sce, id2)) and    \
-                       os.path.exists(os.path.join(self.root_dir, sce, id3)) and    \
-                       os.path.exists(os.path.join(self.root_dir, sce, id4)):
+
+                    if self.forward_context == 1 and self.backward_context == 1:
+                        if os.path.exists(os.path.join(self.root_dir, sce, id2)):
+                            self.files.append(d0)
+                            self.context_files.append(d1)
+                            self.context2_files.append(os.path.join(sce, id2))
+
+                    if self.forward_context == 2 and self.backward_context == 2:
+                        if os.path.exists(os.path.join(self.root_dir, sce, id2)) and    \
+                        os.path.exists(os.path.join(self.root_dir, sce, id3)) and    \
+                        os.path.exists(os.path.join(self.root_dir, sce, id4)):
+                            self.files.append(d0)
+                            self.context_files.append(d1)
+                            self.context2_files.append(os.path.join(sce, id2))
+                            self.context3_files.append(os.path.join(sce, id3))
+                            self.context4_files.append(os.path.join(sce, id4))
+
+        else:
+            # TODO: filename: discrete timestamp
+            n_frames = min(len(files), len(context_files))
+            frame_id_list = [i for i in range(n_frames)]
+            for idx_frame, d0, d1 in zip(frame_id_list, files, context_files):
+                sce = d0.split('/cam_left/')[0] + '/cam_left'
+                id0 = d0.split('/cam_left/')[1]
+                id1 = d1.split('/cam_left/')[1]
+
+                if sce in self.file_tree.keys() and os.path.exists(os.path.join(self.root_dir, sce)):
+                    if self.forward_context == 1 and self.backward_context == 0:
                         self.files.append(d0)
                         self.context_files.append(d1)
-                        self.context2_files.append(os.path.join(sce, id2))
-                        self.context3_files.append(os.path.join(sce, id3))
-                        self.context4_files.append(os.path.join(sce, id4))
+
+                    if self.forward_context == 1 and self.backward_context == 1:
+                        raise NotImplementedError
+
+                    if self.forward_context == 2 and self.backward_context == 2:
+                        raise NotImplementedError
+            pass
 
         assert len(self.files) == len(self.context_files), \
             'len(files) != len(context_files) !!!!!'
@@ -217,13 +253,9 @@ class MatterportTestDataset(Dataset):
         depth = self._read_depth(self._get_depth_file(os.path.join(self.root_dir, color_path)))
         resized_depth = cv2.resize(depth, image.size, interpolation = cv2.INTER_NEAREST)
 
-        # intr_path = os.path.join(self.root_dir, color_path).split('color')[0] + 'intrinsic/intrinsic_color.txt'
-        # intr = np.genfromtxt(intr_path)[:3, :3]
-
         intr = np.array([[577.870605, 0.000000, 319.500000],
                     [0.000000, 577.870605, 239.500000],
                     [0.000000, 0.000000, 1.000000]])
-        logging.info(f'  intr: {type(intr)}, {intr.dtype}, {intr.shape}, {intr}')
         
         context_images = [load_image(os.path.join(self.root_dir, filename))
                                 for filename in context_paths]
