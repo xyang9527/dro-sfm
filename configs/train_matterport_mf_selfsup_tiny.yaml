@@ -34,7 +34,7 @@ datasets:
     train:
         batch_size: 3
         dataset: ['Matterport']
-        # path: ['/data/datasets/scannet/train']
+        # xuelian_yang@badger
         path: ['/home/xuelian_yang/slam/matterport']
         split: ['splits/train_tiny_list.txt']
         depth_type: ['groundtruth']
@@ -43,7 +43,7 @@ datasets:
         back_context: 0
     validation:
         dataset: ['MatterportTest']
-        # path: ['/data/datasets/scannet/test']
+        # xuelian_yang@badger
         path: ['/home/xuelian_yang/slam/matterport']
         split: ['splits/val_tiny_list.txt']
         depth_type: ['groundtruth']
@@ -51,7 +51,7 @@ datasets:
         back_context: 0
     test:
         dataset: ['MatterportTest']
-        # path: ['/data/datasets/scannet/test']
+        # xuelian_yang@badger
         path: ['/home/xuelian_yang/slam/matterport']
         split: ['splits/test_tiny_list.txt']
         depth_type: ['groundtruth']
