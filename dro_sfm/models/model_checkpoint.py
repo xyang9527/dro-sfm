@@ -126,8 +126,12 @@ class ModelCheckpoint:
         self.epoch_last_check = epoch
         # Prepare filepath
         filepath = self.format_checkpoint_name(epoch, metrics)
+        filepath_old = None
         while os.path.isfile(filepath):
             filepath = self.format_checkpoint_name(epoch, metrics)
+            if filepath_old == filepath:
+                break
+            filepath_old = filepath
         # Check if saving or not
         if self.save_top_k != -1:
             current = metrics.get(self.monitor)
