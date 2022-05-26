@@ -3,13 +3,27 @@ import cv2
 import numpy as np
 import random
 import torchvision.transforms as transforms
+from torchvision.transforms.functional import InterpolationMode
 from PIL import Image
 
 from dro_sfm.utils.misc import filter_dict
 
 ########################################################################################################################
 
-def resize_image(image, shape, interpolation=Image.ANTIALIAS):
+'''
+~/anaconda3/envs/dro-sfm-latest/lib/python3.6/site-packages/torchvision/transforms/transforms.py:288:
+ UserWarning: Argument interpolation should be of type InterpolationMode instead of int. Please, use InterpolationMode enum.
+  "Argument interpolation should be of type InterpolationMode instead of int. "
+
+https://github.com/aitorzip/PyTorch-CycleGAN/issues/33
+    I solved it by using T.InterpolationMode.BICUBIC instead of Image.BICUBIC in my project.
+
+/home/sigma/anaconda3/envs/dro-sfm-latest/lib/python3.6/site-packages/torchvision/transforms/functional.py
+    class InterpolationMode(Enum):
+        Available interpolation methods are ``nearest``, ``bilinear``, ``bicubic``, ``box``, ``hamming``, and ``lanczos``.
+'''
+# def resize_image(image, shape, interpolation=Image.ANTIALIAS):
+def resize_image(image, shape, interpolation=InterpolationMode.BILINEAR):
     """
     Resizes input image.
 
@@ -50,8 +64,10 @@ def resize_depth(depth, shape):
                        interpolation=cv2.INTER_NEAREST)
     return np.expand_dims(depth, axis=2)
 
+# def resize_sample_image_and_intrinsics(sample, shape,
+#                                        image_interpolation=Image.ANTIALIAS):
 def resize_sample_image_and_intrinsics(sample, shape,
-                                       image_interpolation=Image.ANTIALIAS):
+                                       image_interpolation=InterpolationMode.BILINEAR):
     """
     Resizes the image and intrinsics of a sample
 
@@ -94,7 +110,8 @@ def resize_sample_image_and_intrinsics(sample, shape,
     # Return resized sample
     return sample
 
-def resize_sample(sample, shape, image_interpolation=Image.ANTIALIAS):
+# def resize_sample(sample, shape, image_interpolation=Image.ANTIALIAS):
+def resize_sample(sample, shape, image_interpolation=InterpolationMode.BILINEAR):
     """
     Resizes a sample, including image, intrinsics and depth maps.
 
