@@ -93,9 +93,11 @@ def setup_log():
 
 def generate_split():
     # xuelian@trex@24
-    dir_root = '/opt/slam/matterport'
+    dir_root = '/home/xuelian/slam/matterport'
     # xuelian@fox@26
     dir_root = '/home/xuelian/slam/matterport'
+    # sigma@66
+    dir_root = '/home/sigma/slam/matterport'
 
     if not osp.exists(dir_root):
         raise ValueError(f'path not exist: {dir_root}')
