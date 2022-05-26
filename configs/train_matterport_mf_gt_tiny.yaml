@@ -40,7 +40,7 @@ datasets:
         # path: ['/home/xuelian_yang/slam/matterport']
         # xuelian@fox
         path: ['/home/xuelian/slam/matterport']
-        split: ['splits/train_all_list.txt']
+        split: ['splits/train_tiny_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
         forward_context: 1
@@ -52,7 +52,7 @@ datasets:
         # path: ['/home/xuelian_yang/slam/matterport']
         # xuelian@fox
         path: ['/home/xuelian/slam/matterport']
-        split: ['splits/val_all_list.txt']
+        split: ['splits/val_tiny_list.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0
@@ -62,7 +62,7 @@ datasets:
         # path: ['/home/xuelian_yang/slam/matterport']
         # xuelian@fox
         path: ['/home/xuelian/slam/matterport']
-        split: ['splits/test_all_list.txt']
+        split: ['splits/test_tiny_list.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0
