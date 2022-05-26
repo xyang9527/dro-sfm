@@ -18,7 +18,19 @@ class HorovodTrainer(BaseTrainer):
         # hvd.init()
         torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 1)))
         # torch.cuda.set_device(hvd.local_rank())
+
+        # https://stackoverflow.com/a/48152675
+        logging.info(f'  torch.cuda.is_available():     {torch.cuda.is_available()}')
+        logging.info(f'  torch.cuda.device_count():     {torch.cuda.device_count()}')
+        logging.info(f'  torch.cuda.current_device():   {torch.cuda.current_device()}')
+        n_device = torch.cuda.device_count()
+        if n_device > 0:
+            for idx_d in range(n_device):
+                logging.info(f'  torch.cuda.get_device_name({idx_d}): {torch.cuda.get_device_name(idx_d)}')  
+
         torch.cuda.set_device('cuda:0')
+        logging.info(f'  torch.cuda.current_device():   {torch.cuda.current_device()}')
+
         torch.backends.cudnn.benchmark = True
 
         self.avg_loss = AvgMeter(50)
