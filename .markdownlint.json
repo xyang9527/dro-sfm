@@ -1,0 +1,16 @@
+{
+    "default": true,
+    "MD033": {
+      "allowed_elements": [ "h1", "h3", "HR", "p", "div", "img",
+      "details", "summary", "br", "module" ]
+    },
+    "MD009": false,
+    "MD010": false,
+    "MD012": false,
+    "MD013": false, 
+    "MD022": false,
+    "MD031": false,
+    "MD032": false,
+    "MD040": false,
+    "MD041": false
+}

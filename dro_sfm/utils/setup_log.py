@@ -1,6 +1,7 @@
 import logging
 import datetime
 import os.path as osp
+import os
 
 def setup_log(log_name):
     # Initialize logging
@@ -20,7 +21,9 @@ def setup_log(log_name):
         ' >>> %(message)s'
     )
 
-    get_log_file = osp.join(osp.dirname(__file__), f'../../{log_name}')
+    get_log_file = osp.join(osp.dirname(__file__), f'../../logs/{log_name}')
+    if not osp.exists(osp.dirname(get_log_file)):
+        os.makedirs(osp.dirname(get_log_file))
 
     logging.basicConfig(
         filename=get_log_file,

@@ -76,6 +76,20 @@ pip install torch==${PYTORCH_VERSION} torchvision==${TORCHVISION_VERSION} && ldc
 sudo ldconfig /usr/local/cuda/targets/x86_64-linux/lib/stubs && HOROVOD_GPU_ALLREDUCE=NCCL HOROVOD_GPU_BROADCAST=NCCL HOROVOD_WITH_PYTORCH=1 pip install --no-cache-dir git+https://github.com/horovod/horovod.git@${HOROVOD_VERSION} && sudo ldconfig
 ```
 
++ Anaconda env on ubuntu20.04:
+
+```bash
+conda create --name dro-sfm-latest python=3.6.9 -y
+conda activate dro-sfm-latest
+conda install pytorch==1.10.1 torchvision==0.11.2 torchaudio==0.10.1 cudatoolkit=11.3 -c pytorch -c conda-forge -y
+conda install pip -y
+pip install -U pip
+pip install opencv-python yacs matplotlib termcolor IPython tqdm wandb
+
+# visualization
+pip install pytorch3d vtk
+```
+
 To verify that the environment is setup correctly, you can run a simple overfitting test:
 
 ```bash
