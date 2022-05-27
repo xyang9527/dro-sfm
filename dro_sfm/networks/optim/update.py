@@ -10,7 +10,7 @@ class DepthHead(nn.Module):
         self.conv2 = nn.Conv2d(hidden_dim, 1, 3, padding=1)
         self.relu = nn.ReLU(inplace=True)
 
-    def forward(self, x_d, act_fn=F.tanh):
+    def forward(self, x_d, act_fn=torch.tanh):
         out = self.conv2(self.relu(self.conv1(x_d)))
         return act_fn(out)
 

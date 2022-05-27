@@ -92,12 +92,7 @@ def setup_log():
 
 
 def generate_split():
-    # xuelian@trex@24
     dir_root = '/home/xuelian/slam/matterport'
-    # xuelian@fox@26
-    dir_root = '/home/xuelian/slam/matterport'
-    # sigma@66
-    dir_root = '/home/sigma/slam/matterport'
 
     if not osp.exists(dir_root):
         raise ValueError(f'path not exist: {dir_root}')
@@ -106,7 +101,7 @@ def generate_split():
     dir_save = osp.join(dir_root, 'splits')
     if not osp.exists(dir_save):
         os.mkdir(dir_save)
-    
+
     subdirs_train_val_test = [
         "train_val_test/matterport005_000",
         "train_val_test/matterport005_001",

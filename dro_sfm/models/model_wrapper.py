@@ -55,6 +55,14 @@ class ModelWrapper(torch.nn.Module):
         self.train_dataset = self.validation_dataset = self.test_dataset = None
         self.current_epoch = 0
 
+        # logging
+        logging.info(f'  self.config:              {type(self.config)}')
+        logging.info(f'  self.logger:              {self.logger}')
+        logging.info(f'  self.resume:              {self.resume}')
+        logging.info(f'  self.metrics_name:        {self.metrics_name}')
+        logging.info(f'  self.metrics_keys:        {self.metrics_keys}')
+        logging.info(f'  self.metrics_modes:       {self.metrics_modes}')
+
         # Prepare model
         self.prepare_model(resume)
 
@@ -67,6 +75,18 @@ class ModelWrapper(torch.nn.Module):
 
         # Preparations done
         self.config.prepared = True
+
+        logging.info(f'  self.current_epoch:       {self.current_epoch}')
+
+        logging.info(f'  self.train_dataset:       {self.train_dataset}')
+        logging.info(f'  self.validation_dataset:  {self.validation_dataset}')
+        logging.info(f'  self.test_dataset:        {self.test_dataset}')
+
+        logging.info(f'  self.model:               {type(self.model)}')
+        logging.info(f'  self.optimizer:           {self.optimizer}')
+        logging.info(f'  self.scheduler:           {self.scheduler}')
+        logging.info(f'  self.config:              {type(self.config)}')
+
 
     def prepare_model(self, resume=None):
         """Prepare self.model (incl. loading previous state)"""
@@ -304,6 +324,9 @@ class ModelWrapper(torch.nn.Module):
     def depth(self, *args, **kwargs):
         """Runs the pose network and returns the output."""
         assert self.depth_net is not None, 'Depth network not defined'
+        logging.info(f'  depth_net: {type(self.depth_net)}')
+        logging.info(f'  args:      {args}')
+        logging.info(f'  kwargs:    {kwargs}')
         return self.depth_net(*args, **kwargs)
 
     def pose(self, *args, **kwargs):

@@ -5,11 +5,15 @@ sys.path.append(lib_dir)
 import argparse
 import torch
 
+import time
+import logging
+
 from dro_sfm.models.model_wrapper import ModelWrapper
 from dro_sfm.trainers.horovod_trainer import HorovodTrainer
 from dro_sfm.utils.config import parse_test_file
 from dro_sfm.utils.load import set_debug
 from dro_sfm.utils.horovod import hvd_init
+from dro_sfm.utils.setup_log import setup_log
 
 
 def parse_args():
@@ -64,5 +68,11 @@ def test(ckpt_file, cfg_file, half):
 
 
 if __name__ == '__main__':
+    setup_log('kneron_eval.log')
+    time_beg_eval = time.time()
+
     args = parse_args()
     test(args.checkpoint, args.config, args.half)
+
+    time_end_eval = time.time()
+    logging.warning(f'elapsed {time_end_eval - time_beg_eval:.3f} seconds.')

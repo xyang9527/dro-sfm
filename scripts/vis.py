@@ -9,11 +9,13 @@ import os
 from multiprocessing import Process, Queue
 import matplotlib.pyplot as plt
 
+
 def gray2rgb(im, cmap='gray'):
     cmap = plt.get_cmap(cmap)
     rgba_img = cmap(im.astype(np.float32))
     rgb_img = np.delete(rgba_img, 3, 2)
     return rgb_img
+
 
 def normalize_depth_for_display(depth, pc=98, crop_percent=0, normalizer=None, cmap='gray'):
     # convert to disparity
@@ -30,6 +32,7 @@ def normalize_depth_for_display(depth, pc=98, crop_percent=0, normalizer=None, c
     keep_H = int(depth.shape[0] * (1-crop_percent))
     depth = depth[:keep_H]
     return depth
+
 
 def create_image_depth_figure(image, depth):
     depth_image = 255 * normalize_depth_for_display(depth)
@@ -248,6 +251,7 @@ def visualize_prediction(pointcloud, colors, poses=None, renwin=None):
     interactor.Initialize()
     interactor.Start()
 
+
 class vtkTimerCallback():
     def __init__(self, cinematic=False, render_path=None, clear_points=False, is_kitti=False):
         self.timer_count = 0
@@ -398,4 +402,3 @@ class InteractiveViz(Process):
 
         #start the interaction and timer
         interactor.Start()
-

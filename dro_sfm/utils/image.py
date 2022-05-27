@@ -5,6 +5,7 @@ from torch._C import device, dtype
 import torch.nn.functional as funct
 from functools import lru_cache
 from PIL import Image
+import logging
 
 from dro_sfm.utils.misc import same_shape
 

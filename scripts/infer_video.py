@@ -8,6 +8,8 @@ from ast import parse
 import numpy as np
 import torch
 from glob import glob
+import logging
+import time
 
 from dro_sfm.models.model_wrapper import ModelWrapper
 from dro_sfm.utils.horovod import hvd_disable
@@ -20,6 +22,7 @@ from dro_sfm.utils.image import write_image
 from scripts import vis
 from multiprocessing import Queue
 import cv2
+from dro_sfm.utils.setup_log import setup_log
 
 
 def parse_args():
@@ -34,7 +37,7 @@ def parse_args():
     parser.add_argument('--image_shape', type=int, nargs='+', default=None,
                         help='Input and output image shape '
                              '(default: checkpoint\'s config.datasets.augmentation.image_shape)')
-    
+
     args = parser.parse_args()
     assert args.checkpoint.endswith('.ckpt'), \
         'You need to provide a .ckpt file as checkpoint'
@@ -44,6 +47,7 @@ def parse_args():
 
 
 def get_intrinsics(image_shape_raw, image_shape, data_type):
+    # logging.warning(f'get_intrinsics({image_shape_raw}, {image_shape}, {data_type})')
     if data_type == "kitti":
         intr = np.array([7.215376999999999725e+02, 0.000000000000000000e+00, 6.095593000000000075e+02,
                          0.000000000000000000e+00, 7.215376999999999725e+02, 1.728540000000000134e+02,
@@ -62,16 +66,16 @@ def get_intrinsics(image_shape_raw, image_shape, data_type):
         intr = np.array([[fx, 0., cx],
                          [0., fy, cy],
                          [0., 0., 1.]])
-    
+
     orig_w, orig_h = image_shape_raw
     out_h, out_w = image_shape
-    
+
     # Scale intrinsics
     intr[0] *= out_w / orig_w
     intr[1] *= out_h / orig_h
     
     return  intr
-    
+
 
 @torch.no_grad()
 def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape, data_type,
@@ -93,10 +97,9 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
         use half precision (fp16)
     save: str
         Save format (npz or png)
-    """    
-    
+    """
     base_name = os.path.splitext(os.path.basename(input_file))[0]
-    
+
     image_raw_wh = load_image(input_file).size
     # Load image
     def process_image(filename):
@@ -111,15 +114,16 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
             image = image.to('cuda')
             intr = intr.to('cuda')
         return image, intr
+
     image_ref = [process_image(input_file_ref)[0] for input_file_ref in input_file_refs]
     image, intrinsics = process_image(input_file)
 
     batch = {'rgb': image, 'rgb_context': image_ref, "intrinsics": intrinsics}
-    
+
     output = model_wrapper(batch)
     inv_depth = output['inv_depths'][0] #(1, 1, h, w)
     depth = inv2depth(inv_depth)[0, 0].detach().cpu().numpy() #(h, w)
-    
+
     pose21 = output['poses'][0].mat[0].detach().cpu().numpy() #(4, 4)  #TODO check: targe -> ref[0]
     pose23 = output['poses'][1].mat[0].detach().cpu().numpy() #(4, 4)  #TODO check: targe -> ref[0]
 
@@ -136,11 +140,14 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
 
 def start_visualization(queue_g, cinematic=False, render_path=None, clear_points=False, is_kitti=True):
     """ Start interactive slam visualization in seperate process """
+    logging.warning(f'start_visualization(..)')
+
     # visualization is a Process Object
     viz = vis.InteractiveViz(queue_g, cinematic, render_path, clear_points, is_kitti=is_kitti)
     viz.start()
     
     return viz
+
 
 def get_coordinate_xy(coord_shape, device):
     """get meshgride coordinate of x, y and the shape is (B, H, W)"""
@@ -269,6 +276,8 @@ def gemo_filter_fusion(depth_ref, depth_srcs, ref_pose, src_poses, intr, thres_v
 
 
 def parse_video(video_file, save_root, sample_rate=10):
+    logging.warning(f'parse_video({video_file}, {save_root}, {sample_rate})')
+
     os.makedirs(save_root, exist_ok=True)
     
     cap = cv2.VideoCapture(video_file)
@@ -293,6 +302,8 @@ def parse_video(video_file, save_root, sample_rate=10):
 
 
 def init_model(args):
+    logging.warning(f'init_model(..)')
+
     print("init model start...................")
     hvd_disable()
     # Parse arguments
@@ -323,13 +334,23 @@ def init_model(args):
     
     print("init model finish...................")
     return model_wrapper, image_shape
-    
 
 
 def inference(model_wrapper, image_shape, input, sample_rate,
               output_depths_npy, output_vis_video, output_tmp_dir,
               data_type="general", ply_mode=False, sfm_params=None):
-    
+    logging.warning(f'inference(\n'
+                    f'  model_wrapper={type(model_wrapper)},\n'
+                    f'  image_shape={image_shape},\n'
+                    f'  input={input},\n'
+                    f'  sample_rate={sample_rate},\n'
+                    f'  output_depths_npy={output_depths_npy},\n'
+                    f'  output_vis_video={output_vis_video},\n'
+                    f'  output_tmp_dir={output_tmp_dir},\n'
+                    f'  data_type={data_type},\n'
+                    f'  ply_mode={ply_mode},\n'
+                    f'  sfm_params={sfm_params})')
+
     assert os.path.exists(input)
     assert os.path.exists(output_tmp_dir)
     save_depth_root = os.path.join(output_tmp_dir, "depth")
@@ -342,7 +363,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     if not os.path.isdir(input):
         print("processing video input:.........")
         input_type = "video"
-        assert  os.path.splitext(input)[1] in [".mp4", ".avi", ".mov", ".mpeg", ".flv", ".wmv"]
+        assert os.path.splitext(input)[1] in [".mp4", ".avi", ".mov", ".mpeg", ".flv", ".wmv"]
         input_video_images = os.path.join(output_tmp_dir, "input_video_images")
         parse_video(input, input_video_images, sample_rate)
         # update input
@@ -365,9 +386,9 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     list_of_files = list(zip(files[:-2],
                               files[1:-1],
                               files[2:]))
-    
 
     if ply_mode:
+        logging.info(f'  ply_mode')
         # visulation
         # new points and poses get added to the queue
         queue_g = Queue()
@@ -384,7 +405,9 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     
     print(f"*********************data_type:{data_type}")
     print("inference start.....................")
-    for fn1, fn2, fn3 in list_of_files:
+    for idx_frame, fns in enumerate(list_of_files):
+        fn1, fn2, fn3 = fns
+        print(f'frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n fn3={fn3}')
         depth, pose21, pose23, intr, rgb = infer_and_save_pose([fn1, fn3], fn2, model_wrapper, 
                                                                 image_shape, data_type,
                                                                 save_depth_root, save_vis_root)
@@ -449,7 +472,8 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     files = sorted(glob(os.path.join(save_vis_root, "*.jpg")))
     image_hw = cv2.imread(files[0]).shape
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    video_writer = cv2.VideoWriter(output_vis_video, fourcc, 1.0, (image_hw[1], image_hw[0]))
+    fps = 30.0
+    video_writer = cv2.VideoWriter(output_vis_video, fourcc, 30.0, (image_hw[1], image_hw[0]))
     for file in files:
         video_writer.write(cv2.imread(file))
     video_writer.release()
@@ -457,7 +481,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     
 def main():
     args = parse_args()
-    
+
     sfm_params = {
         "filer_depth_grad_max": 0.05,
         "filer_depth_max": 6 if not args.data_type=='kitti' else 15,
@@ -467,10 +491,10 @@ def main():
         "fusion_view_num": 5,
         "fusion_thres_view": 1,
     }
-    
+
     model_wrapper, image_shape = init_model(args)
-   
-    
+
+
     input = args.input
     output_depths_npy = os.path.join(args.output, "depths.npy")
     output_vis_video = os.path.join(args.output, "depths_vis.avi")
@@ -492,4 +516,10 @@ def main():
     # shutil.rmtree(output_tmp_dir)
 
 if __name__ == '__main__':
+    setup_log('kneron_infer_video.log')
+    time_beg_infer_video = time.time()
+
     main()
+
+    time_end_infer_video = time.time()
+    logging.warning(f'elapsed {time_end_infer_video - time_beg_infer_video:.3f} seconds.')

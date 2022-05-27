@@ -7,6 +7,8 @@ import numpy as np
 import torch
 from pytorch3d import transforms
 import json
+import logging
+import time
 
 from glob import glob
 from cv2 import imwrite
@@ -19,6 +21,8 @@ from dro_sfm.utils.config import parse_test_file
 from dro_sfm.utils.load import set_debug
 from dro_sfm.utils.depth import write_depth, inv2depth, viz_inv_depth
 from dro_sfm.utils.logging import pcolor
+from dro_sfm.utils.setup_log import setup_log
+
 
 poses = dict()
 
@@ -179,5 +183,11 @@ def main(args):
 
 
 if __name__ == '__main__':
+    setup_log('kneron_infer_pose.log')
+    time_beg_infer_pose = time.time()
+
     args = parse_args()
     main(args)
+
+    time_end_infer_pose = time.time()
+    logging.warning(f'elapsed {time_end_infer_pose - time_beg_infer_pose:.3f} seconds.')

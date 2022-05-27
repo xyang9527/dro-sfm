@@ -1,9 +1,14 @@
+import logging
 import sys
-sys.path.append("/data0/projects/dro-sfm")
+import os
+lib_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(lib_dir)
 import argparse
 import numpy as np
-import os
 import torch
+
+import time
+import logging
 
 from glob import glob
 from cv2 import imwrite
@@ -16,7 +21,7 @@ from dro_sfm.utils.config import parse_test_file
 from dro_sfm.utils.load import set_debug
 from dro_sfm.utils.depth import write_depth, inv2depth, viz_inv_depth
 from dro_sfm.utils.logging import pcolor
-
+from dro_sfm.utils.setup_log import setup_log
 
 
 def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
@@ -24,10 +29,9 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
     Generate a colored point cloud in PLY format from a color and a depth image.
 
     Input:
-    rgb_file -- filename of color image
+    rgb_file   -- filename of color image
     depth_file -- filename of depth image
-    ply_file -- filename of ply file
-
+    ply_file   -- filename of ply file
     """
     # fx, fy, cx, cy = intr[0, 0], intr[1, 1], intr[0, 2], intr[1, 2]
     points = []
@@ -104,6 +108,13 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
     save: str
         Save format (npz or png)
     """
+    logging.warning(f'infer_and_save_depth('
+        f'\n  input_file={input_file},'
+        f'\n  output_file={output_file},'
+        f'\n  model_wapper={type(model_wrapper)},'
+        f'\n  image_shape={image_shape},'
+        f'\n  save={save})')
+
     if not is_image(output_file):
         # If not an image, assume it's a folder and append the input name
         os.makedirs(output_file, exist_ok=True)
@@ -123,6 +134,7 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
         image = image.to('cuda:{}'.format(rank()), dtype=dtype)
 
     # Depth inference (returns predicted inverse depth)
+    logging.info(f'  model_wrapper.depth: {type(model_wrapper.depth)}')
     pred_inv_depth = model_wrapper.depth(image)[0]
 
     if save == 'npz' or save == 'png':
@@ -158,6 +170,13 @@ def infer_and_save_depth(input_file, output_file, model_wrapper, image_shape, ha
 
 
 def main(args):
+    logging.warning('main()')
+    logging.info(f'  --checkpoint:  {args.checkpoint}')
+    logging.info(f'  --input:       {args.input}')
+    logging.info(f'  --output:      {args.output}')
+    logging.info(f'  --image_shape: {args.image_shape}')
+    logging.info(f'  --half:        {args.half}')
+    logging.info(f'  --save:        {args.save}')
 
     # Initialize horovod
     hvd_init()
@@ -206,5 +225,11 @@ def main(args):
 
 
 if __name__ == '__main__':
+    setup_log('kneron_infer.log')
+    time_beg_infer = time.time()
+
     args = parse_args()
     main(args)
+
+    time_end_infer = time.time()
+    logging.warning(f'elapsed {time_end_infer - time_beg_infer:.3f} seconds.')

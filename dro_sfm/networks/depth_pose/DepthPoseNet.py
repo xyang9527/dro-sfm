@@ -2,6 +2,7 @@ from functools import partial
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import logging
 
 from dro_sfm.networks.optim.update import BasicUpdateBlockPose, BasicUpdateBlockDepth
 from dro_sfm.networks.optim.update import DepthHead, PoseHead, UpMaskNet
@@ -14,6 +15,7 @@ from dro_sfm.networks.layers.resnet.layers import disp_to_depth
                 
 class DepthPoseNet(nn.Module):
     def __init__(self, version=None, min_depth=0.1, max_depth=100, **kwargs):
+        logging.warning(f'__init__(version={version}, min_depth={min_depth}, max_depth={max_depth}, ..)')
         super().__init__()
         self.min_depth = min_depth
         self.max_depth = max_depth
@@ -104,6 +106,7 @@ class DepthPoseNet(nn.Module):
             
     def forward(self, target_image, ref_imgs, intrinsics):
         """ Estimate inv depth and  poses """
+        # logging.warning(f'forward({target_image.shape}, {type(ref_imgs)}, {type(intrinsics)})')
         # run the feature network
         fmaps = self.fnet(torch.cat([target_image] + ref_imgs, dim=0))
         fmaps = torch.split(fmaps, [target_image.shape[0]] * (1 + len(ref_imgs)), dim=0)
@@ -116,7 +119,7 @@ class DepthPoseNet(nn.Module):
             pose_list_init.append(self.pose_head(torch.cat([fmap1, fmap_ref], dim=1)))   
         
         # initial depth
-        inv_depth_init = self.depth_head(fmap1, act_fn=F.sigmoid)
+        inv_depth_init = self.depth_head(fmap1, act_fn=torch.sigmoid)
         up_mask = self.upmask_net(fmap1)
         inv_depth_up_init = self.upsample_depth(inv_depth_init, up_mask, ratio=self.feat_ratio)
 

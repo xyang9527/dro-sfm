@@ -3,6 +3,7 @@ from dro_sfm.utils.depth import depth2inv
 from dro_sfm.losses.supervised_loss import SupervisedDepthPoseLoss
 from dro_sfm.models.SfmModelMF import SfmModelMF
 from dro_sfm.models.model_utils import merge_outputs
+import logging
 
 
 class SupModelMF(SfmModelMF):
@@ -16,6 +17,7 @@ class SupModelMF(SfmModelMF):
         Extra parameters
     """
     def __init__(self, **kwargs):
+        logging.warning(f'__init__(..)')
         # Initializes SfmModel
         super().__init__(**kwargs)
         # Initializes the photometric loss

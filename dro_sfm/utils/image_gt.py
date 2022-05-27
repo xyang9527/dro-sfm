@@ -5,6 +5,7 @@ from torch._C import device, dtype
 import torch.nn.functional as funct
 from functools import lru_cache
 from PIL import Image
+import logging
 
 from dro_sfm.utils.misc import same_shape
 
@@ -120,6 +121,8 @@ def flip_mf_model(model, image, ref_imgs, intrinsics, flip, gt_depth=None, gt_po
     inv_depths : list of torch.Tensor [B,1,H,W]
         List of predicted inverse depth maps
     """
+    logging.warning(f'flip_mf_model({type(model)}, {image.shape}, {ref_imgs}, {intrinsics}, {flip}, {type(gt_depth)}, {type(gt_poses)})')
+
     if flip:
         if ref_imgs is not None:
             return model(flip_lr(image), [flip_lr(img) for img in ref_imgs], intrinsics, None, flip_lr(gt_depth), gt_poses)

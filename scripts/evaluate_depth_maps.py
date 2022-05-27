@@ -5,6 +5,8 @@ sys.path.append(lib_dir)
 import argparse
 import numpy as np
 import torch
+import time
+import logging
 
 from glob import glob
 from argparse import Namespace
@@ -12,6 +14,7 @@ from dro_sfm.utils.depth import load_depth
 from tqdm import tqdm
 
 from dro_sfm.utils.depth import load_depth, compute_depth_metrics
+from dro_sfm.utils.setup_log import setup_log
 
 
 def parse_args():
@@ -61,5 +64,11 @@ def main(args):
 
 
 if __name__ == '__main__':
+    setup_log('kneron_evaluate_depth_maps.log')
+    time_beg_evaluate_depth_maps = time.time()
+
     args = parse_args()
     main(args)
+
+    time_end_evaluate_depth_maps = time.time()
+    logging.warning(f'elapsed {time_end_evaluate_depth_maps - time_beg_evaluate_depth_maps:.3f} seconds.')

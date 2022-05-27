@@ -6,6 +6,7 @@ from dro_sfm.utils.image import flip_model, interpolate_scales
 from dro_sfm.geometry.pose import Pose
 from dro_sfm.utils.misc import make_list
 from dro_sfm.utils.depth import inv2depth
+import logging
 
 
 class SfmModel(nn.Module):
@@ -30,6 +31,7 @@ class SfmModel(nn.Module):
     def __init__(self, depth_net=None, pose_net=None,
                  rotation_mode='euler', flip_lr_prob=0.0,
                  upsample_depth_maps=False, **kwargs):
+        logging.warning(f'__init__(..)')
         super().__init__()
         self.depth_net = depth_net
         self.pose_net = pose_net

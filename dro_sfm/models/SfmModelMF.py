@@ -5,6 +5,7 @@ from dro_sfm.utils.image import flip_lr_intr, flip_mf_model, interpolate_scales
 from dro_sfm.utils.image import flip_lr as flip_lr_img
 from dro_sfm.geometry.pose import Pose
 from dro_sfm.utils.misc import make_list
+import logging
 
 
 class SfmModelMF(nn.Module):
@@ -29,6 +30,7 @@ class SfmModelMF(nn.Module):
     def __init__(self, depth_net=None, pose_net=None,
                  rotation_mode='euler', flip_lr_prob=0.0,
                  upsample_depth_maps=False, min_depth=0.1, max_depth=100, **kwargs):
+        logging.warning(f'__init__(..)')
         super().__init__()
         self.depth_net = depth_net
         self.pose_net = pose_net
@@ -103,6 +105,7 @@ class SfmModelMF(nn.Module):
 
     def compute_inv_depths(self, image, ref_imgs, intrinsics):
         """Computes inverse depth maps from single images"""
+        # logging.warning(f'compute_inv_depths({image.shape}, ref_imgs={type(ref_imgs)}, intrinsices={intrinsics})')
         # Randomly flip and estimate inverse depth maps
         flip_lr = random.random() < self.flip_lr_prob if self.training else False
         if flip_lr:
