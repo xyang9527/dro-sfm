@@ -59,7 +59,7 @@ from dro_sfm.utils.setup_log import setup_log
 
 
 def generate_split():
-    dir_root = 'D:/slam/matterport'
+    dir_root = '/home/sigma/slam/matterport'
 
     if not osp.exists(dir_root):
         raise ValueError(f'path not exist: {dir_root}')
@@ -151,9 +151,9 @@ def generate_split():
                             ])
                     # print(f'two_s: {two_s}')
                     f_ou.write(f'{mat[0]} {mat[1]} {mat[2]} {x}\n'
-                                '{mat[3]} {mat[4]} {mat[5]} {y}\n'
-                                '{mat[6]} {mat[7]} {mat[8]} {z}\n'
-                                '0.000000 0.000000 0.000000 1.000000\n')
+                               f'{mat[3]} {mat[4]} {mat[5]} {y}\n'
+                               f'{mat[6]} {mat[7]} {mat[8]} {z}\n'
+                               f'0.000000 0.000000 0.000000 1.000000\n')
 
     image_dir = 'cam_left'
     n_frame_missing_pose_info = 0

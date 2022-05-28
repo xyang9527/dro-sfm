@@ -35,6 +35,8 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
     """
     # fx, fy, cx, cy = intr[0, 0], intr[1, 1], intr[0, 2], intr[1, 2]
     points = []
+    h, w = depth.shape
+    cloud = np.zeros((h, w, 6), dtype=np.float32)
     for v in range(rgb.shape[0]):
         for u in range(rgb.shape[1]):
             color = rgb[v, u] #rgb.getpixel((u, v))
@@ -43,6 +45,13 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
             X = (u - cx) * Z / fx
             Y = (v - cy) * Z / fy
             points.append("%f %f %f %d %d %d 0\n" % (X, Y, Z, color[0], color[1], color[2]))
+            cloud[v, u, 0] = X
+            cloud[v, u, 1] = Y
+            cloud[v, u, 2] = Z
+            cloud[v, u, 3] = float(color[0])
+            cloud[v, u, 4] = float(color[1])
+            cloud[v, u, 5] = float(color[2])
+
     file = open(ply_file, "w")
     file.write('''ply
             format ascii 1.0
@@ -59,6 +68,7 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
             ''' % (len(points), "".join(points)))
     file.close()
     print("save ply, fx:{}, fy:{}, cx:{}, cy:{}".format(fx, fy, cx, cy))
+    return cloud
 
 
 def is_image(file, ext=('.png', '.jpg',)):
