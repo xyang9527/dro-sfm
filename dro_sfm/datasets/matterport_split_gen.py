@@ -49,6 +49,9 @@
 
 import os
 import os.path as osp
+import sys
+lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
+sys.path.append(lib_dir)
 import datetime
 import numpy as np
 
@@ -57,42 +60,11 @@ import logging
 import datetime
 import os.path as osp
 
-
-def setup_log():
-    # Initialize logging
-    # simple_format = '%(levelname)s >>> %(message)s'
-    medium_format = (
-        '%(levelname)s : %(filename)s[%(lineno)d]'
-        ' >>> %(message)s'
-    )
-
-    # Reference:
-    #   http://59.125.118.185:8088/ALG/TestingTools/-/blob/master/model_performance_evaluation_tool/src/common/testingtools_log.py
-    formatter = logging.Formatter(
-                '[%(asctime)s] %(filename)s->%(funcName)s line:%(lineno)d [%(levelname)s]%(message)s')
-
-    medium_format_new = (
-        '[%(asctime)s] %(levelname)s : %(filename)s[%(lineno)d] %(funcName)s'
-        ' >>> %(message)s'
-    )
-
-    get_log_file = osp.join(osp.dirname(__file__), '../../train_kneron_split_gen.log')
-
-    logging.basicConfig(
-        filename=get_log_file,
-        filemode='w',
-        level=logging.INFO,
-        format=medium_format_new
-    )
-    logging.info('@{} created at {}'.format(
-        get_log_file,
-        datetime.datetime.now())
-    )
-    print('\n===== log_file: {}\n'.format(get_log_file))
+from dro_sfm.utils.setup_log import setup_log
 
 
 def generate_split():
-    dir_root = '/home/xuelian/slam/matterport'
+    dir_root = 'D:/slam/matterport'
 
     if not osp.exists(dir_root):
         raise ValueError(f'path not exist: {dir_root}')
@@ -135,8 +107,6 @@ def generate_split():
                 line = line.strip()
                 if line.startswith('#'):
                     continue
-                # if idx_line < 5:
-                #    print(f'{line}')
 
                 if 'nan' in line:
                     print(f'{line} @ line: {idx_line} @ {cam_pose_file}')
@@ -189,10 +159,8 @@ def generate_split():
                                 '{mat[3]} {mat[4]} {mat[5]} {y}\n'
                                 '{mat[6]} {mat[7]} {mat[8]} {z}\n'
                                 '0.000000 0.000000 0.000000 1.000000\n')
-            pass
-    
+
     image_dir = 'cam_left'
-    
     n_frame_missing_pose_info = 0
 
     with open(osp.join(dir_save, 'train_all_list.txt'), 'w') as f_train, \
@@ -213,7 +181,7 @@ def generate_split():
                         f_test.write(f'{subdirs_test[0]}/{image_dir} {item}\n')
             else:
                 logging.warning(f'path not exist: {case_dir}')
-                    
+
             # train_val_test part
             n_case = len(subdirs_train_val_test)
             for id_case in range(n_case):
@@ -239,17 +207,13 @@ def generate_split():
                     # test
                     for item in image_names[-100:]:
                         f_test.write(f'{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
-                    
-                    pass
                 else:
-                    logging.warning(f'path not exist: {case_dir}')            
-            pass
+                    logging.warning(f'path not exist: {case_dir}')
     print(f'n_frame_missing_pose_info: {n_frame_missing_pose_info}')
-    pass
 
 
 if __name__ == '__main__':
-    setup_log()
+    setup_log('kneron_train_split_gen.log')
     time_beg_matterport_split_gen = time.time()
 
     generate_split()

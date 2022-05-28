@@ -31,7 +31,7 @@ datasets:
     augmentation:
         image_shape: (192, 640)
     train:
-        batch_size: 4   
+        batch_size: 4
         dataset: ['KITTI']
         path: ['/home/xuelian/slam/KITTI_tiny']
         split: ['kitti_tiny.txt']
