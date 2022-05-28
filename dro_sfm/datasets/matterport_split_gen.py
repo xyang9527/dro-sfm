@@ -52,14 +52,9 @@ import os.path as osp
 import sys
 lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
-import datetime
 import numpy as np
-
 import time
 import logging
-import datetime
-import os.path as osp
-
 from dro_sfm.utils.setup_log import setup_log
 
 

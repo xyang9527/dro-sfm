@@ -70,7 +70,14 @@ class MatterportDataset(Dataset):
     def __init__(self, root_dir, split, data_transform=None,
                  forward_context=0, back_context=0, strides=(1,),
                  depth_type=None, **kwargs):
-        logging.warning(f'__init__({root_dir}, {split}, data_transform={data_transform},\n  {forward_context}, {back_context}, {strides},\n  depth_type={depth_type}, ..)')
+        logging.warning(f'__init__('
+                        f'\n  root_dir={root_dir},'
+                        f'\n  split={split},'
+                        f'\n  data_transform={data_transform},'
+                        f'\n  forward_context={forward_context},'
+                        f'\n  back_context={back_context},'
+                        f'\n  strides={strides},'
+                        f'\n  depth_type={depth_type}, ..)')
         super().__init__()
         # Asserts
         # assert depth_type is None or depth_type == '', \
