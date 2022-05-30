@@ -138,6 +138,8 @@ def generate_split():
                     # https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
                     #     Maths - Conversion Quaternion to Matrix
                     two_s = 2.0 / np.dot(np.array([r, i, j, k]), np.array([r, i, j, k]).transpose())
+                    if np.fabs(two_s - 2.0) > 1e-5:
+                        logging.warning(f'  two_s: {two_s:.6f}')
                     mat = np.array([
                             1 - two_s * (j * j + k * k),
                             two_s * (i * j - k * r),
@@ -169,8 +171,8 @@ def generate_split():
                         path_jpg = osp.join(dir_root, subdirs_test[0], image_dir, item)
                         path_txt = path_jpg.replace('cam_left', 'pose').replace('.jpg', '.txt')
                         if not osp.exists(path_txt):
-                            print(f'skip {item} {path_jpg} as missing {path_txt}')
-                            logging.info(f'skip {item} {path_jpg} as missing {path_txt}')
+                            print(f'skip {item} as missing {path_txt}')
+                            logging.info(f'skip {item} as missing {path_txt}')
                             n_frame_missing_pose_info += 1
                             continue
                         f_test.write(f'{subdirs_test[0]}/{image_dir} {item}\n')

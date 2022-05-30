@@ -3,7 +3,7 @@ name: 'matterport_gt'
 save:
     folder: './results'
 arch:
-    max_epochs: 100
+    max_epochs: 10000
 checkpoint:
     save_top_k: 10
     monitor: 'abs_rel_pp_gt'

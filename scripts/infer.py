@@ -45,9 +45,9 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
             X = (u - cx) * Z / fx
             Y = (v - cy) * Z / fy
             points.append("%f %f %f %d %d %d 0\n" % (X, Y, Z, color[0], color[1], color[2]))
-            cloud[v, u, 0] = X
-            cloud[v, u, 1] = Y
-            cloud[v, u, 2] = Z
+            cloud[v, u, 0] = -Z
+            cloud[v, u, 1] = -Y
+            cloud[v, u, 2] = X
             cloud[v, u, 3] = float(color[0])
             cloud[v, u, 4] = float(color[1])
             cloud[v, u, 5] = float(color[2])
@@ -67,7 +67,6 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
             %s
             ''' % (len(points), "".join(points)))
     file.close()
-    print("save ply, fx:{}, fy:{}, cx:{}, cy:{}".format(fx, fy, cx, cy))
     return cloud
 
 
