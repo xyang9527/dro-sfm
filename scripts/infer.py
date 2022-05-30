@@ -36,7 +36,8 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0, is_scan
     # fx, fy, cx, cy = intr[0, 0], intr[1, 1], intr[0, 2], intr[1, 2]
     points = []
     h, w = depth.shape
-    cloud = np.zeros((h, w, 6), dtype=np.float32)
+    cloud = np.zeros((h*w, 6), dtype=np.float32)
+    n_valid = 0
     for v in range(rgb.shape[0]):
         for u in range(rgb.shape[1]):
             color = rgb[v, u] #rgb.getpixel((u, v))
@@ -73,16 +74,24 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0, is_scan
                     1  0  0
                     0 -1  0
             '''
-            cloud[v, u, 0] = -Z
-            cloud[v, u, 1] = X
-            cloud[v, u, 2] = -Y
-            cloud[v, u, 3] = float(color[0])
-            cloud[v, u, 4] = float(color[1])
-            cloud[v, u, 5] = float(color[2])
-            if is_scannet:
-                cloud[v, u, 0] = X
-                cloud[v, u, 1] = Y
-                cloud[v, u, 2] = Z
+
+            if Z >= 0:
+                if is_scannet:
+                    cloud[n_valid, 0] = X
+                    cloud[n_valid, 1] = Y
+                    cloud[n_valid, 2] = Z
+                    cloud[n_valid, 3] = float(color[0])
+                    cloud[n_valid, 4] = float(color[1])
+                    cloud[n_valid, 5] = float(color[2])
+                    n_valid += 1
+                else:
+                    cloud[n_valid, 0] = -Z
+                    cloud[n_valid, 1] = X
+                    cloud[n_valid, 2] = -Y
+                    cloud[n_valid, 3] = float(color[0])
+                    cloud[n_valid, 4] = float(color[1])
+                    cloud[n_valid, 5] = float(color[2])
+                    n_valid += 1
 
     file = open(ply_file, "w")
     file.write('''ply

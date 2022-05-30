@@ -58,7 +58,7 @@ def create_obj_cloud():
 
     pose_init = None
 
-    for idx_f in range(20):
+    for idx_f in range(0, 20, 5):
         name = f'{idx_f:06d}'
         data_color = load_image(osp.join(dir_root, f'color/{name}.jpg'))
         data_depth = load_scannet_depth(osp.join(dir_root, f'depth/{name}.png'))
@@ -71,14 +71,14 @@ def create_obj_cloud():
         data_depth_resized = cv2.resize(data_depth, data_color.size, interpolation = cv2.INTER_NEAREST)
         cloud = generate_pointcloud(np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy, file_cloud_ply, 1.0, True)
 
-        if idx_f > 0:
+        if idx_f >= 0:
             rel_pose = np.matmul(pose_init, np.linalg.inv(data_pose)) # v1
             rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose) # v2
 
-            cloud_xyz = cloud[:, :, :3]
-            cloud_rgb = cloud[:, :, 3:]
-            cloud_xyz = cloud_xyz.reshape((-1, 3))
-            cloud_rgb = cloud_rgb.reshape((-1, 3))
+            cloud_xyz = cloud[:, :3]
+            cloud_rgb = cloud[:, 3:]
+            # cloud_xyz = cloud_xyz.reshape((-1, 3))
+            # cloud_rgb = cloud_rgb.reshape((-1, 3))
 
             n = cloud_xyz.shape[0]
             cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n, 1)))))
