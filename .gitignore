@@ -111,3 +111,4 @@ test_inputs
 results/
 logs/
 log/
+nohup.out
