@@ -24,7 +24,7 @@ from dro_sfm.utils.logging import pcolor
 from dro_sfm.utils.setup_log import setup_log
 
 
-def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
+def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0, is_scannet=False):
     """
     Generate a colored point cloud in PLY format from a color and a depth image.
 
@@ -79,6 +79,10 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
             cloud[v, u, 3] = float(color[0])
             cloud[v, u, 4] = float(color[1])
             cloud[v, u, 5] = float(color[2])
+            if is_scannet:
+                cloud[v, u, 0] = X
+                cloud[v, u, 1] = Y
+                cloud[v, u, 2] = Z
 
     file = open(ply_file, "w")
     file.write('''ply
