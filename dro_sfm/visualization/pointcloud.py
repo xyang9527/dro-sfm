@@ -45,6 +45,35 @@ from scripts.infer import generate_pointcloud
   From IMU to Groundtruth
           Tig  q: [ 0, 0, 0, 1 ]
                p: [ 0, 0, -0.068 ]
+
+
+https://gazebosim.org/api/gazebo/6.0/spherical_coordinates.html
+  Coordinates for the world origin
+
+           gazebo                                       camera
+                                                     __________________ X
+           | Z                                       |\
+           |                                         | \
+           |                                         |  \
+           |                                         |   \
+           |______________                           |    \
+           /               Y                         |     \
+          /                                          |      \
+         /                                           |       \
+        /                                            |        \ Z
+       /                                             | Y
+        X
+
+          X ---------------------------------------  -Z
+          Y ---------------------------------------   X
+          Z ---------------------------------------  -Y
+
+cam_to_gazebo
+
+        0  0 -1
+        1  0  0
+        0 -1  0
+
 '''
 
 
