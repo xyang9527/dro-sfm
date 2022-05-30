@@ -45,6 +45,34 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
             X = (u - cx) * Z / fx
             Y = (v - cy) * Z / fy
             points.append("%f %f %f %d %d %d 0\n" % (X, Y, Z, color[0], color[1], color[2]))
+            '''
+            https://gazebosim.org/api/gazebo/6.0/spherical_coordinates.html
+            Coordinates for the world origin
+
+                          gazebo                                       camera
+                                                                        __________________ X
+                            | Z                                       |\
+                            |                                         | \
+                            |                                         |  \
+                            |                                         |   \
+                            |______________                           |    \
+                            /               Y                         |     \
+                           /                                          |      \
+                          /                                           |       \
+                         /                                            |        \ Z
+                        /                                             | Y
+                        X
+
+                            X ---------------------------------------  -Z
+                            Y ---------------------------------------   X
+                            Z ---------------------------------------  -Y
+
+            cam_to_gazebo
+
+                    0  0 -1
+                    1  0  0
+                    0 -1  0
+            '''
             cloud[v, u, 0] = -Z
             cloud[v, u, 1] = X
             cloud[v, u, 2] = -Y

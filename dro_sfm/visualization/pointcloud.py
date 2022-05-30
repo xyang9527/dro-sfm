@@ -205,8 +205,9 @@ def load_path(namelist):
     pose_init = data_col[0]['pose']
 
     n_case = len(data_col)
-    for idx_c in range(n_case):
+    for idx_c in range(1, n_case):
         pose_curr = data_col[idx_c]['pose']
+        pose_prev = data_col[idx_c - 1]['pose']
         name_curr = data_col[idx_c]['name']
 
         cloud = data_col[idx_c]['cloud']
@@ -215,23 +216,22 @@ def load_path(namelist):
         cloud_xyz = cloud_xyz.reshape((-1, 3))
         cloud_rgb = cloud_rgb.reshape((-1, 3))
 
-        logging.info(f'{name_curr} curr_pose:\n{pose_curr}\n')
+        # logging.info(f'{name_curr} curr_pose:\n{pose_curr}\n')
+
+        pose_prev_to_curr = np.matmul(pose_curr, np.linalg.inv(pose_prev))
+        pose_curr_to_prev = np.matmul(pose_prev, np.linalg.inv(pose_curr))
+        logging.info(f'{name_curr} prev_to_curr:\n{pose_prev_to_curr}\n')
+        logging.info(f'{name_curr} curr_to_prev:\n{pose_curr_to_prev}\n')
+        logging.info(f'{name_curr} prev_to_curr.inv:\n{np.linalg.inv(pose_prev_to_curr)}\n')
+        logging.info(f'{name_curr} prev:\n{pose_prev}')
+        logging.info(f'{name_curr} curr:\n{pose_curr}')
 
         # rel_poses = [np.matmul(np.linalg.inv(x), pose).astype(np.float32) for x in context_poses]
         pose_curr_to_init_gt = np.matmul(np.linalg.inv(pose_init), pose_curr).astype(np.float32)
-        logging.info(f'{name_curr} pose_curr_to_init_gt:\n{pose_curr_to_init_gt}\n')
+        # logging.info(f'{name_curr} pose_curr_to_init_gt:\n{pose_curr_to_init_gt}\n')
 
         pose_curr_to_init_cam = np.matmul(gazebo_param.get_gt2cam, pose_curr_to_init_gt)
-        logging.info(f'{name_curr} pose_curr_to_init_cam:\n{pose_curr_to_init_cam}\n')
-
-        coord_swap = np.array([
-            0.0, 0.0, -1.0, 0.0,
-            0.0, -1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 1.0]).reshape((4, 4))
-
-        pose_curr_to_init_cam_swap = np.matmul(pose_curr_to_init_cam, coord_swap)
-        logging.info(f'{name_curr} pose_curr_to_init_cam_swap:\n{pose_curr_to_init_cam_swap}')
+        # logging.info(f'{name_curr} pose_curr_to_init_cam:\n{pose_curr_to_init_cam}\n')
 
         n = cloud_xyz.shape[0]
         cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n, 1)))))
@@ -253,17 +253,105 @@ def load_path(namelist):
                 f_ou_local_gray.write(f'v {x} {y} {z}\n')
 
 
+def load_path_v2(namelist):
+    gazebo_param = GazeboParam()
+    data_col, data_save_dir = get_data(namelist, gazebo_param)
+
+    pose_init = data_col[0]['pose']
+
+    n_case = len(data_col)
+    for idx_c in range(1, n_case):
+        pose_curr = data_col[idx_c]['pose']
+        pose_prev = data_col[idx_c - 1]['pose']
+        name_curr = data_col[idx_c]['name']
+
+        cloud = data_col[idx_c]['cloud']
+        cloud_xyz = cloud[:, :, :3]
+        cloud_rgb = cloud[:, :, 3:]
+        cloud_xyz = cloud_xyz.reshape((-1, 3))
+        cloud_rgb = cloud_rgb.reshape((-1, 3))
+
+        n = cloud_xyz.shape[0]
+        cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n, 1)))))
+        pose_gt_to_curr = pose_curr
+        pose_gt_to_init = pose_init
+        pose_curr_to_init = np.matmul(pose_gt_to_init, np.linalg.inv(pose_gt_to_curr))
+        pose_curr_to_init_gt = np.matmul(pose_curr_to_init, gazebo_param.cam2gt)
+        cloud_xyz_align = np.dot(pose_curr_to_init_gt, cloud_xyz_hom)
+
+        cloud_xyz_align_t = np.transpose(cloud_xyz_align)
+        with open(osp.join(data_save_dir, f'v3_aligned_rgb_{name_curr}_{idx_c:04d}.obj'), 'wt') as f_ou_align_rgb:
+            for i in range(n):
+                x, y, z, w = cloud_xyz_align_t[i]
+                r, g, b = cloud_rgb[i]
+                f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
+
+
+def gen_list():
+    pose_dir = '/home/sigma/slam/matterport/test/matterport014_000/pose'
+    sorted_files = sorted(os.listdir(pose_dir))
+    for item in sorted_files[::10]:
+        # print(f'\'{osp.splitext(item)[0]}\',')
+        pass
+    pass
+
+
+def export_trajectory():
+    pass
+
 
 def create_obj_cloud():
     names = ['000542628000000', '000543008000000', '000543496000000', '000543976000000']
-    load_path(names)
+    names = ['000542628000000',
+            '000543360000000',
+            '000544048000000',
+            '000544712000000',
+            '000545368000000',
+            '000546008000000',
+            '000546648000000',
+            '000547312000000',
+            '000547840000000',
+            '000548340000000',
+            '000548868000000',
+            '000549400000000',
+            '000549932000000',
+            '000550472000000',
+            '000550996000000',
+            '000551504000000',
+            '000552020000000',
+            '000552520000000',
+            '000553028000000',
+            '000553528000000',
+            '000554052000000',
+            '000554604000000',
+            '000555100000000',
+            '000555592000000',
+            '000556112000000',
+            '000556612000000',
+            '000557108000000',
+            '000557592000000',
+            '000558112000000',
+            '000558772000000',
+            '000559456000000',
+            '000560148000000',
+            '000560824000000',
+            '000561488000000',
+            '000562168000000',
+            '000562976000000',
+            '000563884000000',
+            '000564664000000',
+            '000565328000000',
+            '000565932000000']
+    gen_list()
+    load_path(names[:10])
+    load_path_v2(names[:10])
 
 
 if __name__ == '__main__':
     setup_log('kneron_pointcloud.log')
     time_beg_pointcloud = time.time()
 
-    np.set_printoptions(precision=3, suppress=True)
+    np.set_printoptions(precision=6, suppress=True)
     create_obj_cloud()
 
     time_end_pointcloud = time.time()

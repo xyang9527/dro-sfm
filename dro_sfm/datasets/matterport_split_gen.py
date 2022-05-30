@@ -88,6 +88,7 @@ def generate_split():
 
     for item in subdirs_pose:
         cam_pose_file = osp.join(dir_root, item, 'cam_pose.txt')
+        cam_traj_file = osp.join(dir_root, item, 'traj_cam_pose.obj')
         if not osp.exists(cam_pose_file):
             logging.warning(f'file not exist: {cam_pose_file}')
             continue
@@ -96,8 +97,9 @@ def generate_split():
         if not osp.exists(pose_dir):
             os.mkdir(pose_dir)
 
-        with open(cam_pose_file, 'r') as f_in:
+        with open(cam_pose_file, 'r') as f_in, open(cam_traj_file, 'w') as f_ou_obj:
             lines = f_in.readlines()
+            n_valid = 0
             for idx_line, line in enumerate(lines):
                 line = line.strip()
                 if line.startswith('#'):
@@ -111,8 +113,11 @@ def generate_split():
                 if len(words) != 8:
                     print(f'unexpected format: {words}')
                 params = [float(v) for v in words[1:]]
-                # x, y, z, qx, qy, qz, qw = params
                 x, y, z, r, i, j, k = params
+
+                n_valid += 1
+                f_ou_obj.write(f'v {x} {y} {z}\n')
+
                 with open(osp.join(pose_dir, words[0].zfill(15) + '.txt'), 'w') as f_ou:
                     # ref: dro_sfm/geometry/pose_trans.py   def quaternion_to_matrix(quaternions)
                     '''
@@ -156,6 +161,42 @@ def generate_split():
                                f'{mat[3]} {mat[4]} {mat[5]} {y}\n'
                                f'{mat[6]} {mat[7]} {mat[8]} {z}\n'
                                f'0.000000 0.000000 0.000000 1.000000\n')
+
+            for idx_p in range(1, n_valid):
+                f_ou_obj.write(f'f {idx_p} {idx_p+1} {idx_p+1}\n')
+
+        # ==================================================================== #
+        # groundtruth.txt
+        gt_pose_file = osp.join(dir_root, item, 'groundtruth.txt')
+        gt_traj_file = osp.join(dir_root, item, 'traj_groundtruth.obj')
+        if not osp.exists(cam_traj_file):
+            logging.warning(f'file not exist: {cam_pose_file}')
+            continue
+
+        with open(gt_pose_file, 'r') as f_in, open(gt_traj_file, 'w') as f_ou_obj:
+            lines = f_in.readlines()
+            n_valid = 0
+            for idx_line, line in enumerate(lines):
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+
+                if 'nan' in line:
+                    print(f'{line} @ line: {idx_line} @ {cam_pose_file}')
+                    continue
+
+                words = line.split()
+                if len(words) != 8:
+                    print(f'unexpected format: {words}')
+                params = [float(v) for v in words[1:]]
+                x, y, z, r, i, j, k = params
+
+                n_valid += 1
+                f_ou_obj.write(f'v {x} {y} {z}\n')
+
+            for idx_p in range(1, n_valid):
+                f_ou_obj.write(f'f {idx_p} {idx_p+1} {idx_p+1}\n')
+        # ==================================================================== #
 
     image_dir = 'cam_left'
     n_frame_missing_pose_info = 0
