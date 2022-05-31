@@ -116,6 +116,10 @@ class GazeboPose:
         two_s = 2.0 / np.dot(np.array([r, i, j, k]), np.array([r, i, j, k]).transpose())
         logging.warning(f'  two_s: {two_s:.6f}')
 
+        # References:
+        #     https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
+        #         Conversion Quaternion to Matrix
+        #     def quaternion_to_matrix(quaternions) @ dro_sfm/geometry/pose_trans.py
         self.R = np.array([
                 1 - two_s * (j * j + k * k),
                 two_s * (i * j - k * r),
@@ -235,13 +239,28 @@ def load_data(names):
 
         n = cloud_xyz.shape[0]
         cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n, 1)))))
+
         cloud_xyz_hom_robot = np.dot(gazebo_param.get_cam2gazeborobot, cloud_xyz_hom)
         cloud_xyz_hom_world = np.dot(gazebo_param.get_gazeborobot2gazeboworld, cloud_xyz_hom_robot)
         logging.info(f'    use cloud_xyz_hom_world')
-        cloud_xyz_align = np.dot(rel_pose, cloud_xyz_hom_world)
+
+        trans_in_all = rel_pose # v1                                                                          F
+        trans_in_all = np.linalg.inv(rel_pose) # v2                                                           F
+        trans_in_all = np.matmul(rel_pose, gazebo_param.get_cam2gazeborobot) # v3                             F
+        trans_in_all = np.matmul(gazebo_param.get_cam2gazeborobot, rel_pose) # v4                             F
+        trans_in_all = np.matmul(np.linalg.inv(rel_pose), gazebo_param.get_cam2gazeborobot) # v5              F
+        trans_in_all = np.matmul(gazebo_param.get_cam2gazeborobot, np.linalg.inv(rel_pose)) # v6              F
+        trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)) # v7                                        F
+        trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot))) # v8    F
+        trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot))) # v9    F
+        trans_in_all = np.matmul(np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot), rel_pose) # v10                                       F
+        trans_in_all = np.matmul(np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v11   F
+        trans_in_all = np.matmul(np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v12   F
+
+        cloud_xyz_align = np.dot(trans_in_all, cloud_xyz_hom)
         cloud_xyz_align_t = np.transpose(cloud_xyz_align)
 
-        with open(osp.join(dir_cloud_obj, f'v2_{name}.obj'), 'w') as f_ou_align_rgb:
+        with open(osp.join(dir_cloud_obj, f'v12_{name}.obj'), 'w') as f_ou_align_rgb:
             for i in range(n):
                 x, y, z, w = cloud_xyz_align_t[i]
                 r, g, b = cloud_rgb[i]
