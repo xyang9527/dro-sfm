@@ -52,7 +52,7 @@ from scripts.infer import generate_pointcloud
 https://gazebosim.org/api/gazebo/6.0/spherical_coordinates.html
   Coordinates for the world origin
 
-           gazebo                                       camera
+        gazebo robot                             camera
                                                      __________________ X
            | Z                                       |\
            |                                         | \
@@ -64,17 +64,49 @@ https://gazebosim.org/api/gazebo/6.0/spherical_coordinates.html
          /                                           |       \
         /                                            |        \ Z
        /                                             | Y
-        X
+       X
 
           X ---------------------------------------  -Z
           Y ---------------------------------------   X
           Z ---------------------------------------  -Y
 
-cam_to_gazebo
+cam_to_gazebo_robot
 
-        0  0 -1
-        1  0  0
-        0 -1  0
+        0  0 -1  0
+        1  0  0  0
+        0 -1  0  0
+        0  0  0  1
+
+
+https://ux.stackexchange.com/questions/79561/why-are-x-y-and-z-axes-represented-by-red-green-and-blue
+  /media/figs/matterport_world_coord.png
+  /media/figs/matterport_robot_vs_world.png
+
+
+           gazebo world                              gazebo robot
+                                                         Z
+               | Z                                       |
+               |                                         |
+               |                                         |
+ X             |                                         |
+ ______________|                                         |_____________ Y
+               /                                        /
+              /                                        /
+             /                                        /
+            /                                        /
+           /                                        / X
+           Y
+
+           X --------------------------------------- -Y
+           Y ---------------------------------------  X
+           Z ---------------------------------------  Z
+
+gazebo_robot_to_gazebo_world
+
+        0 -1  0  0
+        1  0  0  0
+        0  0  1  0
+        0  0  0  1
 '''
 
 
@@ -111,6 +143,18 @@ class GazeboParam:
         self.cam2gt = np.matmul(self.imu2gt, self.cam2imu)
         self.gt2cam = np.linalg.inv(self.cam2gt)
 
+        self.cam2gazeborobot = np.array([
+            [ 0.0,  0.0, -1.0, 0.0],
+            [ 1.0,  0.0,  0.0, 0.0],
+            [ 0.0, -1.0,  0.0, 0.0],
+            [ 0.0,  0.0,  0.0, 1.0]], dtype=np.float)
+
+        self.gazeborobot2gazeboworld = np.array([
+            [ 0.0, -1.0,  0.0, 0.0],
+            [ 1.0,  0.0,  0.0, 0.0],
+            [ 0.0,  0.0,  1.0, 0.0],
+            [ 0.0,  0.0,  0.0, 1.0]], dtype=np.float)
+
         logging.info(f'\n========== GazeboParam ==========')
         logging.info(f'  cam2imu:\n{self.cam2imu}\n')
         logging.info(f'  imu2gt: \n{self.imu2gt}\n')
@@ -124,6 +168,14 @@ class GazeboParam:
     @property
     def get_gt2cam(self):
         return self.gt2cam
+
+    @property
+    def get_cam2gazeborobot(self):
+        return self.cam2gazeborobot
+
+    @property
+    def get_gazeborobot2gazeboworld(self):
+        return self.gazeborobot2gazeboworld
 
 
 def load_matterport_depth(d_file):
@@ -147,6 +199,8 @@ def load_data(names):
     fy = intr_color[1][1]
     cx = intr_color[0][2]
     cy = intr_color[1][2]
+
+    gazebo_param = GazeboParam()
 
     dir_root = '/home/sigma/slam/matterport/test/matterport014_000'
     dir_cloud_ply = osp.join(dir_root, 'demo/ply')
@@ -181,7 +235,10 @@ def load_data(names):
 
         n = cloud_xyz.shape[0]
         cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n, 1)))))
-        cloud_xyz_align = np.dot(rel_pose, cloud_xyz_hom)
+        cloud_xyz_hom_robot = np.dot(gazebo_param.get_cam2gazeborobot, cloud_xyz_hom)
+        cloud_xyz_hom_world = np.dot(gazebo_param.get_gazeborobot2gazeboworld, cloud_xyz_hom_robot)
+        logging.info(f'    use cloud_xyz_hom_world')
+        cloud_xyz_align = np.dot(rel_pose, cloud_xyz_hom_world)
         cloud_xyz_align_t = np.transpose(cloud_xyz_align)
 
         with open(osp.join(dir_cloud_obj, f'v2_{name}.obj'), 'w') as f_ou_align_rgb:
