@@ -24,7 +24,7 @@ from dro_sfm.utils.logging import pcolor
 from dro_sfm.utils.setup_log import setup_log
 
 
-def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0, is_scannet=False):
+def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
     """
     Generate a colored point cloud in PLY format from a color and a depth image.
 
@@ -42,57 +42,17 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0, is_scan
         for u in range(rgb.shape[1]):
             color = rgb[v, u] #rgb.getpixel((u, v))
             Z = depth[v, u] / scale
-            if Z == 0: continue
-            if Z < 0: continue
+            if Z <= 0: continue
             X = (u - cx) * Z / fx
             Y = (v - cy) * Z / fy
             points.append("%f %f %f %d %d %d 0\n" % (X, Y, Z, color[0], color[1], color[2]))
-            '''
-            https://gazebosim.org/api/gazebo/6.0/spherical_coordinates.html
-            Coordinates for the world origin
-
-                          gazebo                                       camera
-                                                                        __________________ X
-                            | Z                                       |\
-                            |                                         | \
-                            |                                         |  \
-                            |                                         |   \
-                            |______________                           |    \
-                            /               Y                         |     \
-                           /                                          |      \
-                          /                                           |       \
-                         /                                            |        \ Z
-                        /                                             | Y
-                        X
-
-                            X ---------------------------------------  -Z
-                            Y ---------------------------------------   X
-                            Z ---------------------------------------  -Y
-
-            cam_to_gazebo
-
-                    0  0 -1
-                    1  0  0
-                    0 -1  0
-            '''
-
-            if Z >= 0:
-                if is_scannet:
-                    cloud[n_valid, 0] = X
-                    cloud[n_valid, 1] = Y
-                    cloud[n_valid, 2] = Z
-                    cloud[n_valid, 3] = float(color[0])
-                    cloud[n_valid, 4] = float(color[1])
-                    cloud[n_valid, 5] = float(color[2])
-                    n_valid += 1
-                else:
-                    cloud[n_valid, 0] = -Z
-                    cloud[n_valid, 1] = X
-                    cloud[n_valid, 2] = -Y
-                    cloud[n_valid, 3] = float(color[0])
-                    cloud[n_valid, 4] = float(color[1])
-                    cloud[n_valid, 5] = float(color[2])
-                    n_valid += 1
+            cloud[n_valid, 0] = X
+            cloud[n_valid, 1] = Y
+            cloud[n_valid, 2] = Z
+            cloud[n_valid, 3] = float(color[0])
+            cloud[n_valid, 4] = float(color[1])
+            cloud[n_valid, 5] = float(color[2])
+            n_valid += 1
 
     file = open(ply_file, "w")
     file.write('''ply

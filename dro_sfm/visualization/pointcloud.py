@@ -1,3 +1,5 @@
+# -*- coding=utf-8 -*-
+
 import os
 import os.path as osp
 import sys
@@ -9,7 +11,6 @@ import numpy as np
 import subprocess
 
 from dro_sfm.utils.setup_log import setup_log
-# from dro_sfm.utils.depth import load_depth
 from dro_sfm.utils.image import load_image
 from scripts.infer import generate_pointcloud
 
@@ -73,7 +74,6 @@ cam_to_gazebo
         0  0 -1
         1  0  0
         0 -1  0
-
 '''
 
 
@@ -82,6 +82,7 @@ class GazeboPose:
         r, i, j, k = qx, qy, qz, qw
         two_s = 2.0 / np.dot(np.array([r, i, j, k]), np.array([r, i, j, k]).transpose())
         logging.warning(f'  two_s: {two_s:.6f}')
+
         self.R = np.array([
                 1 - two_s * (j * j + k * k),
                 two_s * (i * j - k * r),
@@ -147,9 +148,11 @@ class GazeboParam:
 
 def load_depth(d_file):
     # ref: dro_sfm/utils/depth.py  def load_depth(file)
-        depth_png = np.array(load_image(d_file), dtype=int)
-        assert (np.max(depth_png) > 255), 'Wrong .png depth file'
-        return depth_png.astype(np.float) / 1000.0
+    depth_png = np.array(load_image(d_file), dtype=int)
+    assert (np.max(depth_png) > 255), 'Wrong .png depth file'
+    depth = depth_png.astype(np.float) / 1000.0
+    depth[depth_png == 0] = -1.
+    return depth
 
 
 def get_data(namelist, gazebo_param):
@@ -167,9 +170,6 @@ def get_data(namelist, gazebo_param):
         file_depth = osp.join(dir_case, f'depth/{name}.png')
         file_pose = osp.join(dir_case, f'pose/{name}.txt')
 
-        file_cloud_obj = osp.join(dir_case, f'demo/cloud_obj/{name}.obj')
-        file_cloud_ply = osp.join(dir_case, f'demo/cloud_ply/{name}.ply')
-
         files_read = [file_color, file_depth, file_pose]
         for item in files_read:
             if not osp.exists(item):
@@ -179,6 +179,9 @@ def get_data(namelist, gazebo_param):
         subprocess.call(['cp', file_color, file_color.replace('cam_left', 'demo')])
         subprocess.call(['cp', file_depth, file_depth.replace('depth', 'demo')])
         subprocess.call(['cp', file_pose, file_pose.replace('pose', 'demo')])
+
+        file_cloud_obj = osp.join(dir_case, f'demo/cloud_obj/{name}.obj')
+        file_cloud_ply = osp.join(dir_case, f'demo/cloud_ply/{name}.ply')
 
         files_write = [file_cloud_obj, file_cloud_ply]
         for item in files_write:
@@ -211,10 +214,8 @@ def load_path(namelist):
         name_curr = data_col[idx_c]['name']
 
         cloud = data_col[idx_c]['cloud']
-        cloud_xyz = cloud[:, :, :3]
-        cloud_rgb = cloud[:, :, 3:]
-        cloud_xyz = cloud_xyz.reshape((-1, 3))
-        cloud_rgb = cloud_rgb.reshape((-1, 3))
+        cloud_xyz = cloud[:, :3]
+        cloud_rgb = cloud[:, 3:]
 
         # logging.info(f'{name_curr} curr_pose:\n{pose_curr}\n')
 
@@ -262,14 +263,11 @@ def load_path_v2(namelist):
     n_case = len(data_col)
     for idx_c in range(1, n_case):
         pose_curr = data_col[idx_c]['pose']
-        pose_prev = data_col[idx_c - 1]['pose']
         name_curr = data_col[idx_c]['name']
 
         cloud = data_col[idx_c]['cloud']
-        cloud_xyz = cloud[:, :, :3]
-        cloud_rgb = cloud[:, :, 3:]
-        cloud_xyz = cloud_xyz.reshape((-1, 3))
-        cloud_rgb = cloud_rgb.reshape((-1, 3))
+        cloud_xyz = cloud[:, :3]
+        cloud_rgb = cloud[:, 3:]
 
         n = cloud_xyz.shape[0]
         cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n, 1)))))
@@ -277,7 +275,10 @@ def load_path_v2(namelist):
         pose_gt_to_init = pose_init
         pose_curr_to_init = np.matmul(pose_gt_to_init, np.linalg.inv(pose_gt_to_curr))
         pose_curr_to_init_gt = np.matmul(pose_curr_to_init, gazebo_param.cam2gt)
-        cloud_xyz_align = np.dot(pose_curr_to_init_gt, cloud_xyz_hom)
+
+        rel_pose = np.matmul(np.linalg.inv(pose_init), pose_curr)
+
+        cloud_xyz_align = np.dot(rel_pose, cloud_xyz_hom)
 
         cloud_xyz_align_t = np.transpose(cloud_xyz_align)
         with open(osp.join(data_save_dir, f'v3_aligned_rgb_{name_curr}_{idx_c:04d}.obj'), 'wt') as f_ou_align_rgb:
@@ -285,19 +286,6 @@ def load_path_v2(namelist):
                 x, y, z, w = cloud_xyz_align_t[i]
                 r, g, b = cloud_rgb[i]
                 f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
-
-
-def gen_list():
-    pose_dir = '/home/sigma/slam/matterport/test/matterport014_000/pose'
-    sorted_files = sorted(os.listdir(pose_dir))
-    for item in sorted_files[::10]:
-        # print(f'\'{osp.splitext(item)[0]}\',')
-        pass
-    pass
-
-
-def export_trajectory():
-    pass
 
 
 def create_obj_cloud():
@@ -342,8 +330,7 @@ def create_obj_cloud():
             '000564664000000',
             '000565328000000',
             '000565932000000']
-    gen_list()
-    load_path(names[:10])
+    # load_path(names[:10])
     load_path_v2(names[:10])
 
 

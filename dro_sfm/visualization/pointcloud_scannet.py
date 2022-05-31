@@ -1,3 +1,5 @@
+# -*- coding=utf-8 -*-
+
 import os
 import os.path as osp
 import sys
@@ -10,7 +12,6 @@ import subprocess
 import cv2
 
 from dro_sfm.utils.setup_log import setup_log
-#from dro_sfm.utils.depth import load_depth
 from dro_sfm.utils.image import load_image
 from scripts.infer import generate_pointcloud
 
@@ -19,7 +20,6 @@ from scripts.infer import generate_pointcloud
     color/000000.jpg 1296x968
     depth/000000.png 640x480
 """
-
 
 def load_scannet_depth(file):
     # ref: def read_png_depth(file) @ dro_sfm/datasets/scannet_dataset.py
@@ -30,9 +30,10 @@ def load_scannet_depth(file):
 
 
 def create_obj_cloud():
+    logging.warning(f'create_obj_cloud()')
     dir_root = '/home/sigma/slam/scannet_train_data/scene0000_00'
     n = len(os.listdir(osp.join(dir_root, 'color')))
-    print(f'n:  {n}')
+    logging.info(f'  {n} files in {dir_root}')
 
     extr_color = np.genfromtxt(osp.join(dir_root, 'intrinsic/extrinsic_color.txt'))
     extr_depth = np.genfromtxt(osp.join(dir_root, 'intrinsic/extrinsic_depth.txt'))
@@ -58,22 +59,20 @@ def create_obj_cloud():
             os.makedirs(item_dir)
 
     pose_init = None
-
     for idx_f in range(0, 1000, 90):
-        print(f'idx_f: {idx_f}')
+        print(f'  process frame: {idx_f:6d} ..')
         name = f'{idx_f:06d}'
         data_color = load_image(osp.join(dir_root, f'color/{name}.jpg'))
         data_depth = load_scannet_depth(osp.join(dir_root, f'depth/{name}.png'))
         data_pose = np.genfromtxt(osp.join(dir_root, f'pose/{name}.txt'))
 
         subprocess.call(['cp', osp.join(dir_root, f'color/{name}.jpg'), osp.join(dir_cloud_jpg, f'{name}.jpg')])
-
         if idx_f == 0:
             pose_init = data_pose
 
         file_cloud_ply = osp.join(dir_cloud_ply, f'{name}.ply')
         data_depth_resized = cv2.resize(data_depth, data_color.size, interpolation = cv2.INTER_NEAREST)
-        cloud = generate_pointcloud(np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy, file_cloud_ply, 1.0, True)
+        cloud = generate_pointcloud(np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy, file_cloud_ply, 1.0)
 
         # rel_pose = np.matmul(pose_init, np.linalg.inv(data_pose)) # v1
         rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose) # v2
@@ -102,3 +101,4 @@ if __name__ == '__main__':
 
     time_end_pointcloud = time.time()
     print(f'pointcloud_scannet.py elapsed {time_end_pointcloud - time_beg_pointcloud:.6f} seconds.')
+    logging.info(f'pointcloud_scannet.py elapsed {time_end_pointcloud - time_beg_pointcloud:.6f} seconds.')
