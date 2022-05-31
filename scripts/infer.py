@@ -43,6 +43,7 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0, is_scan
             color = rgb[v, u] #rgb.getpixel((u, v))
             Z = depth[v, u] / scale
             if Z == 0: continue
+            if Z < 0: continue
             X = (u - cx) * Z / fx
             Y = (v - cy) * Z / fy
             points.append("%f %f %f %d %d %d 0\n" % (X, Y, Z, color[0], color[1], color[2]))
