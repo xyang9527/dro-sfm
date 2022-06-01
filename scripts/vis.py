@@ -384,7 +384,8 @@ class InteractiveViz(Process):
 
         renwin = vtk.vtkRenderWindow()
         renwin.SetWindowName("Point Cloud Viewer")
-        renwin.SetSize(800, 600)
+        # renwin.SetSize(800, 600)
+        renwin.SetSize(640, 480)
         renwin.AddRenderer(renderer)
 
         interactor = vtk.vtkRenderWindowInteractor()

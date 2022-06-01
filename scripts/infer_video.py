@@ -1,5 +1,6 @@
 import sys
 import os
+import os.path as osp
 lib_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(lib_dir)
 
@@ -403,7 +404,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
         files = files[::sample_rate]
 
     files.sort()
-    files = files[:100]
+    files = files[:120]
     print('Found total {} files'.format(len(files)))
     assert len(files) > 2
 
@@ -498,20 +499,33 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     files = sorted(glob(os.path.join(save_vis_root, "*.jpg")))
     image_hw = cv2.imread(files[0]).shape
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    fps = 5.0
+    fps = 4.0
     gap_size = 40
-    video_writer = cv2.VideoWriter(output_vis_video, fourcc, 30.0, ((image_hw[1] + gap_size) * 2, (image_hw[0] + gap_size) * 2))
-    canvas = np.full(((image_hw[0] + gap_size) * 2, (image_hw[1] + gap_size) * 2, 3), 128, np.uint8)
-    for file in files:
+    video_writer = cv2.VideoWriter(output_vis_video, fourcc, fps, (image_hw[1]*2+gap_size, image_hw[0]*2+gap_size*2))
+    canvas = np.full((image_hw[0]*2+gap_size*2, image_hw[1]*2+gap_size, 3), 128, np.uint8)
+    cv2.putText(img=canvas, text='Left Camera', org=(300, 510), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Camera Trajectory (Wrong GT)', org=(830, 510), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Predicted Depth', org=(300, 1030), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Groundtruth Depth', org=(830, 1030), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+
+    for idx_f, file in enumerate(files):
         color_file = file.replace('infer_video/tmp/depth_vis', 'cam_left')
         data_color = cv2.imread(color_file)
-        canvas[0:image_hw[0], 0:image_hw[1], :] = data_color        
+        canvas[0:image_hw[0], 0:image_hw[1], :] = data_color
 
         data_depth = cv2.imread(file)
         canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, 0:image_hw[1], :] = data_depth
 
         data_depth_gt = cv2.imread(file.replace('depth_vis', 'depth_gt_vis'))
         canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_depth_gt
+
+        traj_file = osp.join(osp.dirname(osp.dirname(file)), f'renders/{idx_f:06d}.png')
+        if osp.exists(traj_file):
+            data_traj = cv2.imread(traj_file)
+            canvas[0:image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
+        else:
+            print(f'  missing {traj_file}')
+
 
         video_writer.write(canvas)
     video_writer.release()
