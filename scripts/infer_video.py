@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--checkpoint', type=str, help='Checkpoint (.ckpt)', required=True)
     parser.add_argument('--input', type=str, help='Input folder or video', required=True)
     parser.add_argument('--output', type=str, help='Output folder', required=True)
-    parser.add_argument('--data_type', type=str, choices=['kitti', 'indoor', 'general'], required=True)
+    parser.add_argument('--data_type', type=str, choices=['kitti', 'indoor', 'matterport', 'general'], required=True)
     parser.add_argument('--sample_rate', type=int, default=10, help='sample rate', required=True)
     parser.add_argument('--ply_mode', action="store_true", help='vis point cloud')
 
@@ -56,6 +56,10 @@ def get_intrinsics(image_shape_raw, image_shape, data_type):
         intr = np.array([1170.187988, 0.000000, 647.750000, 
                          0.000000, 1170.187988, 483.750000,
                          0.000000, 0.000000, 1.000000], dtype=np.float32).reshape(3, 3)
+    elif data_type == 'matterport':
+        intr = np.array([530.4669406576809,   0.0,             320.5,
+                         0.0,               530.4669406576809, 240.5,
+                         0.0,                 0.0,               1.0], dtype=np.float32).reshape(3, 3)
     else:
         # print("fake intrinsics")
         w, h = image_shape_raw
@@ -73,13 +77,13 @@ def get_intrinsics(image_shape_raw, image_shape, data_type):
     # Scale intrinsics
     intr[0] *= out_w / orig_w
     intr[1] *= out_h / orig_h
-    
+
     return  intr
 
 
 @torch.no_grad()
 def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape, data_type,
-                        save_depth_root, save_vis_root):
+                        save_depth_root, save_vis_root, save_model=False):
     """
     Process a single input file to produce and save visualization
 
@@ -121,6 +125,10 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
     batch = {'rgb': image, 'rgb_context': image_ref, "intrinsics": intrinsics}
 
     output = model_wrapper(batch)
+    if save_model:
+        # torch.onnx.export(model_wrapper, batch, "/home/sigma/slam/matterport/test/matterport014_000/infer_video/model.onnx")
+        pass
+
     inv_depth = output['inv_depths'][0] #(1, 1, h, w)
     depth = inv2depth(inv_depth)[0, 0].detach().cpu().numpy() #(h, w)
 
@@ -128,13 +136,13 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
     pose23 = output['poses'][1].mat[0].detach().cpu().numpy() #(4, 4)  #TODO check: targe -> ref[0]
 
     vis_depth = viz_inv_depth(inv_depth[0]) * 255
-    
+
     vis_depth_upsample = cv2.resize(vis_depth, image_raw_wh, interpolation=cv2.INTER_LINEAR)
     write_image(os.path.join(save_vis_root, f"{base_name}.jpg"), vis_depth_upsample)
-    
+
     depth_upsample = cv2.resize(depth, image_raw_wh, interpolation=cv2.INTER_NEAREST)
     np.save(os.path.join(save_depth_root, f"{base_name}.npy"), depth_upsample)
-    
+
     return depth, pose21, pose23, intrinsics[0].detach().cpu().numpy(), image[0].permute(1, 2, 0).detach().cpu().numpy() * 255
 
 
@@ -145,7 +153,7 @@ def start_visualization(queue_g, cinematic=False, render_path=None, clear_points
     # visualization is a Process Object
     viz = vis.InteractiveViz(queue_g, cinematic, render_path, clear_points, is_kitti=is_kitti)
     viz.start()
-    
+
     return viz
 
 
@@ -159,6 +167,7 @@ def get_coordinate_xy(coord_shape, device):
                        x_coord.unsqueeze(0).repeat(bs, 1, 1)
 
     return x_coord, y_coord
+
 
 def reproject_with_depth_batch(depth_ref, depth_src, ref_pose, src_pose, xy_coords):
     """project the reference point cloud into the source view, then project back"""
@@ -240,6 +249,7 @@ def check_geometric_consistency_batch(depth_ref, depth_src, ref_pose, src_pose, 
 
     return mask, depth_reprojected
 
+
 def gemo_filter_fusion(depth_ref, depth_srcs, ref_pose, src_poses, intr, thres_view):
     depth_ref = torch.from_numpy(depth_ref).unsqueeze(0).to("cuda") #(1, H, W)
     ref_pose = torch.from_numpy(ref_pose).unsqueeze(0).to("cuda") #(1, 4, 4)
@@ -247,14 +257,13 @@ def gemo_filter_fusion(depth_ref, depth_srcs, ref_pose, src_poses, intr, thres_v
 
     depth_srcs = [torch.from_numpy(depth_src).unsqueeze(0).to("cuda") for depth_src in depth_srcs]
     src_poses = [torch.from_numpy(src_pose).unsqueeze(0).to("cuda") for src_pose in src_poses]
-    
+
     xy_coords = get_coordinate_xy(depth_ref.shape, device=depth_ref.device)
-    
+
     params = {"thres_p_dist": 1, "thres_d_diff": 0.001}
-    
+
     geo_mask_sum = torch.zeros_like(depth_ref)
     all_srcview_depth_ests = torch.zeros_like(depth_ref)
-
 
     for depth_src, src_pose in zip(depth_srcs, src_poses):
         geo_mask, depth_reprojected = check_geometric_consistency_batch( \
@@ -265,13 +274,12 @@ def gemo_filter_fusion(depth_ref, depth_srcs, ref_pose, src_poses, intr, thres_v
             thres_d_diff=params["thres_d_diff"])
         geo_mask_sum += geo_mask.float()
         all_srcview_depth_ests += depth_reprojected
-    
-    
+
      # fusion
     geo_mask = (geo_mask_sum - thres_view) >= 0
     depth_ests_averaged = (all_srcview_depth_ests + depth_ref) / (geo_mask_sum + 1)
     depth_ests_averaged = depth_ests_averaged * geo_mask
-    
+
     return depth_ests_averaged[0].detach().cpu().numpy()
 
 
@@ -279,15 +287,14 @@ def parse_video(video_file, save_root, sample_rate=10):
     logging.warning(f'parse_video({video_file}, {save_root}, {sample_rate})')
 
     os.makedirs(save_root, exist_ok=True)
-    
     cap = cv2.VideoCapture(video_file)
-    
+
     # Check if camera opened successfully
     if (cap.isOpened()== False): 
         print("Error opening video stream or file")
     count = 0
     sample_count = 0
-    
+
     while cap.isOpened():
         ret, img = cap.read()
         if ret:
@@ -322,16 +329,16 @@ def init_model(args):
     model_wrapper = ModelWrapper(config, load_datasets=False)
     # Restore monodepth_model state
     model_wrapper.load_state_dict(state_dict)
-    
+
     # Send model to GPU if available
     if torch.cuda.is_available():
         model_wrapper = model_wrapper.to('cuda')
     else:
         raise RuntimeError("cuda is not available")
-        
+
     # Set to eval mode
     model_wrapper.eval()
-    
+
     print("init model finish...................")
     return model_wrapper, image_shape
 
@@ -357,7 +364,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     save_vis_root = os.path.join(output_tmp_dir, "depth_vis")
     os.makedirs(save_depth_root, exist_ok=True)
     os.makedirs(save_vis_root, exist_ok=True)
-    
+
     input_type = "folder"
     # processs input data
     if not os.path.isdir(input):
@@ -372,16 +379,16 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     files = []
     for ext in ['png', 'jpg', 'bmp']:
         files.extend(glob((os.path.join(input, '*.{}'.format(ext)))))
-    
+
     if input_type == "folder":
         print("processing folder input:...........")
         print(f"folder total frames num: {len(files)}")    
         files = files[::sample_rate]
-    
+
     files.sort()
     print('Found total {} files'.format(len(files)))
     assert len(files) > 2
-    
+
     # Process each file
     list_of_files = list(zip(files[:-2],
                               files[1:-1],
@@ -402,59 +409,58 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     pose_23_prev = None
     depth_list = []
     pose_list = []
-    
+
     print(f"*********************data_type:{data_type}")
     print("inference start.....................")
     for idx_frame, fns in enumerate(list_of_files):
         fn1, fn2, fn3 = fns
-        print(f'frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n fn3={fn3}')
+        print(f'frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n    fn3={fn3}')
         depth, pose21, pose23, intr, rgb = infer_and_save_pose([fn1, fn3], fn2, model_wrapper, 
                                                                 image_shape, data_type,
-                                                                save_depth_root, save_vis_root)
+                                                                save_depth_root, save_vis_root, idx_frame==0)
         depth_list.append(depth)
         if ply_mode:
             if pose_23_prev is not None:
                 s = np.linalg.norm(np.linalg.norm(pose_23_prev[:3, 3])) / np.linalg.norm(pose21[:3, 3])
                 pose21[:3, 3] = pose21[:3, 3] * s
             pose_23_prev = pose23
-            
+
             pose = pose21
-            
+
             depth_pad = np.pad(depth, [(0, 1), (0, 1)], "constant")
 
             depth_grad = (depth_pad[1:, :-1] - depth_pad[:-1, :-1])**2 + (depth_pad[:-1, 1:] - depth_pad[:-1, :-1])**2
             depth[depth_grad > sfm_params["filer_depth_grad_max"]] = 0
-            
             depth[depth > sfm_params["filer_depth_max"]] = 0
-                        
+
             crop_h = sfm_params["depth_crop_h"]
             crop_w = sfm_params["depth_crop_w"]
-              
+
             depth[:crop_h, :crop_w] = 0
             depth[-crop_h:, -crop_w:] = 0
-            
+
             print(f"depth median:{np.median(depth)}")
-            
+
             if pose_prev is not None:
                 pose = np.matmul(pose_prev, pose)
             pose_prev = pose
-            
+
             pose_list.append(pose)
             num_view = sfm_params["fusion_view_num"]
             if len(pose_list) >= num_view:
                 depth = gemo_filter_fusion(depth_list[-1], depth_list[-num_view:-1], pose_list[-1],
                                         pose_list[-num_view:-1], intr, thres_view=sfm_params["fusion_thres_view"])
-            
+
             pcd_colors = rgb.reshape(-1, 3) #TODO rgb or bgr
-        
+
             h, w = depth.shape[:2]
             x_m, y_m = np.meshgrid(np.arange(0, w), np.arange(0, h))
             xy_m = np.stack([x_m, y_m, np.ones_like(x_m)], axis=2).reshape(-1, 3) #(h*w, 3)
             depth = depth.reshape(-1)[np.newaxis, :] #(1, N)
             p3d = np.multiply(depth, np.matmul(np.linalg.inv(intr), xy_m.transpose(1, 0))) #(3, N)
-    
+
             p3d_trans = np.matmul(pose[:3], np.concatenate([p3d, np.ones((1, p3d.shape[1]))], axis=0)) #(3, N)
-            
+
             pcd_coords = p3d_trans.transpose(1, 0)
             pointcloud = (pcd_coords, pcd_colors)
 
@@ -467,8 +473,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     for file in sorted(glob(os.path.join(save_depth_root, "*.npy"))):
         depth_npy_list.append(np.load(file))
     np.save(output_depths_npy, np.stack(depth_npy_list, axis=0))
-    
-    
+
     files = sorted(glob(os.path.join(save_vis_root, "*.jpg")))
     image_hw = cv2.imread(files[0]).shape
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -478,8 +483,10 @@ def inference(model_wrapper, image_shape, input, sample_rate,
         video_writer.write(cv2.imread(file))
     video_writer.release()
     print("inference finish.....................")
-    
+
+
 def main():
+    logging.warning(f'main()')
     args = parse_args()
 
     sfm_params = {
@@ -494,7 +501,6 @@ def main():
 
     model_wrapper, image_shape = init_model(args)
 
-
     input = args.input
     output_depths_npy = os.path.join(args.output, "depths.npy")
     output_vis_video = os.path.join(args.output, "depths_vis.avi")
@@ -502,18 +508,19 @@ def main():
     sample_rate = args.sample_rate
     data_type = args.data_type 
     ply_mode = args.ply_mode
-    
+
     os.makedirs(args.output, exist_ok=True)
     os.makedirs(output_tmp_dir, exist_ok=True)
-    
+
     inference(model_wrapper, image_shape, input, sample_rate=sample_rate, 
               output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
               output_tmp_dir=output_tmp_dir, data_type=data_type,
               ply_mode=ply_mode, sfm_params=sfm_params)
-    
+
     # clean tmp dir
     # import shutil
     # shutil.rmtree(output_tmp_dir)
+
 
 if __name__ == '__main__':
     setup_log('kneron_infer_video.log')
@@ -522,4 +529,4 @@ if __name__ == '__main__':
     main()
 
     time_end_infer_video = time.time()
-    logging.warning(f'elapsed {time_end_infer_video - time_beg_infer_video:.3f} seconds.')
+    logging.warning(f'elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')

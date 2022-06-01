@@ -90,7 +90,7 @@ class ModelWrapper(torch.nn.Module):
 
     def prepare_model(self, resume=None):
         """Prepare self.model (incl. loading previous state)"""
-        logging.warning(f'prepare_model(..)')
+        logging.warning(f'prepare_model(resume={resume})')
         print0(pcolor('### Preparing Model', 'green'))
         self.model = setup_model(self.config.model, self.config.prepared)
         # Resume model if available
@@ -549,7 +549,9 @@ def setup_model(config, prepared, **kwargs):
     model : nn.Module
         Created model
     """
-    logging.warning(f'setup_model(..)')
+    logging.warning(f'setup_model(.., prepared={prepared}, ..)')
+    logging.info(f'  config:\n{config}')
+    logging.info(f'  kwargs:\n{kwargs}')
     print0(pcolor('Model: %s' % config.name, 'yellow'))
     config.loss.min_depth = config.params.min_depth
     config.loss.max_depth = config.params.max_depth
