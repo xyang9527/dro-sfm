@@ -19,10 +19,13 @@ https://www.wfonts.com/font/microsoft-sans-serif
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
+import PIL
 import glob
 import numpy as np
 import logging
 import time
+import cv2
+import numpy as np
 
 import os
 import os.path as osp
@@ -49,7 +52,8 @@ def load_images():
         #     (left, upper, right, lower)
         frames.append(new_frame.crop((60, 0, 3280, 1080)))
 
-    return add_text_with_pil(frames)
+    # return add_text_with_pil(frames)
+    return add_text_with_opencv(frames)
 
 
 def add_text_with_pil(images):
@@ -64,6 +68,23 @@ def add_text_with_pil(images):
           # https://pillow.readthedocs.io/en/stable/reference/ImageDraw.html#PIL.ImageDraw.ImageDraw.text
           draw.text((100, 300), f'Frame {idx:4d}', fill=(255, 0, 0), font=font, stroke_width=0)
 
+    return images
+
+
+def add_text_with_opencv(images):
+    logging.warning(f'add_text_with_opencv(..)')
+    for idx, img in enumerate(images):
+          nimg = np.array(img)
+          ocvim = cv2.cvtColor(nimg, cv2.COLOR_RGB2BGR)
+
+          org = (100, 300)
+          font_scale = 1
+          color = (0, 0, 255)
+          thickness = 2
+          ocvim = cv2.putText(img=ocvim, text=f'Frame {idx:4d}', org=org, fontScale=font_scale, color=color, thickness=thickness, fontFace=cv2.LINE_AA)
+          ocvim_back = cv2.cvtColor(ocvim, cv2.COLOR_RGB2BGR)
+          img_back = Image.fromarray(ocvim_back.astype('uint8'), 'RGB')
+          images[idx] = img_back
     return images
 
 
@@ -94,6 +115,9 @@ def write_gif(frames):
 
 if __name__ == '__main__':
     setup_log('kneron_img2gif.log')
+    logging.info(f'  PIL.__version__:    {PIL.__version__}')
+    logging.info(f'  cv2.__version__:    {cv2.__version__}')
+
     time_beg_img2gif = time.time()
 
     np.set_printoptions(precision=6, suppress=True)
@@ -101,6 +125,5 @@ if __name__ == '__main__':
     write_gif(images)
 
     time_end_img2gif = time.time()
-    import PIL
-    print(f'{PIL.__version__}')
+
     print(f'img2gif.py elapsed {time_end_img2gif - time_beg_img2gif:.6f} seconds.')
