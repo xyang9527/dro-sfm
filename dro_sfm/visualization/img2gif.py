@@ -46,14 +46,14 @@ def load_images():
     imgs = sorted(glob.glob("/home/sigma/vgithub-xyang9527/kneron_figure/scannet/*.png"))
     for idx_f, item in enumerate(imgs):
         new_frame = Image.open(item)
-        print(f'{idx_f:4d} {osp.basename(item)}')
-        print(f'  {type(new_frame)} {new_frame.size}')
+        logging.info(f'  {idx_f:4d} {osp.basename(item)}')
+        logging.info(f'  {type(new_frame)} {new_frame.size}')
         # https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.crop
         #     (left, upper, right, lower)
         frames.append(new_frame.crop((60, 0, 3280, 1080)))
 
-    # return add_text_with_pil(frames)
-    return add_text_with_opencv(frames)
+    return add_text_with_pil(frames)
+    # return add_text_with_opencv(frames)
 
 
 def add_text_with_pil(images):
@@ -63,16 +63,23 @@ def add_text_with_pil(images):
     # https://stackoverflow.com/a/16377244
 
     font = ImageFont.truetype("/home/sigma/vgithub-xyang9527/kneron_figure/ttf/micro_se.ttf", 16)
+    font = ImageFont.truetype("/home/sigma/vgithub-xyang9527/kneron_figure/ttf/CHGENE1.ttf", 64)
+    # git@github.com:sonatype/maven-guide-zh.git
+    font = ImageFont.truetype("/home/sigma/vgithub-xyang9527/kneron_figure/ttf/simsun.ttc", 64)
     for idx, img in enumerate(images):
           draw = ImageDraw.Draw(img)
           # https://pillow.readthedocs.io/en/stable/reference/ImageDraw.html#PIL.ImageDraw.ImageDraw.text
-          draw.text((100, 300), f'Frame {idx:4d}', fill=(255, 0, 0), font=font, stroke_width=0)
+          # draw.text((100, 300), f'Frame {idx:4d}', fill=(255, 0, 0), font=font, stroke_width=0)
+          draw.text((100, 300), f'帧序号 {idx:4d}', fill=(255, 0, 0), font=font, stroke_width=0)
 
     return images
 
 
 def add_text_with_opencv(images):
     logging.warning(f'add_text_with_opencv(..)')
+    # OpenCV putText is only able to support a small ascii subset of characters
+    #     and does not support unicode characters which are other symboles
+    #     like chinese and arabic characters.
     for idx, img in enumerate(images):
           nimg = np.array(img)
           ocvim = cv2.cvtColor(nimg, cv2.COLOR_RGB2BGR)
@@ -81,8 +88,9 @@ def add_text_with_opencv(images):
           font_scale = 1
           color = (0, 0, 255)
           thickness = 2
-          ocvim = cv2.putText(img=ocvim, text=f'Frame {idx:4d}', org=org, fontScale=font_scale, color=color, thickness=thickness, fontFace=cv2.LINE_AA)
-          ocvim_back = cv2.cvtColor(ocvim, cv2.COLOR_RGB2BGR)
+          text=f'Frame {idx:4d}'
+          ocvim = cv2.putText(img=ocvim, text=text, org=org, fontScale=font_scale, color=color, thickness=thickness, fontFace=cv2.LINE_AA)
+          ocvim_back = cv2.cvtColor(ocvim, cv2.COLOR_BGR2RGB)
           img_back = Image.fromarray(ocvim_back.astype('uint8'), 'RGB')
           images[idx] = img_back
     return images
