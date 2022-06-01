@@ -206,7 +206,7 @@ def load_data(names):
 
     gazebo_param = GazeboParam()
 
-    dir_root = '/home/sigma/slam/matterport/test/matterport014_000'
+    dir_root = '/home/sigma/slam/matterport/test/matterport014_000_0601'
     dir_cloud_ply = osp.join(dir_root, 'demo/ply')
     dir_cloud_obj = osp.join(dir_root, 'demo/obj')
     dir_cloud_jpg = osp.join(dir_root, 'demo/jpg')
@@ -245,22 +245,22 @@ def load_data(names):
         logging.info(f'    use cloud_xyz_hom_world')
 
         trans_in_all = rel_pose # v1                                                                          F
-        trans_in_all = np.linalg.inv(rel_pose) # v2                                                           F
+        # trans_in_all = np.linalg.inv(rel_pose) # v2                                                           F
         trans_in_all = np.matmul(rel_pose, gazebo_param.get_cam2gazeborobot) # v3                             F
-        trans_in_all = np.matmul(gazebo_param.get_cam2gazeborobot, rel_pose) # v4                             F
-        trans_in_all = np.matmul(np.linalg.inv(rel_pose), gazebo_param.get_cam2gazeborobot) # v5              F
-        trans_in_all = np.matmul(gazebo_param.get_cam2gazeborobot, np.linalg.inv(rel_pose)) # v6              F
-        trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)) # v7                                        F
-        trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot))) # v8    F
-        trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot))) # v9    F
-        trans_in_all = np.matmul(np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot), rel_pose) # v10                                       F
-        trans_in_all = np.matmul(np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v11   F
-        trans_in_all = np.matmul(np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v12   F
+        # trans_in_all = np.matmul(gazebo_param.get_cam2gazeborobot, rel_pose) # v4                             F
+        # trans_in_all = np.matmul(np.linalg.inv(rel_pose), gazebo_param.get_cam2gazeborobot) # v5              F
+        # trans_in_all = np.matmul(gazebo_param.get_cam2gazeborobot, np.linalg.inv(rel_pose)) # v6              F
+        # trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)) # v7                                        F
+        # trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot))) # v8    F
+        # trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot))) # v9    F
+        # trans_in_all = np.matmul(np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot), rel_pose) # v10                                       F
+        # trans_in_all = np.matmul(np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v11   F
+        # trans_in_all = np.matmul(np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v12   F
 
         cloud_xyz_align = np.dot(trans_in_all, cloud_xyz_hom)
         cloud_xyz_align_t = np.transpose(cloud_xyz_align)
 
-        with open(osp.join(dir_cloud_obj, f'v12_{name}.obj'), 'w') as f_ou_align_rgb:
+        with open(osp.join(dir_cloud_obj, f'v3_{name}.obj'), 'w') as f_ou_align_rgb:
             for i in range(n):
                 x, y, z, w = cloud_xyz_align_t[i]
                 r, g, b = cloud_rgb[i]
@@ -276,6 +276,11 @@ def create_obj_cloud():
              '000556612000000', '000557108000000', '000557592000000', '000558112000000', '000558772000000',
              '000559456000000', '000560148000000', '000560824000000', '000561488000000', '000562168000000',
              '000562976000000', '000563884000000', '000564664000000', '000565328000000', '000565932000000']
+    data_dir = '/home/sigma/slam/matterport/test/matterport014_000_0601/pose'
+    names = []
+    for item in sorted(os.listdir(data_dir)):
+        # print(item)
+        names.append(osp.splitext(item)[0])
     load_data(names[:10])
 
 

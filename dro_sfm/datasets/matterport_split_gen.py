@@ -76,7 +76,8 @@ def generate_split():
         "train_val_test/matterport010_000"
     ]
     subdirs_test = [
-        "test/matterport014_000"
+        "test/matterport014_000",
+        "test/matterport014_000_0601"
     ]
 
     # create pose file
@@ -205,20 +206,22 @@ def generate_split():
         open(osp.join(dir_save, 'val_all_list.txt'), 'w') as f_val, \
         open(osp.join(dir_save, 'test_all_list.txt'), 'w') as f_test:
             # test part
-            case_dir = osp.join(dir_root, subdirs_test[0])
-            if osp.exists(case_dir):
-                for item in sorted(os.listdir(osp.join(case_dir, image_dir))):
-                    if item.endswith('.jpg'):
-                        path_jpg = osp.join(dir_root, subdirs_test[0], image_dir, item)
-                        path_txt = path_jpg.replace('cam_left', 'pose').replace('.jpg', '.txt')
-                        if not osp.exists(path_txt):
-                            print(f'skip {item} as missing {path_txt}')
-                            logging.info(f'skip {item} as missing {path_txt}')
-                            n_frame_missing_pose_info += 1
-                            continue
-                        f_test.write(f'{subdirs_test[0]}/{image_dir} {item}\n')
-            else:
-                logging.warning(f'path not exist: {case_dir}')
+            n_case = len(subdirs_test)
+            for idx_case in range(n_case):
+                case_dir = osp.join(dir_root, subdirs_test[idx_case])
+                if osp.exists(case_dir):
+                    for item in sorted(os.listdir(osp.join(case_dir, image_dir))):
+                        if item.endswith('.jpg'):
+                            path_jpg = osp.join(dir_root, subdirs_test[0], image_dir, item)
+                            path_txt = path_jpg.replace('cam_left', 'pose').replace('.jpg', '.txt')
+                            if not osp.exists(path_txt):
+                                print(f'skip {item} as missing {path_txt}')
+                                logging.info(f'skip {item} as missing {path_txt}')
+                                n_frame_missing_pose_info += 1
+                                continue
+                            f_test.write(f'{subdirs_test[0]}/{image_dir} {item}\n')
+                else:
+                    logging.warning(f'path not exist: {case_dir}')
 
             # train_val_test part
             n_case = len(subdirs_train_val_test)

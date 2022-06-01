@@ -140,6 +140,23 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
     vis_depth_upsample = cv2.resize(vis_depth, image_raw_wh, interpolation=cv2.INTER_LINEAR)
     write_image(os.path.join(save_vis_root, f"{base_name}.jpg"), vis_depth_upsample)
 
+    # ground truth depth
+    depth_gt_int = cv2.imread(input_file.replace('cam_left', 'depth').replace('jpg', 'png'))
+    # print(f'  depth_gt_int: {type(depth_gt_int)} {depth_gt_int.shape}')
+
+    is_true_01 = depth_gt_int[100, 100, 0] == depth_gt_int[100, 100, 1]
+    is_true_02 = depth_gt_int[100, 100, 0] == depth_gt_int[100, 100, 2]
+    # print(f'  is_true: {is_true_01} {is_true_02}')
+    depth_gt_float = depth_gt_int.astype(np.float) / 1000.0
+    vis_depth_gt = viz_inv_depth(depth_gt_float[:, :, 0]) * 255
+
+    save_vis_root_gt = save_vis_root.replace('depth_vis', 'depth_gt_vis')
+    if not os.path.exists(save_vis_root_gt):
+        os.makedirs(save_vis_root_gt)
+
+    # vis_depth_upsample_gt = cv2.resize(vis_depth_gt, image_raw_wh, interpolation=cv2.INTER_LINEAR)
+    write_image(os.path.join(save_vis_root_gt, f"{base_name}.jpg"), vis_depth_gt)
+
     depth_upsample = cv2.resize(depth, image_raw_wh, interpolation=cv2.INTER_NEAREST)
     np.save(os.path.join(save_depth_root, f"{base_name}.npy"), depth_upsample)
 
@@ -386,6 +403,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
         files = files[::sample_rate]
 
     files.sort()
+    files = files[:100]
     print('Found total {} files'.format(len(files)))
     assert len(files) > 2
 
@@ -474,13 +492,28 @@ def inference(model_wrapper, image_shape, input, sample_rate,
         depth_npy_list.append(np.load(file))
     np.save(output_depths_npy, np.stack(depth_npy_list, axis=0))
 
+    # ======================================================================== #
+    # Write Video
+    # ======================================================================== #
     files = sorted(glob(os.path.join(save_vis_root, "*.jpg")))
     image_hw = cv2.imread(files[0]).shape
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    fps = 30.0
-    video_writer = cv2.VideoWriter(output_vis_video, fourcc, 30.0, (image_hw[1], image_hw[0]))
+    fps = 5.0
+    gap_size = 40
+    video_writer = cv2.VideoWriter(output_vis_video, fourcc, 30.0, ((image_hw[1] + gap_size) * 2, (image_hw[0] + gap_size) * 2))
+    canvas = np.full(((image_hw[0] + gap_size) * 2, (image_hw[1] + gap_size) * 2, 3), 128, np.uint8)
     for file in files:
-        video_writer.write(cv2.imread(file))
+        color_file = file.replace('infer_video/tmp/depth_vis', 'cam_left')
+        data_color = cv2.imread(color_file)
+        canvas[0:image_hw[0], 0:image_hw[1], :] = data_color        
+
+        data_depth = cv2.imread(file)
+        canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, 0:image_hw[1], :] = data_depth
+
+        data_depth_gt = cv2.imread(file.replace('depth_vis', 'depth_gt_vis'))
+        canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_depth_gt
+
+        video_writer.write(canvas)
     video_writer.release()
     print("inference finish.....................")
 
@@ -530,3 +563,4 @@ if __name__ == '__main__':
 
     time_end_infer_video = time.time()
     logging.warning(f'elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')
+    print(f'elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')
