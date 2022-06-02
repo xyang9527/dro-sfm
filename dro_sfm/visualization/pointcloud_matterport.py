@@ -328,11 +328,14 @@ def create_obj_cloud():
         data_dir = '/home/sigma/slam/matterport/test/matterport014_000_0601/pose'
         names = []
         for item in sorted(os.listdir(data_dir)):
-            # print(item)
             names.append(osp.splitext(item)[0])
         load_data(names[::10], use_matterport014_000_0601)
     else:
-        load_data(names, use_matterport014_000_0601)
+        data_dir = '/home/sigma/slam/matterport/test/matterport014_000/pose'
+        names = []
+        for item in sorted(os.listdir(data_dir)):
+            names.append(osp.splitext(item)[0])
+        load_data(names[::10], use_matterport014_000_0601)
 
 
 if __name__ == '__main__':
