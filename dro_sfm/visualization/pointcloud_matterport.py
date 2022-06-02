@@ -190,11 +190,9 @@ def load_matterport_depth(d_file):
     return depth
 
 
-def load_data(names, use_matterport014_000_0601):
+def load_data(names, data_dir):
     logging.warning(f'load_data(..)')
-    n = len(names)
-    logging.info(f'  {n} files to process ..')
-
+    n_frame = len(names)
     intr_color = np.array([[530.4669406576809,   0.0,             320.5, 0.0],
                            [0.0,               530.4669406576809, 240.5, 0.0],
                            [0.0,                 0.0,               1.0, 0.0],
@@ -204,25 +202,23 @@ def load_data(names, use_matterport014_000_0601):
     cx = intr_color[0][2]
     cy = intr_color[1][2]
 
-    gazebo_param = GazeboParam()
-
-    if use_matterport014_000_0601:
-        dir_root = '/home/sigma/slam/matterport/test/matterport014_000_0601'
-    else:
-        dir_root = '/home/sigma/slam/matterport/test/matterport014_000'
-    # dir_root = '/home/sigma/slam/matterport/test/matterport014_000_0601'
+    dir_root = data_dir
     dir_cloud_ply = osp.join(dir_root, 'demo/ply')
     dir_cloud_obj = osp.join(dir_root, 'demo/obj')
     dir_cloud_jpg = osp.join(dir_root, 'demo/jpg')
-    dir_cloud_original_obj = osp.join(dir_root, 'demo/original_obj')
-    dir_cloud_original_npy = osp.join(dir_root, 'demo/original_npy')
-    folders_need = [dir_cloud_ply, dir_cloud_obj, dir_cloud_jpg, dir_cloud_original_obj, dir_cloud_original_npy]
+
+    folders_need = [dir_cloud_ply, dir_cloud_obj, dir_cloud_jpg]
     for item_dir in folders_need:
         if not osp.exists(item_dir):
             os.makedirs(item_dir)
 
+    T05 = np.array([[ 0.,  0., -1.,  0.],
+                    [ 1.,  0.,  0.,  0.],
+                    [ 0., -1.,  0.,  0.],
+                    [ 0.,  0.,  0.,  1.]], dtype=np.float)
+
     pose_init = None
-    for idx_f in range(n):
+    for idx_f in range(n_frame):
         name = names[idx_f]
         print(f'  process frame: {name} ..')
         data_color = load_image(osp.join(dir_root, f'cam_left/{name}.jpg'))
@@ -237,105 +233,34 @@ def load_data(names, use_matterport014_000_0601):
         data_depth_resized = cv2.resize(data_depth, data_color.size, interpolation = cv2.INTER_NEAREST)
         cloud = generate_pointcloud(np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy, file_cloud_ply, 1.0)
 
-        # rel_pose = np.matmul(pose_init, np.linalg.inv(data_pose)) # v1
-        rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose) # v2
+        rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose)
 
         cloud_xyz = cloud[:, :3]
         cloud_rgb = cloud[:, 3:]
-        print(f'      valid points: {cloud_xyz.shape[0]:6d}')
 
-        n = cloud_xyz.shape[0]
-        with open(osp.join(dir_cloud_original_obj, f'valid-only_{name}.obj'), 'w') as f_ou_orig_obj:
-            for i in range(n):
-                x, y, z = cloud_xyz[i]
-                r, g, b = cloud_rgb[i]
-                f_ou_orig_obj.write(f'v {x} {y} {z} {r} {g} {b}\n')
-        np.save(osp.join(dir_cloud_original_npy, f'valid-only_{name}.npy'), cloud_xyz)
+        n_vert = cloud_xyz.shape[0]
+        cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n_vert, 1)))))
 
-
-        cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n, 1)))))
-
-        cloud_xyz_hom_robot = np.dot(gazebo_param.get_cam2gazeborobot, cloud_xyz_hom)
-        cloud_xyz_hom_world = np.dot(gazebo_param.get_gazeborobot2gazeboworld, cloud_xyz_hom_robot)
-        logging.info(f'    use cloud_xyz_hom_world')
-
-        trans_in_all = rel_pose # v1                                                                          F
-        # trans_in_all = np.linalg.inv(rel_pose) # v2                                                           F
-        trans_in_all = np.matmul(rel_pose, gazebo_param.get_cam2gazeborobot) # v3                             F
-        # trans_in_all = np.matmul(gazebo_param.get_cam2gazeborobot, rel_pose) # v4                             F
-        # trans_in_all = np.matmul(np.linalg.inv(rel_pose), gazebo_param.get_cam2gazeborobot) # v5              F
-        # trans_in_all = np.matmul(gazebo_param.get_cam2gazeborobot, np.linalg.inv(rel_pose)) # v6              F
-        # trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)) # v7                                        F
-        # trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot))) # v8    F
-        # trans_in_all = np.matmul(rel_pose, np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot))) # v9    F
-        # trans_in_all = np.matmul(np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot), rel_pose) # v10                                       F
-        # trans_in_all = np.matmul(np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v11   F
-        # trans_in_all = np.matmul(np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v12   F
-
-        T_bodong = GazeboPose(-0.5, 0.5, -0.5, 0.5, 0.0, 0, 0.0).get_T()
-        logging.info(f'  T_bodong:\n{T_bodong}')
-        # T_weita = GazeboPose(-0.5, -0.5, 0.5, 0.5, 0.0, 0.0, 0.0).get_T()
-        # logging.info(f'  T_weita:\n{T_weita}')
-
-        # T_bodong[0][2] *= -1.0  # 00
-        # T_bodong[1][0] *= -1.0  # 01
-        # T_bodong[2][1] *= -1.0  # 02
-        # logging.info(f'  T_bodong new:\n{T_bodong}')
-
-        trans_in_all = np.matmul(rel_pose, T_bodong) # vx1_bodong                                           F
-        trans_in_all = np.matmul(T_bodong, rel_pose) # vx2_bodong                                           F
-        trans_in_all = np.matmul(rel_pose, np.linalg.inv(T_bodong)) # vx3_bodong                   ***      T +++
-        # trans_in_all = np.matmul(np.linalg.inv(T_bodong), rel_pose) # vx4_bodong                            F
-        # trans_in_all = np.matmul(np.linalg.inv(rel_pose), T_bodong) # vx5_bodong                            F
-        # trans_in_all = np.matmul(T_bodong, np.linalg.inv(rel_pose)) # vx6_bodong                            F
-        # trans_in_all = np.matmul(np.linalg.inv(T_bodong), np.linalg.inv(rel_pose)) # vx7_bodong             F
-        # trans_in_all = np.matmul(np.linalg.inv(rel_pose), np.linalg.inv(T_bodong)) # vx8_bodong             F
-
-        # trans_in_all = np.matmul(rel_pose, np.linalg.inv(T_weita)) # vx3_weita
-        T05 = np.array([[ 0.,  0., -1.,  0.],
-                        [ 1.,  0.,  0.,  0.],
-                        [ 0., -1.,  0.,  0.],
-                        [ 0.,  0.,  0.,  1.]], dtype=np.float)
-
-        data_pose[0, 3] = -data_pose[0, 3]
-        data_pose[1, 3] = -data_pose[1, 3]
-        data_pose[2, 3] = -data_pose[2, 3]
-
-        cloud_xyz_align = np.dot(np.linalg.inv(data_pose), np.dot(T05, cloud_xyz_hom))
-        cloud_xyz_align = np.dot(T05, cloud_xyz_hom) # step 1
-        cloud_xyz_align = np.dot(data_pose, np.dot(T05, cloud_xyz_hom)) # step 2
-        print(f'data_pose: \n{data_pose}')
+        cloud_xyz_align = np.dot(rel_pose, np.dot(T05, cloud_xyz_hom))
         cloud_xyz_align_t = np.transpose(cloud_xyz_align)
 
         with open(osp.join(dir_cloud_obj, f'pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:
-            for i in range(n):
+            for i in range(n_vert):
                 x, y, z, w = cloud_xyz_align_t[i]
                 r, g, b = cloud_rgb[i]
                 f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
 
 
 def create_obj_cloud():
-    names = ['000542628000000', '000543360000000', '000544048000000', '000544712000000', '000545368000000',
-             '000546008000000', '000546648000000', '000547312000000', '000547840000000', '000548340000000',
-             '000548868000000', '000549400000000', '000549932000000', '000550472000000', '000550996000000',
-             '000551504000000', '000552020000000', '000552520000000', '000553028000000', '000553528000000',
-             '000554052000000', '000554604000000', '000555100000000', '000555592000000', '000556112000000',
-             '000556612000000', '000557108000000', '000557592000000', '000558112000000', '000558772000000',
-             '000559456000000', '000560148000000', '000560824000000', '000561488000000', '000562168000000',
-             '000562976000000', '000563884000000', '000564664000000', '000565328000000', '000565932000000']
-    use_matterport014_000_0601 = False
-    if use_matterport014_000_0601:
-        data_dir = '/home/sigma/slam/matterport/test/matterport014_000_0601/pose'
+    data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 100},
+                 {'dir': '/home/sigma/slam/matterport/test/matterport014_000_0601', 'space': 5}]
+    for item_data in data_cols:
+        data_dir = item_data['dir']
+        space = item_data['space']
         names = []
-        for item in sorted(os.listdir(data_dir)):
+        for item in sorted(os.listdir(osp.join(data_dir, 'pose'))):
             names.append(osp.splitext(item)[0])
-        load_data(names[::10], use_matterport014_000_0601)
-    else:
-        data_dir = '/home/sigma/slam/matterport/test/matterport014_000/pose'
-        names = []
-        for item in sorted(os.listdir(data_dir)):
-            names.append(osp.splitext(item)[0])
-        load_data(names[::10], use_matterport014_000_0601)
+        load_data(names[::space], data_dir)
 
 
 if __name__ == '__main__':

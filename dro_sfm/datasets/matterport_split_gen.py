@@ -115,6 +115,9 @@ def generate_split():
                     print(f'unexpected format: {words}')
                 params = [float(v) for v in words[1:]]
                 x, y, z, i, j, k, r = params
+                x = -x
+                y = -y
+                z = -z
 
                 n_valid += 1
                 f_ou_obj.write(f'v {x} {y} {z}\n')
