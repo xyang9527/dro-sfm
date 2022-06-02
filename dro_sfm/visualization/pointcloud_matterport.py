@@ -212,10 +212,35 @@ def load_data(names, data_dir):
         if not osp.exists(item_dir):
             os.makedirs(item_dir)
 
+    '''
+    T_coord_swap = np.array([[ 0.,  0.,  1.,  0.],
+                             [ 1.,  0.,  0.,  0.],
+                             [ 0.,  1.,  0.,  0.],
+                             [ 0.,  0.,  0.,  1.]], dtype=np.float)
+    T_combination = []
+    for i in range(2):
+        neg_x = 1.0 if i % 2 == 0 else -1.0
+        T_x = copy.deepcopy(T_coord_swap)
+        T_x[0, :] *= neg_x
+        for j in range(2):
+            neg_y = 1.0 if j % 2 == 0 else -1.0
+            T_y = copy.deepcopy(T_x)
+            T_y[1, :] *= neg_y
+            for k in range(2):
+                neg_z = 1.0 if k % 2 == 0 else -1.0
+                T_z = copy.deepcopy(T_y)
+                T_z[2, :] *= neg_z
+                T_combination.append(T_z)
+    for i in range(len(T_combination)):
+        print(f"\nT_combination[{i:02d}]:\n{T_combination[i]}")
+    '''
+
+    '''
     T05 = np.array([[ 0.,  0., -1.,  0.],
                     [ 1.,  0.,  0.,  0.],
                     [ 0., -1.,  0.,  0.],
                     [ 0.,  0.,  0.,  1.]], dtype=np.float)
+    '''
 
     pose_init = None
     for idx_f in range(n_frame):
@@ -241,7 +266,7 @@ def load_data(names, data_dir):
         n_vert = cloud_xyz.shape[0]
         cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n_vert, 1)))))
 
-        cloud_xyz_align = np.dot(rel_pose, np.dot(T05, cloud_xyz_hom))
+        cloud_xyz_align = np.dot(rel_pose, cloud_xyz_hom)
         cloud_xyz_align_t = np.transpose(cloud_xyz_align)
 
         with open(osp.join(dir_cloud_obj, f'pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:

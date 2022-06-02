@@ -80,6 +80,11 @@ def generate_split():
         "test/matterport014_000_0601"
     ]
 
+    T05 = np.array([[ 0.,  0., -1.,  0.],
+                    [ 1.,  0.,  0.,  0.],
+                    [ 0., -1.,  0.,  0.],
+                    [ 0.,  0.,  0.,  1.]], dtype=np.float)
+
     # create pose file
     subdirs_pose = []
     for item in subdirs_train_val_test:
@@ -115,9 +120,6 @@ def generate_split():
                     print(f'unexpected format: {words}')
                 params = [float(v) for v in words[1:]]
                 x, y, z, i, j, k, r = params
-                x = -x
-                y = -y
-                z = -z
 
                 n_valid += 1
                 f_ou_obj.write(f'v {x} {y} {z}\n')
@@ -149,7 +151,7 @@ def generate_split():
                     two_s = 2.0 / np.dot(np.array([r, i, j, k]), np.array([r, i, j, k]).transpose())
                     if np.fabs(two_s - 2.0) > 1e-5:
                         logging.warning(f'  two_s: {two_s:.6f}')
-                    mat = np.array([
+                    part_R = np.array([
                             1 - two_s * (j * j + k * k),
                             two_s * (i * j - k * r),
                             two_s * (i * k + j * r),
@@ -159,12 +161,16 @@ def generate_split():
                             two_s * (i * k - j * r),
                             two_s * (j * k + i * r),
                             1 - two_s * (i * i + j * j)
-                            ])
-                    # print(f'two_s: {two_s}')
-                    f_ou.write(f'{mat[0]} {mat[1]} {mat[2]} {x}\n'
-                               f'{mat[3]} {mat[4]} {mat[5]} {y}\n'
-                               f'{mat[6]} {mat[7]} {mat[8]} {z}\n'
-                               f'0.000000 0.000000 0.000000 1.000000\n')
+                            ]).reshape((3, 3))
+                    part_t = np.array([-x, -y, -z]).reshape((3, 1))
+                    T = np.hstack((part_R, part_t))
+                    T_hom = np.vstack((T, np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float).reshape((1, 4))))
+                    mat = np.matmul(T_hom, T05)
+
+                    f_ou.write(f'{mat[0][0]} {mat[0][1]} {mat[0][2]} {mat[0][3]}\n'
+                               f'{mat[1][0]} {mat[1][1]} {mat[1][2]} {mat[1][3]}\n'
+                               f'{mat[2][0]} {mat[2][1]} {mat[2][2]} {mat[2][3]}\n'
+                               f'{mat[3][0]} {mat[3][1]} {mat[3][2]} {mat[3][3]}\n')
 
             for idx_p in range(1, n_valid):
                 f_ou_obj.write(f'f {idx_p} {idx_p+1} {idx_p+1}\n')
