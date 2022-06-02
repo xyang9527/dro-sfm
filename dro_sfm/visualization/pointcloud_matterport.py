@@ -261,15 +261,19 @@ def load_data(names, use_matterport014_000_0601):
         # trans_in_all = np.matmul(np.matmul(gazebo_param.get_cam2gt, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v11   F
         # trans_in_all = np.matmul(np.matmul(gazebo_param.get_gt2cam, np.matmul(gazebo_param.get_gazeborobot2gazeboworld, gazebo_param.get_cam2gazeborobot)), rel_pose) # v12   F
 
-        T_bodong = GazeboPose(-0.5, 0.5, -0.5, 0.5, 0.0, -0.0045, 0.0).get_T()
+        T_bodong = GazeboPose(-0.5, 0.5, -0.5, 0.5, 0.0, 0, 0.0).get_T()
         logging.info(f'  T_bodong:\n{T_bodong}')
-        T_weita = GazeboPose(-0.5, -0.5, 0.5, 0.5, 0.0, 0.0, 0.0).get_T()
-        logging.info(f'  T_weita:\n{T_weita}')
+        # T_weita = GazeboPose(-0.5, -0.5, 0.5, 0.5, 0.0, 0.0, 0.0).get_T()
+        # logging.info(f'  T_weita:\n{T_weita}')
+
+        # T_bodong[0][2] *= -1.0  # 00
+        # T_bodong[1][0] *= -1.0  # 01
+        # T_bodong[2][1] *= -1.0  # 02
+        # logging.info(f'  T_bodong new:\n{T_bodong}')
 
         trans_in_all = np.matmul(rel_pose, T_bodong) # vx1_bodong                                           F
         trans_in_all = np.matmul(T_bodong, rel_pose) # vx2_bodong                                           F
         trans_in_all = np.matmul(rel_pose, np.linalg.inv(T_bodong)) # vx3_bodong                   ***      T +++
-        # trans_in_all = np.matmul(np.linalg.inv(data_pose), np.linalg.inv(T_bodong))
         # trans_in_all = np.matmul(np.linalg.inv(T_bodong), rel_pose) # vx4_bodong                            F
         # trans_in_all = np.matmul(np.linalg.inv(rel_pose), T_bodong) # vx5_bodong                            F
         # trans_in_all = np.matmul(T_bodong, np.linalg.inv(rel_pose)) # vx6_bodong                            F
@@ -278,10 +282,10 @@ def load_data(names, use_matterport014_000_0601):
 
         # trans_in_all = np.matmul(rel_pose, np.linalg.inv(T_weita)) # vx3_weita
 
-        cloud_xyz_align = np.dot(trans_in_all, cloud_xyz_hom)
+        cloud_xyz_align = np.dot(T_bodong, np.dot(np.linalg.inv(data_pose), cloud_xyz_hom))
         cloud_xyz_align_t = np.transpose(cloud_xyz_align)
 
-        with open(osp.join(dir_cloud_obj, f'vx3_world_{name}.obj'), 'w') as f_ou_align_rgb:
+        with open(osp.join(dir_cloud_obj, f'world_inv_pose_{name}.obj'), 'w') as f_ou_align_rgb:
             for i in range(n):
                 x, y, z, w = cloud_xyz_align_t[i]
                 r, g, b = cloud_rgb[i]
@@ -304,7 +308,7 @@ def create_obj_cloud():
         for item in sorted(os.listdir(data_dir)):
             # print(item)
             names.append(osp.splitext(item)[0])
-    load_data(names[:10], use_matterport014_000_0601)
+    load_data(names[::10], use_matterport014_000_0601)
     # load_data(names[::5], use_matterport014_000_0601)
 
 
