@@ -214,7 +214,9 @@ def load_data(names, use_matterport014_000_0601):
     dir_cloud_ply = osp.join(dir_root, 'demo/ply')
     dir_cloud_obj = osp.join(dir_root, 'demo/obj')
     dir_cloud_jpg = osp.join(dir_root, 'demo/jpg')
-    folders_need = [dir_cloud_ply, dir_cloud_obj, dir_cloud_jpg]
+    dir_cloud_original_obj = osp.join(dir_root, 'demo/original_obj')
+    dir_cloud_original_npy = osp.join(dir_root, 'demo/original_npy')
+    folders_need = [dir_cloud_ply, dir_cloud_obj, dir_cloud_jpg, dir_cloud_original_obj, dir_cloud_original_npy]
     for item_dir in folders_need:
         if not osp.exists(item_dir):
             os.makedirs(item_dir)
@@ -240,8 +242,17 @@ def load_data(names, use_matterport014_000_0601):
 
         cloud_xyz = cloud[:, :3]
         cloud_rgb = cloud[:, 3:]
+        print(f'      valid points: {cloud_xyz.shape[0]:6d}')
 
         n = cloud_xyz.shape[0]
+        with open(osp.join(dir_cloud_original_obj, f'valid-only_{name}.obj'), 'w') as f_ou_orig_obj:
+            for i in range(n):
+                x, y, z = cloud_xyz[i]
+                r, g, b = cloud_rgb[i]
+                f_ou_orig_obj.write(f'v {x} {y} {z} {r} {g} {b}\n')
+        np.save(osp.join(dir_cloud_original_npy, f'valid-only_{name}.npy'), cloud_xyz)
+
+
         cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((n, 1)))))
 
         cloud_xyz_hom_robot = np.dot(gazebo_param.get_cam2gazeborobot, cloud_xyz_hom)
@@ -281,11 +292,22 @@ def load_data(names, use_matterport014_000_0601):
         # trans_in_all = np.matmul(np.linalg.inv(rel_pose), np.linalg.inv(T_bodong)) # vx8_bodong             F
 
         # trans_in_all = np.matmul(rel_pose, np.linalg.inv(T_weita)) # vx3_weita
+        T05 = np.array([[ 0.,  0., -1.,  0.],
+                        [ 1.,  0.,  0.,  0.],
+                        [ 0., -1.,  0.,  0.],
+                        [ 0.,  0.,  0.,  1.]], dtype=np.float)
 
-        cloud_xyz_align = np.dot(T_bodong, np.dot(np.linalg.inv(data_pose), cloud_xyz_hom))
+        data_pose[0, 3] = -data_pose[0, 3]
+        data_pose[1, 3] = -data_pose[1, 3]
+        data_pose[2, 3] = -data_pose[2, 3]
+
+        cloud_xyz_align = np.dot(np.linalg.inv(data_pose), np.dot(T05, cloud_xyz_hom))
+        cloud_xyz_align = np.dot(T05, cloud_xyz_hom) # step 1
+        cloud_xyz_align = np.dot(data_pose, np.dot(T05, cloud_xyz_hom)) # step 2
+        print(f'data_pose: \n{data_pose}')
         cloud_xyz_align_t = np.transpose(cloud_xyz_align)
 
-        with open(osp.join(dir_cloud_obj, f'world_inv_pose_{name}.obj'), 'w') as f_ou_align_rgb:
+        with open(osp.join(dir_cloud_obj, f'pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:
             for i in range(n):
                 x, y, z, w = cloud_xyz_align_t[i]
                 r, g, b = cloud_rgb[i]
@@ -301,15 +323,16 @@ def create_obj_cloud():
              '000556612000000', '000557108000000', '000557592000000', '000558112000000', '000558772000000',
              '000559456000000', '000560148000000', '000560824000000', '000561488000000', '000562168000000',
              '000562976000000', '000563884000000', '000564664000000', '000565328000000', '000565932000000']
-    use_matterport014_000_0601 = True
+    use_matterport014_000_0601 = False
     if use_matterport014_000_0601:
         data_dir = '/home/sigma/slam/matterport/test/matterport014_000_0601/pose'
         names = []
         for item in sorted(os.listdir(data_dir)):
             # print(item)
             names.append(osp.splitext(item)[0])
-    load_data(names[::10], use_matterport014_000_0601)
-    # load_data(names[::5], use_matterport014_000_0601)
+        load_data(names[::10], use_matterport014_000_0601)
+    else:
+        load_data(names, use_matterport014_000_0601)
 
 
 if __name__ == '__main__':

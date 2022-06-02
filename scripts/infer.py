@@ -69,7 +69,8 @@ def generate_pointcloud(rgb, depth, fx, fy, cx, cy, ply_file, scale=1.0):
             %s
             ''' % (len(points), "".join(points)))
     file.close()
-    return cloud
+    return cloud[:n_valid, :]
+    # return cloud
 
 
 def is_image(file, ext=('.png', '.jpg',)):
