@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--checkpoint', type=str, help='Checkpoint (.ckpt)', required=True)
     parser.add_argument('--input', type=str, help='Input folder or video', required=True)
     parser.add_argument('--output', type=str, help='Output folder', required=True)
-    parser.add_argument('--data_type', type=str, choices=['kitti', 'indoor', 'matterport', 'general'], required=True)
+    parser.add_argument('--data_type', type=str, choices=['kitti', 'indoor', 'scannet', 'matterport', 'general'], required=True)
     parser.add_argument('--sample_rate', type=int, default=10, help='sample rate', required=True)
     parser.add_argument('--ply_mode', action="store_true", help='vis point cloud')
 
@@ -53,11 +53,15 @@ def get_intrinsics(image_shape_raw, image_shape, data_type):
         intr = np.array([7.215376999999999725e+02, 0.000000000000000000e+00, 6.095593000000000075e+02,
                          0.000000000000000000e+00, 7.215376999999999725e+02, 1.728540000000000134e+02,
                          0.000000000000000000e+00, 0.000000000000000000e+00, 1.000000000000000000e+00], dtype=np.float32).reshape(3, 3)
+    elif data_type == "scannet":
+        intr = np.array([1169.621094, 0.000000, 646.295044, 
+                         0.000000, 1167.105103, 489.927032,
+                         0.000000, 0.000000, 1.000000], dtype=np.float32).reshape(3, 3)
     elif data_type == "indoor":
         intr = np.array([1170.187988, 0.000000, 647.750000, 
                          0.000000, 1170.187988, 483.750000,
                          0.000000, 0.000000, 1.000000], dtype=np.float32).reshape(3, 3)
-    elif data_type == 'matterport':
+    elif data_type == "matterport":
         intr = np.array([530.4669406576809,   0.0,             320.5,
                          0.0,               530.4669406576809, 240.5,
                          0.0,                 0.0,               1.0], dtype=np.float32).reshape(3, 3)
@@ -109,6 +113,7 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
     # Load image
     def process_image(filename):
         image = load_image(filename)
+        logging.info(f'  process_image({filename})')
         # Resize and to tensor
         intr = get_intrinsics(image.size, image_shape, data_type) #(3, 3)
         image = resize_image(image, image_shape)
@@ -141,25 +146,27 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
     vis_depth_upsample = cv2.resize(vis_depth, image_raw_wh, interpolation=cv2.INTER_LINEAR)
     write_image(os.path.join(save_vis_root, f"{base_name}.jpg"), vis_depth_upsample)
 
-    # ground truth depth
-    depth_gt_int = cv2.imread(input_file.replace('cam_left', 'depth').replace('jpg', 'png'))
-    # print(f'  depth_gt_int: {type(depth_gt_int)} {depth_gt_int.shape}')
-
-    is_true_01 = depth_gt_int[100, 100, 0] == depth_gt_int[100, 100, 1]
-    is_true_02 = depth_gt_int[100, 100, 0] == depth_gt_int[100, 100, 2]
-    # print(f'  is_true: {is_true_01} {is_true_02}')
-    depth_gt_float = depth_gt_int.astype(np.float) / 1000.0
-    vis_depth_gt = viz_inv_depth(depth_gt_float[:, :, 0]) * 255
-
-    save_vis_root_gt = save_vis_root.replace('depth_vis', 'depth_gt_vis')
-    if not os.path.exists(save_vis_root_gt):
-        os.makedirs(save_vis_root_gt)
-
-    # vis_depth_upsample_gt = cv2.resize(vis_depth_gt, image_raw_wh, interpolation=cv2.INTER_LINEAR)
-    write_image(os.path.join(save_vis_root_gt, f"{base_name}.jpg"), vis_depth_gt)
-
     depth_upsample = cv2.resize(depth, image_raw_wh, interpolation=cv2.INTER_NEAREST)
     np.save(os.path.join(save_depth_root, f"{base_name}.npy"), depth_upsample)
+
+    if data_type == 'matterport':
+        # ground truth depth
+        depth_gt_int = cv2.imread(input_file.replace('cam_left', 'depth').replace('jpg', 'png'))
+        # print(f'  depth_gt_int: {type(depth_gt_int)} {depth_gt_int.shape}')
+
+        # is_true_01 = depth_gt_int[100, 100, 0] == depth_gt_int[100, 100, 1]
+        # is_true_02 = depth_gt_int[100, 100, 0] == depth_gt_int[100, 100, 2]
+
+        # print(f'  is_true: {is_true_01} {is_true_02}')
+        depth_gt_float = depth_gt_int.astype(np.float) / 1000.0
+        vis_depth_gt = viz_inv_depth(depth_gt_float[:, :, 0]) * 255
+
+        save_vis_root_gt = save_vis_root.replace('depth_vis', 'depth_gt_vis')
+        if not os.path.exists(save_vis_root_gt):
+            os.makedirs(save_vis_root_gt)
+
+        # vis_depth_upsample_gt = cv2.resize(vis_depth_gt, image_raw_wh, interpolation=cv2.INTER_LINEAR)
+        write_image(os.path.join(save_vis_root_gt, f"{base_name}.jpg"), vis_depth_gt)
 
     return depth, pose21, pose23, intrinsics[0].detach().cpu().numpy(), image[0].permute(1, 2, 0).detach().cpu().numpy() * 255
 
@@ -378,10 +385,14 @@ def inference(model_wrapper, image_shape, input, sample_rate,
 
     assert os.path.exists(input)
     assert os.path.exists(output_tmp_dir)
+
     save_depth_root = os.path.join(output_tmp_dir, "depth")
     save_vis_root = os.path.join(output_tmp_dir, "depth_vis")
+    save_color_root = osp.join(output_tmp_dir, 'color')
+
     os.makedirs(save_depth_root, exist_ok=True)
     os.makedirs(save_vis_root, exist_ok=True)
+    os.makedirs(save_color_root, exist_ok=True)
 
     input_type = "folder"
     # processs input data
@@ -509,25 +520,37 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     cv2.putText(canvas, 'Groundtruth Depth', org=(830, 1030), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
 
     for idx_f, file in enumerate(files):
-        color_file = file.replace('infer_video/tmp/depth_vis', 'cam_left')
+        name_dir, name_base = osp.split(file)
+        if data_type == 'matterport':
+            # color_file = file.replace('infer_video/tmp/depth_vis', 'cam_left')
+            color_file = osp.join(name_dir, f'../../../cam_left/{name_base}')
+        else:
+            # color_file = file.replace('depth_vis', 'color')
+            color_file = osp.join(name_dir, f'../../../color/{name_base}')
+
         data_color = cv2.imread(color_file)
         canvas[0:image_hw[0], 0:image_hw[1], :] = data_color
 
         data_depth = cv2.imread(file)
         canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, 0:image_hw[1], :] = data_depth
 
-        data_depth_gt = cv2.imread(file.replace('depth_vis', 'depth_gt_vis'))
-        canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_depth_gt
+        depth_gt_file = file.replace('depth_vis', 'depth_gt_vis')
+        if osp.exists(depth_gt_file):
+            data_depth_gt = cv2.imread(depth_gt_file)
+            canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_depth_gt
+        else:
+            print(f'  missing {depth_gt_file}')
 
         traj_file = osp.join(osp.dirname(osp.dirname(file)), f'renders/{idx_f:06d}.png')
         if osp.exists(traj_file):
+            print(f'  load {traj_file}')
             data_traj = cv2.imread(traj_file)
             canvas[0:image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
         else:
             print(f'  missing {traj_file}')
 
-
         video_writer.write(canvas)
+
     video_writer.release()
     print("inference finish.....................")
 
