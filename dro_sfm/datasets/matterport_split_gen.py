@@ -39,22 +39,24 @@
       matterport010_001[-100:]
       matterport014_000
 
-/opt/slam/matterport/split$ wc -l test.txt 
+/opt/slam/matterport/split$ wc -l test.txt
 4024 test.txt
-/opt/slam/matterport/split$ wc -l val.txt 
+/opt/slam/matterport/split$ wc -l val.txt
 2000 val.txt
-/opt/slam/matterport/split$ wc -l train.txt 
+/opt/slam/matterport/split$ wc -l train.txt
 15671 train.txt
 """
 
+import logging
+import numpy as np
 import os
 import os.path as osp
 import sys
+import time
+
 lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
-import numpy as np
-import time
-import logging
+
 from dro_sfm.utils.setup_log import setup_log
 
 
@@ -63,7 +65,6 @@ def generate_split():
 
     if not osp.exists(dir_root):
         raise ValueError(f'path not exist: {dir_root}')
-        return
 
     dir_save = osp.join(dir_root, 'splits')
     if not osp.exists(dir_save):
@@ -100,8 +101,12 @@ def generate_split():
             continue
 
         pose_dir = osp.join(dir_root, item, 'pose')
-        if not osp.exists(pose_dir):
-            os.mkdir(pose_dir)
+        pose_dir_world_coord = osp.join(dir_root, item, 'pose_world_coord')
+
+        folders_need = [pose_dir, pose_dir_world_coord]
+        for item_dir in folders_need:
+            if not osp.exists(item_dir):
+                os.makedirs(item_dir)
 
         with open(cam_pose_file, 'r') as f_in, open(cam_traj_file, 'w') as f_ou_obj:
             lines = f_in.readlines()
@@ -124,7 +129,8 @@ def generate_split():
                 n_valid += 1
                 f_ou_obj.write(f'v {x} {y} {z}\n')
 
-                with open(osp.join(pose_dir, words[0].zfill(15) + '.txt'), 'w') as f_ou:
+                with open(osp.join(pose_dir, words[0].zfill(15) + '.txt'), 'w') as f_ou, \
+                    open(osp.join(pose_dir_world_coord, words[0].zfill(15) + '.txt'), 'w') as f_ou_world_coord:
                     # ref: dro_sfm/geometry/pose_trans.py   def quaternion_to_matrix(quaternions)
                     '''
                     r, i, j, k = torch.unbind(quaternions, -1)
@@ -165,12 +171,24 @@ def generate_split():
                     part_t = np.array([-x, -y, -z]).reshape((3, 1))
                     T = np.hstack((part_R, part_t))
                     T_hom = np.vstack((T, np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float).reshape((1, 4))))
-                    mat = np.matmul(T_hom, T05)
+                    # mat = np.matmul(T_hom, T05)
+                    mat = np.dot(T_hom, T05)
+
+                    mat_matmul = np.matmul(T_hom, T05)
+                    mat_dot = np.dot(T_hom, T05)
+                    all_close = np.allclose(mat_matmul, mat_dot)
+                    print(f'      all_close: {all_close}')
+                    logging.info(f'      all_close: {all_close}')
 
                     f_ou.write(f'{mat[0][0]} {mat[0][1]} {mat[0][2]} {mat[0][3]}\n'
                                f'{mat[1][0]} {mat[1][1]} {mat[1][2]} {mat[1][3]}\n'
                                f'{mat[2][0]} {mat[2][1]} {mat[2][2]} {mat[2][3]}\n'
                                f'{mat[3][0]} {mat[3][1]} {mat[3][2]} {mat[3][3]}\n')
+
+                    f_ou_world_coord.write(f'{T_hom[0][0]} {T_hom[0][1]} {T_hom[0][2]} {T_hom[0][3]}\n'
+                                           f'{T_hom[1][0]} {T_hom[1][1]} {T_hom[1][2]} {T_hom[1][3]}\n'
+                                           f'{T_hom[2][0]} {T_hom[2][1]} {T_hom[2][2]} {T_hom[2][3]}\n'
+                                           f'{T_hom[3][0]} {T_hom[3][1]} {T_hom[3][2]} {T_hom[3][3]}\n')
 
             for idx_p in range(1, n_valid):
                 f_ou_obj.write(f'f {idx_p} {idx_p+1} {idx_p+1}\n')
