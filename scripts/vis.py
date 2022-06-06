@@ -5,6 +5,7 @@ import numpy as np
 import time
 import vtk
 import os
+import logging
 
 from multiprocessing import Process, Queue
 import matplotlib.pyplot as plt
@@ -357,13 +358,15 @@ class vtkTimerCallback():
 
 
 class InteractiveViz(Process):
-    def __init__(self, queue, cinematic, render_path, clear_points, is_kitti=False):
+    def __init__(self, queue, cinematic, render_path, clear_points, win_size, is_kitti=False):
         super(InteractiveViz, self).__init__()
         self.queue = queue
         self.cinematic = cinematic
         self.render_path = render_path
         self.clear_points = clear_points
         self.is_kitti = is_kitti
+        self.win_size = win_size
+        logging.info(f'  win_size: {win_size}')
 
     def run(self):
         renderer = vtk.vtkRenderer()
@@ -386,7 +389,10 @@ class InteractiveViz(Process):
         renwin.SetWindowName("Point Cloud Viewer")
         # renwin.SetSize(800, 600)
         # renwin.SetSize(640, 480)  # matterport
-        renwin.SetSize(1296, 968)  # scannet
+        # renwin.SetSize(1296, 968)  # scannet
+        win_h, win_w = self.win_size
+        renwin.SetSize(win_w, win_h)
+
         renwin.AddRenderer(renderer)
 
         interactor = vtk.vtkRenderWindowInteractor()

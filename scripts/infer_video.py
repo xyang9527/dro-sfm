@@ -171,12 +171,12 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
     return depth, pose21, pose23, intrinsics[0].detach().cpu().numpy(), image[0].permute(1, 2, 0).detach().cpu().numpy() * 255
 
 
-def start_visualization(queue_g, cinematic=False, render_path=None, clear_points=False, is_kitti=True):
+def start_visualization(queue_g, win_size, cinematic=False, render_path=None, clear_points=False, is_kitti=True):
     """ Start interactive slam visualization in seperate process """
     logging.warning(f'start_visualization(..)')
 
     # visualization is a Process Object
-    viz = vis.InteractiveViz(queue_g, cinematic, render_path, clear_points, is_kitti=is_kitti)
+    viz = vis.InteractiveViz(queue_g, cinematic, render_path, clear_points, win_size, is_kitti=is_kitti)
     viz.start()
 
     return viz
@@ -432,8 +432,11 @@ def inference(model_wrapper, image_shape, input, sample_rate,
         vis_counter = 0
         render_path=os.path.join(output_tmp_dir, "renders")
         os.makedirs(render_path, exist_ok=True)
+        img_sample = cv2.imread(files[0])
+        print(f'  img_sample.shape: {img_sample.shape}')
+
         start_visualization(queue_g, cinematic=True, render_path=render_path,
-                            clear_points=False, is_kitti= data_type=="kitti")
+                            clear_points=False, win_size=img_sample.shape[:2], is_kitti= data_type=="kitti")
 
     pose_prev = None
     pose_23_prev = None
@@ -444,7 +447,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     print("inference start.....................")
     for idx_frame, fns in enumerate(list_of_files):
         fn1, fn2, fn3 = fns
-        print(f'frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n    fn3={fn3}')
+        logging.info(f'  frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n    fn3={fn3}')
         depth, pose21, pose23, intr, rgb = infer_and_save_pose([fn1, fn3], fn2, model_wrapper, 
                                                                 image_shape, data_type,
                                                                 save_depth_root, save_vis_root, idx_frame==0)
@@ -469,7 +472,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
             depth[:crop_h, :crop_w] = 0
             depth[-crop_h:, -crop_w:] = 0
 
-            print(f"depth median:{np.median(depth)}")
+            logging.info(f"  depth median:{np.median(depth)}")
 
             if pose_prev is not None:
                 pose = np.matmul(pose_prev, pose)
@@ -539,15 +542,15 @@ def inference(model_wrapper, image_shape, input, sample_rate,
             data_depth_gt = cv2.imread(depth_gt_file)
             canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_depth_gt
         else:
-            print(f'  missing {depth_gt_file}')
+            logging.info(f'  missing {depth_gt_file}')
 
         traj_file = osp.join(osp.dirname(osp.dirname(file)), f'renders/{idx_f:06d}.png')
         if osp.exists(traj_file):
-            print(f'  load {traj_file}')
+            logging.info(f'  load {traj_file}')
             data_traj = cv2.imread(traj_file)
             canvas[0:image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
         else:
-            print(f'  missing {traj_file}')
+            logging.info(f'  missing {traj_file}')
 
         video_writer.write(canvas)
 
