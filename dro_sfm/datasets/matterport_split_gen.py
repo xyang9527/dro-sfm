@@ -77,8 +77,7 @@ def generate_split():
         "train_val_test/matterport010_000"
     ]
     subdirs_test = [
-        "test/matterport014_000",
-        "test/matterport014_000_0601"
+        "test/matterport014_000"
     ]
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
@@ -124,6 +123,10 @@ def generate_split():
                 if len(words) != 8:
                     print(f'unexpected format: {words}')
                 params = [float(v) for v in words[1:]]
+
+                # https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+                #     q = [q0 q1 q2 q3]^T = [qw qx qy qz]^T
+                #     |q|^2 = q0^2 + q1^2 + q2^2 + q3^2 = qw^2 + qx^2 + qy^2 + qz^2 = 1
                 x, y, z, i, j, k, r = params
 
                 n_valid += 1
@@ -171,14 +174,17 @@ def generate_split():
                     part_t = np.array([-x, -y, -z]).reshape((3, 1))
                     T = np.hstack((part_R, part_t))
                     T_hom = np.vstack((T, np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float).reshape((1, 4))))
+                    # https://www.delftstack.com/howto/numpy/numpy-dot-vs-matmul/
+                    #     NumPy dot vs matmul in Python
                     # mat = np.matmul(T_hom, T05)
                     mat = np.dot(T_hom, T05)
 
                     mat_matmul = np.matmul(T_hom, T05)
                     mat_dot = np.dot(T_hom, T05)
                     all_close = np.allclose(mat_matmul, mat_dot)
-                    print(f'      all_close: {all_close}')
-                    logging.info(f'      all_close: {all_close}')
+                    if not all_close:
+                        print(f'      all_close: {all_close}')
+                        logging.info(f'      all_close: {all_close}')
 
                     f_ou.write(f'{mat[0][0]} {mat[0][1]} {mat[0][2]} {mat[0][3]}\n'
                                f'{mat[1][0]} {mat[1][1]} {mat[1][2]} {mat[1][3]}\n'

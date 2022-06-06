@@ -246,6 +246,7 @@ def load_data(names, data_dir):
                     [ 1.,  0.,  0.,  0.],
                     [ 0., -1.,  0.,  0.],
                     [ 0.,  0.,  0.,  1.]], dtype=np.float)
+    T05_inv = np.linalg.inv(T05)
     # '''
 
     pose_init = None
@@ -293,18 +294,30 @@ def load_data(names, data_dir):
                 r, g, b = cloud_rgb[i]
                 f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
 
+        # ==================================================================== #
         # check np.dot(np.matmul(A, B), C) == np.dot(A, np.dot(B, C))
         rel_pose_world_coord = np.matmul(np.linalg.inv(pose_init_world_coord), data_pose_world_coord)
-        cloud_xyz_align_world_coord = np.dot(rel_pose_world_coord, np.dot(T05, cloud_xyz_hom))
+        cloud_xyz_align_world_coord = np.dot(T05_inv, np.dot(rel_pose_world_coord, np.dot(T05, cloud_xyz_hom)))
         is_same = np.allclose(cloud_xyz_align, cloud_xyz_align_world_coord)
         mean_diff = np.mean(cloud_xyz_align - cloud_xyz_align_world_coord)
-        print(f'    is_same:    {is_same},   mean_diff:    {mean_diff}')
+        if not is_same:
+            print(f'    is_same:    {is_same},   mean_diff:    {mean_diff}')
 
         cloud_xyz_align_A = np.dot(data_pose, cloud_xyz_hom)
         cloud_xyz_align_B = np.dot(data_pose_world_coord, np.dot(T05, cloud_xyz_hom))
         is_same_AB = np.allclose(cloud_xyz_align_A, cloud_xyz_align_B)
         mean_diff_AB = np.mean(cloud_xyz_align_A - cloud_xyz_align_B)
-        print(f'    is_same_AB: {is_same_AB},   mean_diff_AB: {mean_diff_AB}')
+        if not is_same_AB:
+            print(f'    is_same_AB: {is_same_AB},   mean_diff_AB: {mean_diff_AB}')
+
+        with open(osp.join(dir_cloud_obj, f'pose_world_coord_T05_{name}.obj'), 'w') as f_ou_align_rgb:
+            n_vert = cloud_xyz.shape[0]
+            cloud_xyz_temp = np.transpose(np.dot(data_pose_world_coord, np.dot(T05, cloud_xyz_hom)))
+            for i in range(n_vert):
+                x, y, z, w = cloud_xyz_temp[i]
+                r, g, b = cloud_rgb[i]
+                f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
+        # ==================================================================== #
 
         # downsampled point cloud
         cloud_xyz_downsample = cloud_downsample[:, :3]
@@ -324,6 +337,7 @@ def load_data(names, data_dir):
 def create_obj_cloud():
     data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 100},
                  {'dir': '/home/sigma/slam/matterport/test/matterport014_000_0601', 'space': 5}]
+    data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 100}]
     for item_data in data_cols:
         data_dir = item_data['dir']
         space = item_data['space']
