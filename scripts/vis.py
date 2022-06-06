@@ -352,7 +352,6 @@ class vtkTimerCallback():
                 writer.Write()
 
                 self.write_count += 1
-                
 
         self.timer_count += 1
 

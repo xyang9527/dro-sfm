@@ -33,6 +33,7 @@ def parse_args():
     parser.add_argument('--output', type=str, help='Output folder', required=True)
     parser.add_argument('--data_type', type=str, choices=['kitti', 'indoor', 'scannet', 'matterport', 'general'], required=True)
     parser.add_argument('--sample_rate', type=int, default=10, help='sample rate', required=True)
+    parser.add_argument('--max_frames', type=int, default=120, help='max frames to test')
     parser.add_argument('--ply_mode', action="store_true", help='vis point cloud')
 
     parser.add_argument('--image_shape', type=int, nargs='+', default=None,
@@ -110,15 +111,18 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
     base_name = os.path.splitext(os.path.basename(input_file))[0]
 
     image_raw_wh = load_image(input_file).size
+
     # Load image
     def process_image(filename):
         image = load_image(filename)
         logging.info(f'  process_image({filename})')
+
         # Resize and to tensor
         intr = get_intrinsics(image.size, image_shape, data_type) #(3, 3)
         image = resize_image(image, image_shape)
         image = to_tensor(image).unsqueeze(0)
         intr = torch.from_numpy(intr).unsqueeze(0) #(1, 3, 3)
+
         # Send image to GPU if available
         if torch.cuda.is_available():
             image = image.to('cuda')
@@ -200,6 +204,7 @@ def reproject_with_depth_batch(depth_ref, depth_src, ref_pose, src_pose, xy_coor
     intrinsics_src, extrinsics_src = src_pose["intr"], src_pose["extr"]
 
     bs, height, width = depth_ref.shape[:3]
+
     ## step1. project reference pixels to the source view
     # reference view x, y
     x_ref, y_ref = xy_coords  # (B, H, W)
@@ -338,6 +343,7 @@ def init_model(args):
 
     print("init model start...................")
     hvd_disable()
+
     # Parse arguments
     config, state_dict = parse_test_file(args.checkpoint)
 
@@ -345,10 +351,11 @@ def init_model(args):
     image_shape = args.image_shape
     if image_shape is None:
         image_shape = config.datasets.augmentation.image_shape
-
     print(f"input image shape:{image_shape}")
+
     # Set debug if requested
-    set_debug(config.debug)
+    # set_debug(config.debug)
+    set_debug(True)
 
     # Initialize model wrapper from checkpoint arguments
     model_wrapper = ModelWrapper(config, load_datasets=False)
@@ -368,7 +375,7 @@ def init_model(args):
     return model_wrapper, image_shape
 
 
-def inference(model_wrapper, image_shape, input, sample_rate,
+def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
               output_depths_npy, output_vis_video, output_tmp_dir,
               data_type="general", ply_mode=False, sfm_params=None):
     logging.warning(f'inference(\n'
@@ -395,13 +402,16 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     os.makedirs(save_color_root, exist_ok=True)
 
     input_type = "folder"
+
     # processs input data
     if not os.path.isdir(input):
         print("processing video input:.........")
+
         input_type = "video"
         assert os.path.splitext(input)[1] in [".mp4", ".avi", ".mov", ".mpeg", ".flv", ".wmv"]
         input_video_images = os.path.join(output_tmp_dir, "input_video_images")
         parse_video(input, input_video_images, sample_rate)
+
         # update input
         input = input_video_images
 
@@ -415,7 +425,8 @@ def inference(model_wrapper, image_shape, input, sample_rate,
         files = files[::sample_rate]
 
     files.sort()
-    files = files[:120]
+    if len(files) > max_frames:
+        files = files[:max_frames]
     print('Found total {} files'.format(len(files)))
     assert len(files) > 2
 
@@ -426,12 +437,15 @@ def inference(model_wrapper, image_shape, input, sample_rate,
 
     if ply_mode:
         logging.info(f'  ply_mode')
+
         # visulation
         # new points and poses get added to the queue
         queue_g = Queue()
         vis_counter = 0
+
         render_path=os.path.join(output_tmp_dir, "renders")
         os.makedirs(render_path, exist_ok=True)
+
         img_sample = cv2.imread(files[0])
         print(f'  img_sample.shape: {img_sample.shape}')
 
@@ -443,21 +457,25 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     depth_list = []
     pose_list = []
 
-    print(f"*********************data_type:{data_type}")
+    print(f"*********************\ndata_type: {data_type}")
     print("inference start.....................")
     for idx_frame, fns in enumerate(list_of_files):
         fn1, fn2, fn3 = fns
         logging.info(f'  frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n    fn3={fn3}')
+
         depth, pose21, pose23, intr, rgb = infer_and_save_pose([fn1, fn3], fn2, model_wrapper, 
                                                                 image_shape, data_type,
                                                                 save_depth_root, save_vis_root, idx_frame==0)
         depth_list.append(depth)
+
+        logging.info(f'frame {idx_frame:6d}\npose21:\n{pose21}\npose23{pose23}\n')
+
         if ply_mode:
             if pose_23_prev is not None:
                 s = np.linalg.norm(np.linalg.norm(pose_23_prev[:3, 3])) / np.linalg.norm(pose21[:3, 3])
                 pose21[:3, 3] = pose21[:3, 3] * s
-            pose_23_prev = pose23
 
+            pose_23_prev = pose23
             pose = pose21
 
             depth_pad = np.pad(depth, [(0, 1), (0, 1)], "constant")
@@ -480,6 +498,7 @@ def inference(model_wrapper, image_shape, input, sample_rate,
 
             pose_list.append(pose)
             num_view = sfm_params["fusion_view_num"]
+
             if len(pose_list) >= num_view:
                 depth = gemo_filter_fusion(depth_list[-1], depth_list[-num_view:-1], pose_list[-1],
                                         pose_list[-num_view:-1], intr, thres_view=sfm_params["fusion_thres_view"])
@@ -525,10 +544,8 @@ def inference(model_wrapper, image_shape, input, sample_rate,
     for idx_f, file in enumerate(files):
         name_dir, name_base = osp.split(file)
         if data_type == 'matterport':
-            # color_file = file.replace('infer_video/tmp/depth_vis', 'cam_left')
             color_file = osp.join(name_dir, f'../../../cam_left/{name_base}')
         else:
-            # color_file = file.replace('depth_vis', 'color')
             color_file = osp.join(name_dir, f'../../../color/{name_base}')
 
         data_color = cv2.imread(color_file)
@@ -581,11 +598,12 @@ def main():
     sample_rate = args.sample_rate
     data_type = args.data_type 
     ply_mode = args.ply_mode
+    max_frames = args.max_frames
 
     os.makedirs(args.output, exist_ok=True)
     os.makedirs(output_tmp_dir, exist_ok=True)
 
-    inference(model_wrapper, image_shape, input, sample_rate=sample_rate, 
+    inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
               output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
               output_tmp_dir=output_tmp_dir, data_type=data_type,
               ply_mode=ply_mode, sfm_params=sfm_params)
