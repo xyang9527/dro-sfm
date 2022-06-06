@@ -88,6 +88,8 @@ pip install opencv-python yacs matplotlib termcolor IPython tqdm wandb
 
 # visualization
 pip install pytorch3d vtk
+
+pip install gitpython
 ```
 
 To verify that the environment is setup correctly, you can run a simple overfitting test:

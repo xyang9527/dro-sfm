@@ -2,6 +2,9 @@ import logging
 import datetime
 import os.path as osp
 import os
+import subprocess
+# pip install gitpython
+import git
 
 def setup_log(log_name):
     # Initialize logging
@@ -35,4 +38,19 @@ def setup_log(log_name):
         get_log_file,
         datetime.datetime.now())
     )
+
+    # https://gitpython.readthedocs.io/en/stable/reference.html#module-git.objects.commit
+    # TestingTools/model_performance_evaluation_tool/src/common/job_runner.py
+    #     subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('ascii')
+    repo_path = osp.join(osp.dirname(__file__), '../../')
+    repo = git.Repo(repo_path)
+    logging.info(f'  {type(repo)}')
+    logging.info(f'  repo.head.commit.hexsha: {repo.head.commit.hexsha}')
+    logging.info(f'  is_dirty():              {repo.is_dirty()}')
+
+    if repo.is_dirty():
+        git_diff = subprocess.check_output(['git', 'diff'])
+        logging.info(f'  git diff\n{git_diff.decode()}')
+        print(f'  git diff\n{git_diff.decode()}')
+
     print('\n===== log_file: {}\n'.format(get_log_file))
