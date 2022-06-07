@@ -58,6 +58,7 @@ lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
 
 from dro_sfm.utils.setup_log import setup_log
+from dro_sfm.visualization.gazebo_config import GazeboParam
 
 
 def generate_split():
@@ -84,7 +85,9 @@ def generate_split():
                     [ 1.,  0.,  0.,  0.],
                     [ 0., -1.,  0.,  0.],
                     [ 0.,  0.,  0.,  1.]], dtype=np.float)
-    T05_inv = np.linalg.inv(T05)
+    # T05_inv = np.linalg.inv(T05)
+    # gazebo_param = GazeboParam()
+    # translation_gt2cam = gazebo_param.gt2cam
 
     # create pose file
     subdirs_pose = []
@@ -110,12 +113,16 @@ def generate_split():
             if not osp.exists(item_dir):
                 os.makedirs(item_dir)
 
+        has_pose_init = False
+        pose_init = None
+
         with open(cam_pose_file, 'r') as f_in, \
             open(cam_traj_file_world_coord, 'w') as f_ou_obj_world_coord, \
             open(cam_traj_file_camera_coord, 'w') as f_ou_obj_camera_coord:
 
             lines = f_in.readlines()
             n_valid = 0
+
             for idx_line, line in enumerate(lines):
                 line = line.strip()
                 if line.startswith('#'):
@@ -135,12 +142,6 @@ def generate_split():
                 #     |q|^2 = q0^2 + q1^2 + q2^2 + q3^2 = qw^2 + qx^2 + qy^2 + qz^2 = 1
                 x, y, z, i, j, k, r = params
                 x, y, z = -x, -y, -z
-
-                n_valid += 1
-                f_ou_obj_world_coord.write(f'v {x} {y} {z}\n')
-                vec_pos = np.dot(T05_inv, np.array([x, y, z, 1.0]).T).T
-                f_ou_obj_camera_coord.write(f'v {vec_pos[0]} {vec_pos[1]} {vec_pos[2]}\n')
-
 
                 with open(osp.join(pose_dir, words[0].zfill(15) + '.txt'), 'w') as f_ou, \
                     open(osp.join(pose_dir_world_coord, words[0].zfill(15) + '.txt'), 'w') as f_ou_world_coord:
@@ -199,6 +200,10 @@ def generate_split():
                         print(f'      all_close: {all_close}')
                         logging.info(f'      all_close: {all_close}')
 
+                    if not has_pose_init and pose_init is None:
+                        pose_init = mat
+                        has_pose_init = True
+
                     # camera coordinate
                     f_ou.write(f'{mat[0][0]} {mat[0][1]} {mat[0][2]} {mat[0][3]}\n'
                                f'{mat[1][0]} {mat[1][1]} {mat[1][2]} {mat[1][3]}\n'
@@ -210,6 +215,11 @@ def generate_split():
                                            f'{T_hom[1][0]} {T_hom[1][1]} {T_hom[1][2]} {T_hom[1][3]}\n'
                                            f'{T_hom[2][0]} {T_hom[2][1]} {T_hom[2][2]} {T_hom[2][3]}\n'
                                            f'{T_hom[3][0]} {T_hom[3][1]} {T_hom[3][2]} {T_hom[3][3]}\n')
+
+                n_valid += 1
+                f_ou_obj_world_coord.write(f'v {x} {y} {z}\n')
+                vec_pos = np.dot(np.linalg.inv(pose_init), np.array([x, y, z, 1.0]).T).T
+                f_ou_obj_camera_coord.write(f'v {vec_pos[0]} {vec_pos[1]} {vec_pos[2]}\n')
 
             for idx_p in range(1, n_valid-1, 2):
                 f_ou_obj_world_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
@@ -248,7 +258,7 @@ def generate_split():
 
                 n_valid += 1
                 f_ou_obj_world_coord.write(f'v {x} {y} {z}\n')
-                vec_pos = np.dot(T05_inv, np.array([x, y, z, 1.0]).T).T
+                vec_pos = np.dot(np.linalg.inv(pose_init), np.array([x, y, z, 1.0]).T).T
                 f_ou_obj_camera_coord.write(f'v {vec_pos[0]} {vec_pos[1]} {vec_pos[2]}\n')
 
             for idx_p in range(1, n_valid-1, 2):
