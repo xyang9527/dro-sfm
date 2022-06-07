@@ -114,8 +114,8 @@ def generate_split():
         pose_init = None
 
         with open(cam_pose_file, 'r') as f_in, \
-            open(cam_traj_file_world_coord, 'w') as f_ou_obj_world_coord, \
-            open(cam_traj_file_camera_coord, 'w') as f_ou_obj_camera_coord:
+            open(cam_traj_file_world_coord, 'w') as f_ou_traj_world_coord, \
+            open(cam_traj_file_camera_coord, 'w') as f_ou_traj_camera_coord:
 
             lines = f_in.readlines()
             n_valid = 0
@@ -195,13 +195,13 @@ def generate_split():
                                            f'{T_hom[3][0]} {T_hom[3][1]} {T_hom[3][2]} {T_hom[3][3]}\n')
 
                 n_valid += 1
-                f_ou_obj_world_coord.write(f'v {x} {y} {z}\n')
+                f_ou_traj_world_coord.write(f'v {x} {y} {z}\n')
                 vec_pos = np.dot(np.linalg.inv(pose_init), np.array([x, y, z, 1.0]).T).T
-                f_ou_obj_camera_coord.write(f'v {vec_pos[0]} {vec_pos[1]} {vec_pos[2]}\n')
+                f_ou_traj_camera_coord.write(f'v {vec_pos[0]} {vec_pos[1]} {vec_pos[2]}\n')
 
             for idx_p in range(1, n_valid-1, 2):
-                f_ou_obj_world_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
-                f_ou_obj_camera_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
+                f_ou_traj_world_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
+                f_ou_traj_camera_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
 
         # ==================================================================== #
         # groundtruth.txt
@@ -213,8 +213,8 @@ def generate_split():
             continue
 
         with open(gt_pose_file, 'r') as f_in, \
-            open(gt_traj_file_world_coord, 'w') as f_ou_obj_world_coord, \
-            open(gt_traj_file_camera_coord, 'w') as f_ou_obj_camera_coord:
+            open(gt_traj_file_world_coord, 'w') as f_ou_traj_world_coord, \
+            open(gt_traj_file_camera_coord, 'w') as f_ou_traj_camera_coord:
 
             lines = f_in.readlines()
             n_valid = 0
@@ -235,13 +235,13 @@ def generate_split():
                 x, y, z = -x, -y, -z
 
                 n_valid += 1
-                f_ou_obj_world_coord.write(f'v {x} {y} {z}\n')
+                f_ou_traj_world_coord.write(f'v {x} {y} {z}\n')
                 vec_pos = np.dot(np.linalg.inv(pose_init), np.array([x, y, z, 1.0]).T).T
-                f_ou_obj_camera_coord.write(f'v {vec_pos[0]} {vec_pos[1]} {vec_pos[2]}\n')
+                f_ou_traj_camera_coord.write(f'v {vec_pos[0]} {vec_pos[1]} {vec_pos[2]}\n')
 
             for idx_p in range(1, n_valid-1, 2):
-                f_ou_obj_world_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
-                f_ou_obj_camera_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
+                f_ou_traj_world_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
+                f_ou_traj_camera_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
         # ==================================================================== #
     # end of "for item in subdirs_pose:"
 

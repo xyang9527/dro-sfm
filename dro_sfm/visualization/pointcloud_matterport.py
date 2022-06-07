@@ -57,13 +57,13 @@ def load_data(names, data_dir):
     valid_only = True
 
     dir_root = data_dir
-    dir_cloud_ply_camera_coord = osp.join(dir_root, 'demo/ply_camera_coord')
-    dir_cloud_obj_camera_coord = osp.join(dir_root, 'demo/obj_camera_coord')
-    dir_cloud_obj_world_coord = osp.join(dir_root, 'demo/obj_world_coord')
+    dir_cloud_ply_camera_coord = osp.join(dir_root, 'demo/unaligned_ply_camera_coord')
+    dir_cloud_obj_camera_coord = osp.join(dir_root, 'demo/aligned_obj_camera_coord')
+    dir_cloud_obj_world_coord = osp.join(dir_root, 'demo/aligned_obj_world_coord')
     dir_cloud_jpg = osp.join(dir_root, 'demo/jpg')
 
-    dir_cloud_ply_camera_coord_downsample = osp.join(dir_root, f'demo/ply_camera_coord_downsample_{sample_x}x{sample_y}')
-    dir_cloud_obj_camera_coord_downsample = osp.join(dir_root, f'demo/obj_camera_coord_downsample_{sample_x}x{sample_y}')
+    dir_cloud_ply_camera_coord_downsample = osp.join(dir_root, f'demo/unaligned_ply_camera_coord_downsample_{sample_x}x{sample_y}')
+    dir_cloud_obj_camera_coord_downsample = osp.join(dir_root, f'demo/aligned_obj_camera_coord_downsample_{sample_x}x{sample_y}')
 
     folders_need = [
         dir_cloud_ply_camera_coord,
