@@ -85,9 +85,6 @@ def generate_split():
                     [ 1.,  0.,  0.,  0.],
                     [ 0., -1.,  0.,  0.],
                     [ 0.,  0.,  0.,  1.]], dtype=np.float)
-    # T05_inv = np.linalg.inv(T05)
-    # gazebo_param = GazeboParam()
-    # translation_gt2cam = gazebo_param.gt2cam
 
     # create pose file
     subdirs_pose = []
@@ -145,27 +142,8 @@ def generate_split():
 
                 with open(osp.join(pose_dir, words[0].zfill(15) + '.txt'), 'w') as f_ou, \
                     open(osp.join(pose_dir_world_coord, words[0].zfill(15) + '.txt'), 'w') as f_ou_world_coord:
-                    # ref: dro_sfm/geometry/pose_trans.py   def quaternion_to_matrix(quaternions)
-                    '''
-                    r, i, j, k = torch.unbind(quaternions, -1)
-                    two_s = 2.0 / (quaternions * quaternions).sum(-1)
-
-                    o = torch.stack(
-                        (
-                            1 - two_s * (j * j + k * k),
-                            two_s * (i * j - k * r),
-                            two_s * (i * k + j * r),
-                            two_s * (i * j + k * r),
-                            1 - two_s * (i * i + k * k),
-                            two_s * (j * k - i * r),
-                            two_s * (i * k - j * r),
-                            two_s * (j * k + i * r),
-                            1 - two_s * (i * i + j * j),
-                        ),
-                        -1,
-                    )
-                    return o.reshape(quaternions.shape[:-1] + (3, 3))
-                    '''
+                    # References:
+                    # dro_sfm/geometry/pose_trans.py   def quaternion_to_matrix(quaternions)
                     # https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
                     #     Maths - Conversion Quaternion to Matrix
                     two_s = 2.0 / np.dot(np.array([r, i, j, k]), np.array([r, i, j, k]).transpose())
@@ -265,10 +243,12 @@ def generate_split():
                 f_ou_obj_world_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
                 f_ou_obj_camera_coord.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
         # ==================================================================== #
+    # end of "for item in subdirs_pose:"
 
     image_dir = 'cam_left'
     n_frame_missing_pose_info = 0
 
+    # split dataset
     with open(osp.join(dir_save, 'train_all_list.txt'), 'w') as f_train, \
         open(osp.join(dir_save, 'val_all_list.txt'), 'w') as f_val, \
         open(osp.join(dir_save, 'test_all_list.txt'), 'w') as f_test:
