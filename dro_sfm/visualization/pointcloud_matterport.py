@@ -57,21 +57,23 @@ def load_data(names, data_dir):
     valid_only = True
 
     dir_root = data_dir
-    dir_cloud_ply_camera_coord = osp.join(dir_root, 'demo/unaligned_ply_camera_coord')
-    dir_cloud_obj_camera_coord = osp.join(dir_root, 'demo/aligned_obj_camera_coord')
-    dir_cloud_obj_world_coord = osp.join(dir_root, 'demo/aligned_obj_world_coord')
+    # dir_cloud_ply_camera_coord = osp.join(dir_root, 'demo/unaligned_ply_camera_coord')
+    # dir_cloud_obj_camera_coord = osp.join(dir_root, 'demo/aligned_obj_camera_coord')
+    # dir_cloud_obj_world_coord = osp.join(dir_root, 'demo/aligned_obj_world_coord')
     dir_cloud_jpg = osp.join(dir_root, 'demo/jpg')
 
     dir_cloud_ply_camera_coord_downsample = osp.join(dir_root, f'demo/unaligned_ply_camera_coord_downsample_{sample_x}x{sample_y}')
     dir_cloud_obj_camera_coord_downsample = osp.join(dir_root, f'demo/aligned_obj_camera_coord_downsample_{sample_x}x{sample_y}')
+    dir_cloud_obj_world_coord_downsample = osp.join(dir_root, f'demo/aligned_obj_world_coord_downsample_{sample_x}x{sample_y}')
 
     folders_need = [
-        dir_cloud_ply_camera_coord,
-        dir_cloud_obj_camera_coord,
-        dir_cloud_obj_world_coord,
+        # dir_cloud_ply_camera_coord,
+        # dir_cloud_obj_camera_coord,
+        # dir_cloud_obj_world_coord,
         dir_cloud_jpg,
         dir_cloud_ply_camera_coord_downsample,
-        dir_cloud_obj_camera_coord_downsample
+        dir_cloud_obj_camera_coord_downsample,
+        dir_cloud_obj_world_coord_downsample
     ]
     for item_dir in folders_need:
         if not osp.exists(item_dir):
@@ -128,13 +130,13 @@ def load_data(names, data_dir):
             pose_init = data_pose
             pose_init_world_coord = data_pose_world_coord
 
-        file_cloud_ply = osp.join(dir_cloud_ply_camera_coord, f'{name}.ply')
+        # file_cloud_ply = osp.join(dir_cloud_ply_camera_coord, f'{name}.ply')
         file_cloud_ply_downsample = osp.join(dir_cloud_ply_camera_coord_downsample, f'{name}.ply')
         data_depth_resized = cv2.resize(data_depth, data_color.size, interpolation = cv2.INTER_NEAREST)
 
-        cloud = generate_pointcloud(
-            np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy,
-            file_cloud_ply, 1.0)
+        # cloud = generate_pointcloud(
+        #     np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy,
+        #     file_cloud_ply, 1.0)
         cloud_downsample = generate_pointcloud_NxN(
             np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy,
             file_cloud_ply_downsample, sample_x, sample_y, valid_only, 1.0)
@@ -142,18 +144,18 @@ def load_data(names, data_dir):
         rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose)
 
         # initial point cloud in camera coord
-        cloud_xyz = cloud[:, :3]
-        cloud_rgb = cloud[:, 3:]
-        cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((cloud_xyz.shape[0], 1)))))
-        cloud_xyz_align = np.dot(rel_pose, cloud_xyz_hom)
-        cloud_xyz_align_t = np.transpose(cloud_xyz_align)
+        # cloud_xyz = cloud[:, :3]
+        # cloud_rgb = cloud[:, 3:]
+        # cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((cloud_xyz.shape[0], 1)))))
+        # cloud_xyz_align = np.dot(rel_pose, cloud_xyz_hom)
+        # cloud_xyz_align_t = np.transpose(cloud_xyz_align)
 
-        with open(osp.join(dir_cloud_obj_camera_coord, f'camera_coord_pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:
-            n_vert = cloud_xyz.shape[0]
-            for i in range(n_vert):
-                x, y, z, w = cloud_xyz_align_t[i]
-                r, g, b = cloud_rgb[i]
-                f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
+        # with open(osp.join(dir_cloud_obj_camera_coord, f'camera_coord_pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:
+        #     n_vert = cloud_xyz.shape[0]
+        #     for i in range(n_vert):
+        #         x, y, z, w = cloud_xyz_align_t[i]
+        #         r, g, b = cloud_rgb[i]
+        #         f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
 
         # downsampled point cloud in camera coord
         cloud_xyz_downsample = cloud_downsample[:, :3]
@@ -170,25 +172,34 @@ def load_data(names, data_dir):
                 f_ou_align_rgb_downsample.write(f'v {x} {y} {z} {r} {g} {b}\n')
 
         # point cloud in world coord
-        with open(osp.join(dir_cloud_obj_world_coord, f'world_coord_pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:
-            n_vert = cloud_xyz.shape[0]
-            cloud_xyz_temp = np.transpose(np.dot(data_pose_world_coord, np.dot(T05, cloud_xyz_hom)))
-            for i in range(n_vert):
+        # with open(osp.join(dir_cloud_obj_world_coord, f'world_coord_pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:
+        #     n_vert = cloud_xyz.shape[0]
+        #     cloud_xyz_temp = np.transpose(np.dot(data_pose_world_coord, np.dot(T05, cloud_xyz_hom)))
+        #     for i in range(n_vert):
+        #         x, y, z, w = cloud_xyz_temp[i]
+        #         r, g, b = cloud_rgb[i]
+        #         f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
+
+        # downsampled point cloud in world coord
+        with open(osp.join(dir_cloud_obj_world_coord_downsample, f'world_coord_pose_T05_{name}.obj'), 'w') as f_ou_align_rgb_downsample:
+            n_vert_downsample = cloud_xyz_downsample.shape[0]
+            cloud_xyz_temp = np.transpose(np.dot(data_pose_world_coord, np.dot(T05, cloud_xyz_hom_downsample)))
+            for i in range(n_vert_downsample):
                 x, y, z, w = cloud_xyz_temp[i]
-                r, g, b = cloud_rgb[i]
-                f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
+                r, g, b = cloud_rgb_downsample[i]
+                f_ou_align_rgb_downsample.write(f'v {x} {y} {z} {r} {g} {b}\n')
 
         # ==================================================================== #
         # check np.dot(np.matmul(A, B), C) == np.dot(A, np.dot(B, C))
         rel_pose_world_coord = np.matmul(np.linalg.inv(pose_init_world_coord), data_pose_world_coord)
-        cloud_xyz_align_world_coord = np.dot(T05_inv, np.dot(rel_pose_world_coord, np.dot(T05, cloud_xyz_hom)))
-        is_same = np.allclose(cloud_xyz_align, cloud_xyz_align_world_coord)
-        mean_diff = np.mean(cloud_xyz_align - cloud_xyz_align_world_coord)
+        cloud_xyz_align_world_coord = np.dot(T05_inv, np.dot(rel_pose_world_coord, np.dot(T05, cloud_xyz_hom_downsample)))
+        is_same = np.allclose(cloud_xyz_align_downsample, cloud_xyz_align_world_coord)
+        mean_diff = np.mean(cloud_xyz_align_downsample - cloud_xyz_align_world_coord)
         if not is_same:
             print(f'    is_same:    {is_same},   mean_diff:    {mean_diff}')
 
-        cloud_xyz_align_A = np.dot(data_pose, cloud_xyz_hom)
-        cloud_xyz_align_B = np.dot(data_pose_world_coord, np.dot(T05, cloud_xyz_hom))
+        cloud_xyz_align_A = np.dot(data_pose, cloud_xyz_hom_downsample)
+        cloud_xyz_align_B = np.dot(data_pose_world_coord, np.dot(T05, cloud_xyz_hom_downsample))
         is_same_AB = np.allclose(cloud_xyz_align_A, cloud_xyz_align_B)
         mean_diff_AB = np.mean(cloud_xyz_align_A - cloud_xyz_align_B)
         if not is_same_AB:
