@@ -36,9 +36,8 @@ def load_scannet_depth(file):
     return depth
 
 
-def create_obj_cloud():
-    logging.warning(f'create_obj_cloud()')
-    dir_root = '/home/sigma/slam/scannet_train_data/scene0000_00'
+def create_obj_cloud(dir_root):
+    logging.warning(f'create_obj_cloud( {dir_root} )')
     n = len(os.listdir(osp.join(dir_root, 'color')))
     logging.info(f'  {n} files in {dir_root}')
 
@@ -90,8 +89,11 @@ def create_obj_cloud():
         open(cam_traj_file_world_coord, 'w') as f_ou_traj_world_coord:
 
         n_valid = 0
+        n_max = len(os.listdir(osp.join(dir_root, 'pose')))
+        n_test = 10000
+        n_range = n_max if n_max < n_test else n_test
 
-        for idx_f in range(0, 1000, 3):
+        for idx_f in range(0, n_range, 1):
             name = f'{idx_f:06d}'
             print(f'  process frame: {name} ..')
 
@@ -177,7 +179,18 @@ if __name__ == '__main__':
     time_beg_pointcloud = time.time()
 
     np.set_printoptions(precision=6, suppress=True)
-    create_obj_cloud()
+    dir_home = '/home/sigma/slam/scannet_train_data'
+    data_cols = [
+        'scene0000_00',
+        'scene0100_00',
+        'scene0200_00',
+        'scene0300_00',
+        'scene0400_00',
+        'scene0500_00',
+        'scene0600_00'
+        ]
+    for item_data in data_cols:
+        create_obj_cloud(osp.join(dir_home, item_data))
 
     time_end_pointcloud = time.time()
     print(f'pointcloud_scannet.py elapsed {time_end_pointcloud - time_beg_pointcloud:.6f} seconds.')
