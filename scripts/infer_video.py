@@ -374,6 +374,16 @@ def init_model(args):
     print("init model finish...................")
     return model_wrapper, image_shape
 
+def get_gt_pose(file, data_type):
+    pose_file = None
+    if data_type == 'scannet':
+        pose_file = file.replace('color', 'pose').replace('jpg', 'txt')
+    elif data_type == 'matterport':
+        pose_file = file.replace('cam_left', 'pose').replace('jpg', 'txt')
+    else:
+        pose_file = file.replace('color', 'pose').replace('jpg', 'txt')
+    return np.genfromtxt(pose_file)
+
 
 def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
               output_depths_npy, output_vis_video, output_tmp_dir,
@@ -467,12 +477,27 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                                                                 image_shape, data_type,
                                                                 save_depth_root, save_vis_root, idx_frame==0)
         depth_list.append(depth)
+        print(f'  idx_frame: {idx_frame:6d}')
+        print(f'    depth:  {type(depth)}  {depth.shape}')
+        print(f'    pose21: {type(pose21)}  {pose21.shape}')
+        print(f'    pose23: {type(pose23)}  {pose23.shape}')
+        print(f'    intr:   {type(intr)}  {intr.shape}')
+        print(f'    rgb:    {type(rgb)}  {rgb.shape}')
+
+        gt_pose_1 = get_gt_pose(fn1, data_type)
+        gt_pose_2 = get_gt_pose(fn2, data_type)
+        gt_pose_3 = get_gt_pose(fn3, data_type)
+        pose21 = np.matmul(np.linalg.inv(gt_pose_1), gt_pose_2).astype(np.float32)
+        pose23 = np.matmul(np.linalg.inv(gt_pose_3), gt_pose_2).astype(np.float32)
+
+        '''
         pose21[0][3] = -pose21[0][3]
         pose21[1][3] = -pose21[1][3]
         pose21[2][3] = -pose21[2][3]
         pose23[0][3] = -pose23[0][3]
         pose23[1][3] = -pose23[1][3]
         pose23[2][3] = -pose23[2][3]
+        '''
 
         logging.info(f'frame {idx_frame:6d}\npose21:\n{pose21}\npose23{pose23}\n')
 
@@ -571,7 +596,8 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         if osp.exists(traj_file):
             logging.info(f'  load {traj_file}')
             data_traj = cv2.imread(traj_file)
-            canvas[0:image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
+            if data_traj is not None:
+                canvas[0:image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
         else:
             logging.info(f'  missing {traj_file}')
 

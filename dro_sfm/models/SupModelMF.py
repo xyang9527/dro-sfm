@@ -109,6 +109,9 @@ class SupModelMF(SfmModelMF):
                 batch['rgb_original'], batch['rgb_context_original'],
                 output['inv_depths'],  batch['depth'], batch['pose_context'], output['poses'], batch['intrinsics'],
                 return_logs=return_logs, progress=progress)
+
+            # matterport: batch['pose_context'] = pose of batch['rgb_original'] to pose of batch['rgb_context_original']
+
             # Return loss and metrics
             return {
                 'loss': self_sup_output['loss'],
