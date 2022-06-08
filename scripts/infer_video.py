@@ -575,11 +575,13 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     gap_size = 40
     video_writer = cv2.VideoWriter(output_vis_video, fourcc, fps, (image_hw[1]*2+gap_size, image_hw[0]*2+gap_size*2))
     canvas = np.full((image_hw[0]*2+gap_size*2, image_hw[1]*2+gap_size, 3), 128, np.uint8)
-    cv2.putText(img=canvas, text='Left Camera', org=(300, 510), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Camera Trajectory (Wrong GT)', org=(830, 510), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Predicted Depth', org=(300, 1030), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Groundtruth Depth', org=(830, 1030), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text='Left Camera', org=(150, image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Camera Trajectory (Wrong GT)', org=(image_hw[1]+gap_size+150, image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Predicted Depth', org=(150, image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Groundtruth Depth', org=(image_hw[1]+gap_size+150, image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
 
+    if len(files) > max_frames:
+        files = files[:max_frames]
     for idx_f, file in enumerate(files):
         name_dir, name_base = osp.split(file)
         if data_type == 'matterport':
