@@ -104,7 +104,7 @@ class ModelWrapper(torch.nn.Module):
 
     def prepare_datasets(self, validation_requirements, test_requirements):
         """Prepare datasets for training, validation and test."""
-        logging.warning(f'prepare_datasets(..)')
+        logging.warning(f'prepare_datasets(validation_requirements={validation_requirements}, test_requirements={test_requirements})')
         # Prepare datasets
         print0(pcolor('### Preparing Datasets', 'green'))
 
@@ -164,20 +164,27 @@ class ModelWrapper(torch.nn.Module):
         params = []
         # Load optimizer
         optimizer = getattr(torch.optim, self.config.model.optimizer.name)
+
         # Depth optimizer
         if self.depth_net is not None:
+            logging.info(f'  add depth optimizer')
             params.append({
                 'name': 'Depth',
                 'params': self.depth_net.parameters(),
                 **filter_args(optimizer, self.config.model.optimizer.depth)
             })
+
         # Pose optimizer
         if self.pose_net is not None:
+            logging.info(f'  add pose optimizer')
             params.append({
                 'name': 'Pose',
                 'params': [param for param in self.pose_net.parameters() if param.requires_grad],
                 **filter_args(optimizer, self.config.model.optimizer.pose)
             })
+        else:
+            logging.warning(f'  skip pose optimizer')
+
         # Create optimizer with parameters
         optimizer = optimizer(params)
 
@@ -332,11 +339,17 @@ class ModelWrapper(torch.nn.Module):
     def pose(self, *args, **kwargs):
         """Runs the depth network and returns the output."""
         assert self.pose_net is not None, 'Pose network not defined'
+        logging.info(f'  pose_net:  {type(self.pose_net)}')
+        logging.info(f'  args:      {args}')
+        logging.info(f'  kwargs:    {kwargs}')
         return self.pose_net(*args, **kwargs)
 
     def percep(self, *args, **kwargs):
         """Runs the depth network and returns the output."""
         assert self.percep_net is not None, 'Perceptual network not defined'
+        logging.info(f'  percep_net:  {type(self.percep_net)}')
+        logging.info(f'  args:        {args}')
+        logging.info(f'  kwargs:      {kwargs}')
         return self.percep_net(*args, **kwargs)
     
     def evaluate_depth(self, batch):
@@ -463,7 +476,7 @@ def setup_depth_net(config, prepared, **kwargs):
     depth_net : nn.Module
         Create depth network
     """
-    logging.warning('setup_depth_net(..)')
+    logging.warning(f'setup_depth_net( {config.name}, prepared={prepared}, {config.checkpoint_path}, .. )')
     print0(pcolor('DepthNet: %s' % config.name, 'yellow'))
     depth_net = load_class_args_create(config.name,
         paths=['dro_sfm.networks.depth_pose',],
@@ -493,7 +506,7 @@ def setup_pose_net(config, prepared, **kwargs):
     pose_net : nn.Module
         Created pose network
     """
-    logging.warning(f'setup_pose_net(..)')
+    logging.warning(f'setup_pose_net({config.name}, prepared={prepared}, {config.checkpoint_path}, ..)')
     print0(pcolor('PoseNet: %s' % config.name, 'yellow'))
     pose_net = load_class_args_create(config.name,
         paths=['dro_sfm.networks.pose',],
@@ -523,7 +536,7 @@ def setup_percep_net(config, prepared, **kwargs):
     depth_net : nn.Module
         Create depth network
     """
-    logging.warning(f'setup_percep_net(..)')
+    logging.warning(f'setup_percep_net({config.name}, prepared={prepared}, ..)')
     print0(pcolor('PercepNet: %s' % config.name, 'yellow'))
     percep_net = load_class_args_create(config.name,
         paths=['dro_sfm.networks.layers',],
@@ -549,7 +562,7 @@ def setup_model(config, prepared, **kwargs):
     model : nn.Module
         Created model
     """
-    logging.warning(f'setup_model(.., prepared={prepared}, ..)')
+    logging.warning(f'setup_model({config.name}, prepared={prepared}, ..)')
     logging.info(f'  config:\n{config}')
     logging.info(f'  kwargs:\n{kwargs}')
     print0(pcolor('Model: %s' % config.name, 'yellow'))
@@ -557,17 +570,24 @@ def setup_model(config, prepared, **kwargs):
     config.loss.max_depth = config.params.max_depth
     model = load_class(config.name, paths=['dro_sfm.models',])(
         **{**config.loss, **kwargs})
+
+    logging.info(f'  model.network_requirements: {model.network_requirements}')
+    logging.info(f'  model.train_requirements:   {model.train_requirements}')
+
     # Add depth network if required
     if model.network_requirements['depth_net']:
         config.depth_net.max_depth = config.params.max_depth
         config.depth_net.min_depth = config.params.min_depth
         model.add_depth_net(setup_depth_net(config.depth_net, prepared))
+
     # Add pose network if required
     if model.network_requirements['pose_net']:
         model.add_pose_net(setup_pose_net(config.pose_net, prepared))
     # Add percep_net if required
+
     if model.network_requirements['percep_net']:
         model.add_percep_net(setup_percep_net(config.percep_net, prepared))
+
     # If a checkpoint is provided, load pretrained model
     if not prepared and config.checkpoint_path is not '':
         model = load_network(model, config.checkpoint_path, 'model')
@@ -595,7 +615,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
     dataset : Dataset
         Dataset class for that mode
     """
-    logging.warning(f'setup_dataset(..)')
+    logging.warning(f'setup_dataset({config.path}, {config.split}, mode={mode}, requirements={requirements}, ..)')
     # If no dataset is given, return None
     if len(config.path) == 0:
         return None
@@ -817,7 +837,7 @@ def setup_dataloader(datasets, config, mode):
     dataloaders : list of Dataloader
         List of created dataloaders for each input dataset
     """
-    logging.warning(f'setup_dataloader({datasets}, config.batch_size={config.batch_size}, config.num_works={config.num_workers}, {mode})')
+    logging.warning(f'setup_dataloader(\n  datasets={datasets},\n  config.batch_size={config.batch_size},\n  config.num_works={config.num_workers}, {mode})')
     return [(DataLoader(dataset,
                         batch_size=config.batch_size, shuffle=False,
                         pin_memory=True, num_workers=config.num_workers,

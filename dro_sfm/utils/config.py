@@ -26,7 +26,7 @@ def prep_dataset(config):
     config : CfgNode
         Updated dataset configuration
     """
-    logging.warning(f'prep_dataset(..)')
+    logging.warning(f'prep_dataset( {config.batch_size}, {config.dataset}, {config.path}, {config.split}, {config.depth_type}, .. )')
 
     # If there is no dataset, do nothing
     if len(config.path) == 0:
@@ -61,7 +61,7 @@ def set_name(config):
     name : str
         Updated run name
     """
-    logging.warning(f'set_name(..)')
+    logging.warning(f'set_name( {config.name} )')
 
     # If there is a name already, do nothing
     if config.name is not '':
@@ -88,7 +88,7 @@ def set_checkpoint(config):
     config : CfgNode
         Updated model configuration
     """
-    logging.warning(f'set_checkpoint(..)')
+    logging.warning(f'set_checkpoint({config.checkpoint.filepath})')
 
     # If checkpoint is enabled
     if config.checkpoint.filepath is not '':
@@ -122,7 +122,7 @@ def prep_logger_and_checkpoint(model):
     model : nn.Module
         Module to update
     """
-    logging.warning(f'prep_logger_and_checkpoint(..)')
+    logging.warning(f'prep_logger_and_checkpoint({model.config.name}, {model.logger})')
 
     # Change run name to be the wandb assigned name
     if model.logger and not model.config.wandb.dry_run:

@@ -21,7 +21,7 @@ def sample_to_cuda(data, dtype=None):
 class BaseTrainer:
     def __init__(self, min_epochs=0, max_epochs=50,
                  checkpoint=None, **kwargs):
-        logging.warning(f'__init__(..)')
+        logging.warning(f'__init__(min_epochs={min_epochs}, max_epochs={max_epochs}, checkpoint={checkpoint}, ..)')
 
         self.min_epochs = min_epochs
         self.max_epochs = max_epochs

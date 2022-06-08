@@ -177,7 +177,7 @@ class MatterportDataset(Dataset):
         if self.depth_type in ['velodyne']:
             return read_npz_depth(depth_file, self.depth_type)
         elif self.depth_type in ['groundtruth']:
-            logging.info(f'  depth_file: {depth_file}')
+            # logging.info(f'  depth_file: {depth_file}')
             return read_png_depth(depth_file)
         else:
             raise NotImplementedError(
@@ -185,7 +185,7 @@ class MatterportDataset(Dataset):
 
     def _get_depth_file(self, image_file):
         """Get the corresponding depth file from an image file."""
-        logging.info(f'  image_file: {image_file}')
+        # logging.info(f'  image_file: {image_file}')
         # depth_file = image_file.replace('color', 'depth').replace('image', 'depth')
         depth_file = image_file.replace('cam_left', 'depth')
         depth_file = depth_file.replace('jpg', 'png')
@@ -247,6 +247,7 @@ class MatterportDataset(Dataset):
         # pose_path = os.path.join(self.root_dir, session, filename).replace('color', 'pose').replace('.jpg', '.txt')
         pose_path = os.path.join(self.root_dir, session, filename).replace('cam_left', 'pose').replace('.jpg', '.txt')
         pose = np.genfromtxt(pose_path)
+        logging.info(f'  load pose: {pose_path}')
         context_pose_paths = [os.path.join(self.root_dir, session, x).replace('cam_left', 'pose').
                                 replace('.jpg', '.txt') for x in context_paths]
         context_poses = [np.genfromtxt(x) for x in context_pose_paths]
