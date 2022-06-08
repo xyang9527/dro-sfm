@@ -374,8 +374,10 @@ def init_model(args):
     print("init model finish...................")
     return model_wrapper, image_shape
 
+
 def get_gt_pose(file, data_type):
     pose_file = None
+
     if data_type == 'scannet':
         pose_file = file.replace('color', 'pose').replace('jpg', 'txt')
     elif data_type == 'matterport':
@@ -386,6 +388,26 @@ def get_gt_pose(file, data_type):
     if osp.exists(pose_file):
         return True, np.genfromtxt(pose_file)
     return False, None
+
+
+def get_gt_depth(file, data_type):
+    depth_file = None
+
+    if data_type == 'scannet':
+        depth_file = file.replace('color', 'depth').replace('jpg', 'png')
+    elif data_type == 'matterport':
+        depth_file = file.replace('cam_left', 'depth').replace('jpg', 'png')
+    else:
+        depth_file = file.replace('color', 'depth').replace('jpg', 'png')
+
+    if not osp.exists(depth_file):
+        return False, None
+
+    depth_gt_int = cv2.imread(depth_file)
+    depth_gt_float = depth_gt_int.astype(np.float) / 1000.0
+    depth_gt_gray_255 = depth_gt_float[:, :, 0] * 255
+    return True, depth_gt_gray_255
+
 
 
 def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
@@ -483,20 +505,23 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             logging.warning(f'skip frame {idx_frame:4d}')
             continue
 
+        has_depth, depth_gt = get_gt_depth(fn2, data_type)
         depth, pose21, pose23, intr, rgb = infer_and_save_pose([fn1, fn3], fn2, model_wrapper, 
                                                                 image_shape, data_type,
                                                                 save_depth_root, save_vis_root, idx_frame==0)
         depth_list.append(depth)
         print(f'  idx_frame: {idx_frame:6d}')
-        print(f'    depth:  {type(depth)}  {depth.shape}')
-        print(f'    pose21: {type(pose21)}  {pose21.shape}')
-        print(f'    pose23: {type(pose23)}  {pose23.shape}')
-        print(f'    intr:   {type(intr)}  {intr.shape}')
-        print(f'    rgb:    {type(rgb)}  {rgb.shape}')
+        print(f'    depth:  {type(depth)}  {depth.shape}  {depth.dtype}')
+        print(f'    pose21: {type(pose21)}  {pose21.shape}  {pose21.dtype}')
+        print(f'    pose23: {type(pose23)}  {pose23.shape}  {pose23.dtype}')
+        print(f'    intr:   {type(intr)}  {intr.shape}  {intr.dtype}')
+        print(f'    rgb:    {type(rgb)}  {rgb.shape}  {rgb.dtype}')
 
 
         pose21 = np.matmul(np.linalg.inv(gt_pose_1), gt_pose_2).astype(np.float32)
         pose23 = np.matmul(np.linalg.inv(gt_pose_3), gt_pose_2).astype(np.float32)
+
+        depth = depth_gt
 
         '''
         pose21[0][3] = -pose21[0][3]
@@ -563,6 +588,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     depth_npy_list = []
     for file in sorted(glob(os.path.join(save_depth_root, "*.npy"))):
         depth_npy_list.append(np.load(file))
+
+    print(f'writing {output_depths_npy}')
+    logging.info(f'writing {output_depths_npy}')
     np.save(output_depths_npy, np.stack(depth_npy_list, axis=0))
 
     # ======================================================================== #
@@ -580,6 +608,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     cv2.putText(canvas, 'Predicted Depth', org=(150, image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(canvas, 'Groundtruth Depth', org=(image_hw[1]+gap_size+150, image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
 
+    print(f'writing {output_vis_video}')
+    logging.info(f'writing {output_vis_video}')
+
     if len(files) > max_frames:
         files = files[:max_frames]
     for idx_f, file in enumerate(files):
@@ -590,6 +621,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             color_file = osp.join(name_dir, f'../../../color/{name_base}')
 
         data_color = cv2.imread(color_file)
+        base_name = osp.splitext(osp.basename(file))[0]
+        frame_text = f'[{idx_f:4d}] - {base_name}'
+        cv2.putText(data_color, frame_text, org=(gap_size, gap_size), fontScale=1, color=(0, 0, 255), thickness=3, fontFace=cv2.LINE_AA)
         canvas[0:image_hw[0], 0:image_hw[1], :] = data_color
 
         data_depth = cv2.imread(file)
