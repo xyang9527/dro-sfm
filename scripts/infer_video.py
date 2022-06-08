@@ -382,7 +382,10 @@ def get_gt_pose(file, data_type):
         pose_file = file.replace('cam_left', 'pose').replace('jpg', 'txt')
     else:
         pose_file = file.replace('color', 'pose').replace('jpg', 'txt')
-    return np.genfromtxt(pose_file)
+
+    if osp.exists(pose_file):
+        return True, np.genfromtxt(pose_file)
+    return False, None
 
 
 def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
@@ -473,6 +476,13 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         fn1, fn2, fn3 = fns
         logging.info(f'  frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n    fn3={fn3}')
 
+        has_1, gt_pose_1 = get_gt_pose(fn1, data_type)
+        has_2, gt_pose_2 = get_gt_pose(fn2, data_type)
+        has_3, gt_pose_3 = get_gt_pose(fn3, data_type)
+        if not has_1 or not has_2 or not has_3:
+            logging.warning(f'skip frame {idx_frame:4d}')
+            continue
+
         depth, pose21, pose23, intr, rgb = infer_and_save_pose([fn1, fn3], fn2, model_wrapper, 
                                                                 image_shape, data_type,
                                                                 save_depth_root, save_vis_root, idx_frame==0)
@@ -484,9 +494,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         print(f'    intr:   {type(intr)}  {intr.shape}')
         print(f'    rgb:    {type(rgb)}  {rgb.shape}')
 
-        gt_pose_1 = get_gt_pose(fn1, data_type)
-        gt_pose_2 = get_gt_pose(fn2, data_type)
-        gt_pose_3 = get_gt_pose(fn3, data_type)
+
         pose21 = np.matmul(np.linalg.inv(gt_pose_1), gt_pose_2).astype(np.float32)
         pose23 = np.matmul(np.linalg.inv(gt_pose_3), gt_pose_2).astype(np.float32)
 
