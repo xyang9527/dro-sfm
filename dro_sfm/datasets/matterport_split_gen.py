@@ -86,6 +86,8 @@ def generate_split():
                     [ 0., -1.,  0.,  0.],
                     [ 0.,  0.,  0.,  1.]], dtype=np.float)
 
+    enable_neg_xyz = True
+
     # create pose file
     subdirs_pose = []
     for item in subdirs_train_val_test:
@@ -138,7 +140,8 @@ def generate_split():
                 #     q = [q0 q1 q2 q3]^T = [qw qx qy qz]^T
                 #     |q|^2 = q0^2 + q1^2 + q2^2 + q3^2 = qw^2 + qx^2 + qy^2 + qz^2 = 1
                 x, y, z, i, j, k, r = params
-                x, y, z = -x, -y, -z
+                if enable_neg_xyz:
+                    x, y, z = -x, -y, -z
 
                 with open(osp.join(pose_dir, words[0].zfill(15) + '.txt'), 'w') as f_ou, \
                     open(osp.join(pose_dir_world_coord, words[0].zfill(15) + '.txt'), 'w') as f_ou_world_coord:
@@ -232,7 +235,8 @@ def generate_split():
                     print(f'unexpected format: {words}')
                 params = [float(v) for v in words[1:]]
                 x, y, z, r, i, j, k = params
-                x, y, z = -x, -y, -z
+                if enable_neg_xyz:
+                    x, y, z = -x, -y, -z
 
                 n_valid += 1
                 f_ou_traj_world_coord.write(f'v {x} {y} {z}\n')

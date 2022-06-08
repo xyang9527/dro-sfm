@@ -467,6 +467,12 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                                                                 image_shape, data_type,
                                                                 save_depth_root, save_vis_root, idx_frame==0)
         depth_list.append(depth)
+        pose21[0][3] = -pose21[0][3]
+        pose21[1][3] = -pose21[1][3]
+        pose21[2][3] = -pose21[2][3]
+        pose23[0][3] = -pose23[0][3]
+        pose23[1][3] = -pose23[1][3]
+        pose23[2][3] = -pose23[2][3]
 
         logging.info(f'frame {idx_frame:6d}\npose21:\n{pose21}\npose23{pose23}\n')
 
