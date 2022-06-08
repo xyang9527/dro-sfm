@@ -35,6 +35,8 @@ def parse_args():
     parser.add_argument('--sample_rate', type=int, default=10, help='sample rate', required=True)
     parser.add_argument('--max_frames', type=int, default=120, help='max frames to test')
     parser.add_argument('--ply_mode', action="store_true", help='vis point cloud')
+    parser.add_argument('--use_depth_gt', action="store_true", help='use GT depth for vis')
+    parser.add_argument('--use_pose_gt', action="store_true", help='use GT pose for vis')
 
     parser.add_argument('--image_shape', type=int, nargs='+', default=None,
                         help='Input and output image shape '
@@ -412,7 +414,7 @@ def get_gt_depth(file, data_type):
 
 def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
               output_depths_npy, output_vis_video, output_tmp_dir,
-              data_type="general", ply_mode=False, sfm_params=None):
+              data_type="general", ply_mode=False, use_depth_gt=False, use_pose_gt=False, sfm_params=None):
     logging.warning(f'inference(\n'
                     f'  model_wrapper={type(model_wrapper)},\n'
                     f'  image_shape={image_shape},\n'
@@ -423,6 +425,8 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                     f'  output_tmp_dir={output_tmp_dir},\n'
                     f'  data_type={data_type},\n'
                     f'  ply_mode={ply_mode},\n'
+                    f'  use_depth_gt={use_depth_gt},\n'
+                    f'  use_pose_gt={use_pose_gt},\n'
                     f'  sfm_params={sfm_params})')
 
     assert os.path.exists(input)
@@ -470,6 +474,17 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                               files[1:-1],
                               files[2:]))
 
+    render_text = 'renders'
+    if use_depth_gt:
+        render_text = f'{render_text}_depth-GT'
+    else:
+        render_text = f'{render_text}_depth-pred'
+
+    if use_pose_gt:
+        render_text = f'{render_text}_pose-GT'
+    else:
+        render_text = f'{render_text}_pose-pred'
+
     if ply_mode:
         logging.info(f'  ply_mode')
 
@@ -478,7 +493,8 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         queue_g = Queue()
         vis_counter = 0
 
-        render_path=os.path.join(output_tmp_dir, "renders")
+
+        render_path=os.path.join(output_tmp_dir, render_text)
         os.makedirs(render_path, exist_ok=True)
 
         img_sample = cv2.imread(files[0])
@@ -518,10 +534,12 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         print(f'    rgb:    {type(rgb)}  {rgb.shape}  {rgb.dtype}')
 
 
-        pose21 = np.matmul(np.linalg.inv(gt_pose_1), gt_pose_2).astype(np.float32)
-        pose23 = np.matmul(np.linalg.inv(gt_pose_3), gt_pose_2).astype(np.float32)
+        if use_pose_gt:
+            pose21 = np.matmul(np.linalg.inv(gt_pose_1), gt_pose_2).astype(np.float32)
+            pose23 = np.matmul(np.linalg.inv(gt_pose_3), gt_pose_2).astype(np.float32)
 
-        depth = depth_gt
+        if use_depth_gt:
+            depth = depth_gt
 
         '''
         pose21[0][3] = -pose21[0][3]
@@ -636,7 +654,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         else:
             logging.info(f'  missing {depth_gt_file}')
 
-        traj_file = osp.join(osp.dirname(osp.dirname(file)), f'renders/{idx_f:06d}.png')
+        traj_file = osp.join(osp.dirname(osp.dirname(file)), f'{render_text}/{idx_f:06d}.png')
         if osp.exists(traj_file):
             logging.info(f'  load {traj_file}')
             data_traj = cv2.imread(traj_file)
@@ -675,6 +693,8 @@ def main():
     data_type = args.data_type 
     ply_mode = args.ply_mode
     max_frames = args.max_frames
+    use_depth_gt = args.use_depth_gt
+    use_pose_gt = args.use_pose_gt
 
     os.makedirs(args.output, exist_ok=True)
     os.makedirs(output_tmp_dir, exist_ok=True)
@@ -682,7 +702,7 @@ def main():
     inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
               output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
               output_tmp_dir=output_tmp_dir, data_type=data_type,
-              ply_mode=ply_mode, sfm_params=sfm_params)
+              ply_mode=ply_mode, use_depth_gt=use_depth_gt, use_pose_gt=use_pose_gt, sfm_params=sfm_params)
 
     # clean tmp dir
     # import shutil
