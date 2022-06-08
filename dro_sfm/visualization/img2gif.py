@@ -43,14 +43,14 @@ def load_images():
 
     # Create the frames
     frames = []
-    imgs = sorted(glob.glob("/home/sigma/vgithub-xyang9527/kneron_figure/scannet/*.png"))
+    imgs = sorted(glob.glob("/home/sigma/vgithub-xyang9527/kneron_figure/pres_20220608/*.png"))
     for idx_f, item in enumerate(imgs):
         new_frame = Image.open(item)
         logging.info(f'  {idx_f:4d} {osp.basename(item)}')
         logging.info(f'  {type(new_frame)} {new_frame.size}')
         # https://pillow.readthedocs.io/en/stable/reference/Image.html#PIL.Image.Image.crop
         #     (left, upper, right, lower)
-        frames.append(new_frame.crop((60, 0, 3280, 1080)))
+        frames.append(new_frame.crop((60, 0, 1920, 1060)))
 
     # frames = add_text_with_pil(frames)
     # frames = add_text_with_opencv(frames)
@@ -116,7 +116,7 @@ def write_gif(frames):
         comment
     '''
     # Save into a GIF file that loops forever
-    frames[0].save('/home/sigma/vgithub-xyang9527/kneron_figure/png_to_gif.gif', format='GIF',
+    frames[0].save('/home/sigma/vgithub-xyang9527/kneron_figure/pres_20220608.gif', format='GIF',
                   append_images=frames[1:],
                   save_all=True,
                   duration=1500, loop=0, comment=b'Aligned Scannet Point Cloud')
@@ -210,9 +210,9 @@ if __name__ == '__main__':
     time_beg_img2gif = time.time()
 
     np.set_printoptions(precision=6, suppress=True)
-    # images = load_images()
-    # write_gif(images)
-    process_scannet()
+    images = load_images()
+    write_gif(images)
+    # process_scannet()
 
     time_end_img2gif = time.time()
 

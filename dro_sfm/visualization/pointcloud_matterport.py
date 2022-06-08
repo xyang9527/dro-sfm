@@ -213,8 +213,8 @@ def load_data(names, data_dir):
 def create_obj_cloud():
     data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 100},
                  {'dir': '/home/sigma/slam/matterport/test/matterport014_000_0601', 'space': 5}]
-    data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 100}]
-    data_cols = [{'dir': '/home/sigma/slam/matterport/train_val_test/matterport010_000', 'space': 10}]
+    data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 20}]
+    # data_cols = [{'dir': '/home/sigma/slam/matterport/train_val_test/matterport010_000', 'space': 10}]
     for item_data in data_cols:
         data_dir = item_data['dir']
         space = item_data['space']
