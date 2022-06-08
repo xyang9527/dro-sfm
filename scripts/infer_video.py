@@ -411,7 +411,6 @@ def get_gt_depth(file, data_type):
     return True, depth_gt_gray_255
 
 
-
 def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
               output_depths_npy, output_vis_video, output_tmp_dir,
               data_type="general", ply_mode=False, use_depth_gt=False, use_pose_gt=False, sfm_params=None):
@@ -474,16 +473,19 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                               files[1:-1],
                               files[2:]))
 
-    render_text = 'renders'
+    render_desc = ''
     if use_depth_gt:
-        render_text = f'{render_text}_depth-GT'
+        render_desc = f'depth-GT'
     else:
-        render_text = f'{render_text}_depth-pred'
+        render_desc = f'depth-pred'
 
     if use_pose_gt:
-        render_text = f'{render_text}_pose-GT'
+        render_desc = f'{render_desc}_pose-GT'
     else:
-        render_text = f'{render_text}_pose-pred'
+        render_desc = f'{render_desc}_pose-pred'
+    render_tag = 'renders'
+
+    traj_modes = ['depth-GT_pose-GT', 'depth-GT_pose-pred', 'depth-pred_pose-GT', 'depth-pred_pose-pred']
 
     if ply_mode:
         logging.info(f'  ply_mode')
@@ -494,7 +496,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         vis_counter = 0
 
 
-        render_path=os.path.join(output_tmp_dir, render_text)
+        render_path=os.path.join(output_tmp_dir, f'{render_tag}_{render_desc}')
         os.makedirs(render_path, exist_ok=True)
 
         img_sample = cv2.imread(files[0])
@@ -619,12 +621,33 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     fps = 4.0
     gap_size = 40
-    video_writer = cv2.VideoWriter(output_vis_video, fourcc, fps, (image_hw[1]*2+gap_size, image_hw[0]*2+gap_size*2))
-    canvas = np.full((image_hw[0]*2+gap_size*2, image_hw[1]*2+gap_size, 3), 128, np.uint8)
+    tags = osp.splitext(output_vis_video)
+
+    video_writer = cv2.VideoWriter(f'{tags[0]}_{render_desc}{tags[1]}', fourcc, fps, (image_hw[1]*4+gap_size*3, image_hw[0]*2+gap_size*2))
+
+    canvas = np.full((image_hw[0]*2+gap_size*2, image_hw[1]*4+gap_size*3, 3), 128, np.uint8)
+
     cv2.putText(img=canvas, text='Left Camera', org=(150, image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Camera Trajectory (Wrong GT)', org=(image_hw[1]+gap_size+150, image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, f'Traj-Vis {render_desc}', org=(image_hw[1]+gap_size+50, image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(canvas, 'Predicted Depth', org=(150, image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(canvas, 'Groundtruth Depth', org=(image_hw[1]+gap_size+150, image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+
+    n_traj_modes = len(traj_modes)
+    color_wrong_pose = (0, 255, 255)
+    color_right_pose = (0, 0, 255)
+    for idx_mode in range(n_traj_modes):
+        mode_text = traj_modes[idx_mode]
+        idx_row = idx_mode % 2
+        idx_col = 2 + idx_mode // 2
+
+        color_tag = color_wrong_pose
+        if 'pose-GT' in mode_text:
+            color_tag = color_right_pose
+
+        if idx_mode % 2 == 0:
+            cv2.putText(canvas, f'Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, image_hw[0]+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
+        else:
+            cv2.putText(canvas, f'Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, image_hw[0]*2+gap_size+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
 
     print(f'writing {output_vis_video}')
     logging.info(f'writing {output_vis_video}')
@@ -654,7 +677,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         else:
             logging.info(f'  missing {depth_gt_file}')
 
-        traj_file = osp.join(osp.dirname(osp.dirname(file)), f'{render_text}/{idx_f:06d}.png')
+        traj_file = osp.join(osp.dirname(osp.dirname(file)), f'{render_tag}_{render_desc}/{idx_f:06d}.png')
         if osp.exists(traj_file):
             logging.info(f'  load {traj_file}')
             data_traj = cv2.imread(traj_file)
@@ -662,6 +685,22 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                 canvas[0:image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
         else:
             logging.info(f'  missing {traj_file}')
+
+        for idx_mode in range(n_traj_modes):
+            mode_text = traj_modes[idx_mode]
+            idx_row = idx_mode % 2
+            idx_col = 2 + idx_mode // 2
+
+            traj_file = osp.join(osp.dirname(osp.dirname(file)), f'{render_tag}_{mode_text}/{idx_f:06d}.png')
+            if osp.exists(traj_file):
+                logging.info(f'  load {traj_file}')
+                data_traj = cv2.imread(traj_file)
+                if data_traj is not None:
+                    canvas[(image_hw[0]+gap_size)*idx_row:(image_hw[0]+gap_size)*idx_row+image_hw[0], (image_hw[1]+gap_size)*idx_col:(image_hw[1]+gap_size)*idx_col+image_hw[1], :] = data_traj
+            else:
+                logging.info(f'  missing {traj_file}')
+
+
 
         video_writer.write(canvas)
 
