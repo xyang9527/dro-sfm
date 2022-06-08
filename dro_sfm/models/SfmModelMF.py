@@ -30,7 +30,7 @@ class SfmModelMF(nn.Module):
     def __init__(self, depth_net=None, pose_net=None,
                  rotation_mode='euler', flip_lr_prob=0.0,
                  upsample_depth_maps=False, min_depth=0.1, max_depth=100, **kwargs):
-        logging.warning(f'__init__(depth_net={depth_net}, pose_net={pose_net}, rotation_mode={rotation_mode}, ..)')
+        logging.warning(f'SfmModelMF::__init__(depth_net={depth_net}, pose_net={pose_net}, rotation_mode={rotation_mode}, ..)')
         super().__init__()
         self.depth_net = depth_net
         self.pose_net = pose_net
@@ -110,15 +110,19 @@ class SfmModelMF(nn.Module):
         flip_lr = random.random() < self.flip_lr_prob if self.training else False
         if flip_lr:
             intrinsics = flip_lr_intr(intrinsics, width=image.shape[3])
+
         inv_depths_with_poses = flip_mf_model(self.depth_net, image, ref_imgs, intrinsics, flip_lr)
         inv_depths, poses = inv_depths_with_poses
         inv_depths = make_list(inv_depths)
+
         if flip_lr:
             inv_depths = [flip_lr_img(inv_d) for inv_d in inv_depths]     
+
         # If upsampling depth maps
         if self.upsample_depth_maps:
             inv_depths = interpolate_scales(
                 inv_depths, mode='nearest', align_corners=None)
+
         # Return inverse depth maps
         return inv_depths, poses
 
@@ -149,13 +153,18 @@ class SfmModelMF(nn.Module):
         output : dict
             Dictionary containing predicted inverse depth maps and poses
         """
+        logging.debug(f'forward(..)')
+        logging.debug(f'  network_requirements: {self.network_requirements}')
+        logging.debug(f'  train_requirements:   {self.train_requirements}')
         # Generate inverse depth predictions
         inv_depths, pose_vec = self.compute_inv_depths(batch['rgb'], batch['rgb_context'], batch["intrinsics"])
+
         # # Generate pose predictions if available
         # pose = None
         # if 'rgb_context' in batch and self.pose_net is not None:
         #     pose = self.compute_poses(batch['rgb'],
         #                               batch['rgb_context'], batch["intrinsics"], inv2depth(inv_depths[0]))
+
         # Return output dictionary
         if pose_vec.shape[2] == 6:
             poses = [Pose.from_vec(pose_vec[:, i], self.rotation_mode)

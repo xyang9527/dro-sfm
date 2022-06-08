@@ -106,7 +106,9 @@ class DepthPoseNet(nn.Module):
             
     def forward(self, target_image, ref_imgs, intrinsics):
         """ Estimate inv depth and  poses """
+        logging.debug(f'forward(target_image={target_image.shape}, ref_imgs={len(ref_imgs)}, {ref_imgs[0].shape}, intrinsics={intrinsics.shape}')
         # logging.warning(f'forward({target_image.shape}, {type(ref_imgs)}, {type(intrinsics)})')
+
         # run the feature network
         fmaps = self.fnet(torch.cat([target_image] + ref_imgs, dim=0))
         fmaps = torch.split(fmaps, [target_image.shape[0]] * (1 + len(ref_imgs)), dim=0)

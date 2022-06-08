@@ -17,7 +17,7 @@ class SupModelMF(SfmModelMF):
         Extra parameters
     """
     def __init__(self, **kwargs):
-        logging.warning(f'__init__(..)')
+        logging.warning(f'SupModelMF::__init__(..)')
         # Initializes SfmModel
         super().__init__(**kwargs)
         # Initializes the photometric loss
@@ -102,6 +102,8 @@ class SupModelMF(SfmModelMF):
         else:
             if output["poses"] is None:
                 return None
+
+            logging.debug(f'  calc supervised_loss with pose')
             # Otherwise, calculate self-supervised loss
             self_sup_output = self.supervised_loss(
                 batch['rgb_original'], batch['rgb_context_original'],

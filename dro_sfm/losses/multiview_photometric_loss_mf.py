@@ -2,6 +2,7 @@
 from numpy.lib.type_check import imag
 import torch
 import torch.nn as nn
+import logging
 
 from dro_sfm.utils.image import match_scales
 from dro_sfm.geometry.camera import Camera
@@ -92,6 +93,10 @@ class MultiViewPhotometricDecayLoss(LossBase):
                  C1=1e-4, C2=9e-4, photometric_reduce_op='mean', disp_norm=True, clip_loss=0.5,
                  progressive_scaling=0.0, padding_mode='zeros',
                  automask_loss=False, **kwargs):
+        logging.warning(f'__init__(num_scales={num_scales}, ssim_loss_weight={ssim_loss_weight}, occ_reg_weight={occ_reg_weight}, smooth_loss_weight={smooth_loss_weight},'
+                        f'\nC1={C1}, C2={C2}, photometric_reduce_op={photometric_reduce_op}, disp_norm={disp_norm}, clip_loss={clip_loss},'
+                        f'\nprogressive_scaling={progressive_scaling}, padding_mode={padding_mode}, automask_loss={automask_loss}, ..)')
+
         super().__init__()
         self.n = 1
         self.progressive_scaling = progressive_scaling

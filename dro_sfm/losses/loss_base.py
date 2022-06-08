@@ -1,5 +1,6 @@
 
 import numpy as np
+import logging
 import torch.nn as nn
 from dro_sfm.utils.types import is_list
 
@@ -18,6 +19,7 @@ class ProgressiveScaling:
         Initial number of scales
     """
     def __init__(self, progressive_scaling, num_scales=4):
+        logging.warning(f'ProgressiveScaling::__init__(progressive_scaling={progressive_scaling}, num_scales={num_scales})')
         self.num_scales = num_scales
         # Use it only if bigger than zero (make a list)
         if progressive_scaling > 0.0:
@@ -52,6 +54,7 @@ class LossBase(nn.Module):
     """Base class for losses."""
     def __init__(self):
         """Initializes logs and metrics dictionaries"""
+        logging.warning(f'LossBase::__init__()')
         super().__init__()
         self._logs = {}
         self._metrics = {}

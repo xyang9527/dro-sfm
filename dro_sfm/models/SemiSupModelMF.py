@@ -19,7 +19,7 @@ class SemiSupModelMFPose(SelfSupModelMF):
         Extra parameters
     """
     def __init__(self, supervised_loss_weight=0.9, **kwargs):
-        logging.warning(f'__init__(supervised_loss_weight={supervised_loss_weight}, ..)')
+        logging.warning(f'SemiSupModelMFPose::__init__(supervised_loss_weight={supervised_loss_weight}, ..)')
         # Initializes SelfSupModel
         super().__init__(**kwargs)
         # If supervision weight is 0.0, use SelfSupModel directly

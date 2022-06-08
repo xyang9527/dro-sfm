@@ -34,7 +34,7 @@ class ModelWrapper(torch.nn.Module):
     """
 
     def __init__(self, config, resume=None, logger=None, load_datasets=True):
-        logging.warning(f'__init__(.., load_datasets={load_datasets})')
+        logging.warning(f'ModelWrapper::__init__(.., load_datasets={load_datasets})')
         super().__init__()
 
         # Store configuration, checkpoint and logger
@@ -279,7 +279,7 @@ class ModelWrapper(torch.nn.Module):
 
     def validation_epoch_end(self, output_data_batch):
         """Finishes a validation epoch."""
-        logging.warning(f'validation_epoch_end(..)')
+        logging.warning(f'validation_epoch_end({len(output_data_batch)})')
 
         # Reduce depth metrics
         metrics_data = all_reduce_metrics(
@@ -305,7 +305,7 @@ class ModelWrapper(torch.nn.Module):
 
     def test_epoch_end(self, output_data_batch):
         """Finishes a test epoch."""
-        logging.warning(f'test_epoch_end(..)')
+        logging.warning(f'test_epoch_end({len(output_data_batch)})')
 
         # Reduce depth metrics
         metrics_data = all_reduce_metrics(
@@ -359,6 +359,7 @@ class ModelWrapper(torch.nn.Module):
         inv_depths = output['inv_depths']
         poses = output['poses']
         depth = inv2depth(inv_depths[0])
+
         # Post-process predicted depth
         batch['rgb'] = flip_lr(batch['rgb'])
         if 'rgb_context' in batch:
@@ -369,12 +370,14 @@ class ModelWrapper(torch.nn.Module):
             inv_depths[0], inv_depths_flipped[0], method='mean')
         depth_pp = inv2depth(inv_depth_pp)
         batch['rgb'] = flip_lr(batch['rgb'])
+
         # Calculate predicted metrics
         if 'pose_context' in batch.keys():
             pose_errs = compute_pose_metrics(self.config.model.params, gt=batch['pose_context'], pred=poses)
         else:
             pose_errs = [0, 0, 0]
         metrics = OrderedDict()
+
         if 'depth' in batch:
             for mode in self.metrics_modes:
                 if self.config['datasets']['validation']['dataset'] == ['Demon']:

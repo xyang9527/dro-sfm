@@ -31,7 +31,7 @@ class SfmModel(nn.Module):
     def __init__(self, depth_net=None, pose_net=None,
                  rotation_mode='euler', flip_lr_prob=0.0,
                  upsample_depth_maps=False, **kwargs):
-        logging.warning(f'__init__(..)')
+        logging.warning(f'SfmModel::__init__(..)')
         super().__init__()
         self.depth_net = depth_net
         self.pose_net = pose_net

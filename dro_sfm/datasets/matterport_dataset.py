@@ -247,12 +247,14 @@ class MatterportDataset(Dataset):
         # pose_path = os.path.join(self.root_dir, session, filename).replace('color', 'pose').replace('.jpg', '.txt')
         pose_path = os.path.join(self.root_dir, session, filename).replace('cam_left', 'pose').replace('.jpg', '.txt')
         pose = np.genfromtxt(pose_path)
-        logging.info(f'  load pose: {pose_path}')
+        # logging.info(f'  load pose: {pose_path}')
         context_pose_paths = [os.path.join(self.root_dir, session, x).replace('cam_left', 'pose').
                                 replace('.jpg', '.txt') for x in context_paths]
         context_poses = [np.genfromtxt(x) for x in context_pose_paths]
 
         #rel_poses = [np.matmul(x, np.linalg.inv(pose)).astype(np.float32) for x in context_poses]
+        # current_pose_to_context_pose
+        #   x as world pose
         rel_poses = [np.matmul(np.linalg.inv(x), pose).astype(np.float32) for x in context_poses]
 
         sample = {

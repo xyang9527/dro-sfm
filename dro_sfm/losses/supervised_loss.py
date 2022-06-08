@@ -1,6 +1,7 @@
 
 import torch
 import torch.nn as nn
+import logging
 
 from dro_sfm.utils.image import match_scales
 from dro_sfm.losses.loss_base import LossBase, ProgressiveScaling
@@ -19,8 +20,10 @@ class BerHuLoss(nn.Module):
         threshold : float
             Mask parameter
         """
+        logging.warning(f'BerHuLoss::__init__(threshold={threshold})')
         super().__init__()
         self.threshold = threshold
+
     def forward(self, pred, gt):
         """
         Calculates the BerHu loss.
@@ -54,6 +57,7 @@ class BerHuLoss(nn.Module):
 
 class SilogLoss(nn.Module):
     def __init__(self, ratio=10, ratio2=0.85):
+        logging.warning(f'SilogLoss::__init__(ratio={ratio}, ratio2={ratio2})')
         super().__init__()
         self.ratio = ratio
         self.ratio2 = ratio2
@@ -70,15 +74,26 @@ class SilogLoss(nn.Module):
 
 def get_loss_func(supervised_method):
     """Determines the supervised loss to be used, given the supervised method."""
+    logging.warning(f'get_loss_func({supervised_method})')
+
     if supervised_method.endswith('l1'):
+        logging.info(f'  L1Loss()')
         return nn.L1Loss()
+
     elif supervised_method.endswith('mse'):
+        logging.info(f'  MSELoss()')
         return nn.MSELoss()
+
     elif supervised_method.endswith('berhu'):
+        logging.info(f'  BerHuLoss()')
         return BerHuLoss()
+
     elif supervised_method.endswith('silog'):
+        logging.info(f'  SilogLoss()')
         return SilogLoss()
+
     elif supervised_method.endswith('abs_rel'):
+        logging.info(f'  abs_rel')
         return lambda x, y: torch.mean(torch.abs(x - y) / x)
     else:
         raise ValueError('Unknown supervised loss {}'.format(supervised_method))
@@ -102,6 +117,7 @@ class SupervisedLoss(LossBase):
     """
     def __init__(self, supervised_method='sparse-l1',
                  supervised_num_scales=4, progressive_scaling=0.0, **kwargs):
+        logging.warning(f'SupervisedLoss::__init__({supervised_method}, {supervised_num_scales}, {progressive_scaling}, ..)')
         super().__init__()
         self.loss_func = get_loss_func(supervised_method)
         self.supervised_method = supervised_method
@@ -203,6 +219,9 @@ class SupervisedDepthPoseLoss(LossBase):
     def __init__(self, supervised_method='sparse-l1',
                  supervised_num_scales=4, progressive_scaling=0.0, min_depth=0.1,
                  max_depth=100, **kwargs):
+        logging.warning(f'SupervisedDepthPoseLoss::__init__(supervised_method={supervised_method}, supervised_num_scales={supervised_num_scales}, '
+                        f'progressive_scaling={progressive_scaling}, min_depth={min_depth}, max_depth={max_depth}, ..)')
+
         super().__init__()
         self.loss_func = get_loss_func(supervised_method)
         self.supervised_method = supervised_method
@@ -243,6 +262,7 @@ class SupervisedDepthPoseLoss(LossBase):
         gamma = 0.85
         min_disp = 1.0 / self.max_depth
         max_disp = 1.0 / self.min_depth
+
         for i in range(self.n):
             w = gamma**(self.n - i - 1)
             total_w += w
@@ -289,7 +309,8 @@ class SupervisedDepthPoseLoss(LossBase):
             loss_it = 0
             w = gamma**(self.n - i - 1)
             w_totoal += w
-                
+
+            # pose loss
             for view_i, gt_pose_view in enumerate(gt_pose_context):
                 pred_pose_view = pred_poses[view_i][i]
                 

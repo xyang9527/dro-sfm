@@ -42,7 +42,7 @@ class BaseTrainer:
         return self.proc_rank == 0
 
     def check_and_save(self, module, output):
-        logging.warning(f'check_and_save(..)')
+        logging.warning(f'check_and_save({type(module)}, {type(output)})')
         if self.checkpoint:
             self.checkpoint.check_and_save(module, output)
 

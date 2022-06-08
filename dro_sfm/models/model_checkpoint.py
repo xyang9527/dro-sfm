@@ -3,6 +3,7 @@
 # https://github.com/PyTorchLightning/pytorch-lightning/blob/master/pytorch_lightning/callbacks/model_checkpoint.py
 
 import os, re
+import logging
 import numpy as np
 import torch
 from dro_sfm.utils.logging import pcolor
@@ -24,6 +25,8 @@ class ModelCheckpoint:
     def __init__(self, filepath=None, monitor='val_loss',
                  save_top_k=1, mode='auto', period=1,
                  s3_path='', s3_frequency=5):
+        logging.warning(f'ModelCheckpoint::__init__(filepath={filepath}, monitor={monitor}, save_top_k={save_top_k}, mode={mode}, period={period}, s3_path={s3_path}, s3_frequency={s3_frequency})')
+
         super().__init__()
         # If save_top_k is zero, save all models
         if save_top_k == 0:

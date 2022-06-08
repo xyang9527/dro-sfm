@@ -1,6 +1,7 @@
 
 import torch
 import numpy as np
+import logging
 from collections import OrderedDict
 from dro_sfm.utils.horovod import reduce_value
 from dro_sfm.utils.logging import prepare_dataset_prefix
@@ -46,6 +47,7 @@ def all_reduce_metrics(output_data_batch, datasets, name='depth'):
     all_metrics_dict : list
         List of reduced metrics
     """
+    logging.warning(f'all_reduce_metrics({len(output_data_batch)}, {len(datasets)}, name={name})')
     # If there is only one dataset, wrap in a list
     if isinstance(output_data_batch[0], dict):
         output_data_batch = [output_data_batch]

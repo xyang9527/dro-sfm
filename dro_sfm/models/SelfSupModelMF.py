@@ -15,7 +15,7 @@ class SelfSupModelMF(SfmModelMF):
         Extra parameters
     """
     def __init__(self, **kwargs):
-        logging.warning(f'__init__(..)')
+        logging.warning(f'SelfSupModelMF::__init__(..)')
         # Initializes SfmModel
         super().__init__(**kwargs)
         # Initializes the photometric loss
