@@ -140,6 +140,9 @@ def load_data(names, data_dir):
         cloud_downsample = generate_pointcloud_NxN(
             np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy,
             file_cloud_ply_downsample, sample_x, sample_y, valid_only, 1.0)
+        if cloud_downsample.shape[0] <= 0:
+            logging.warning(f'skip empty point cloud: {name}')
+            continue
 
         rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose)
 
@@ -211,12 +214,14 @@ def create_obj_cloud():
     data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 100},
                  {'dir': '/home/sigma/slam/matterport/test/matterport014_000_0601', 'space': 5}]
     data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 100}]
+    data_cols = [{'dir': '/home/sigma/slam/matterport/train_val_test/matterport010_000', 'space': 10}]
     for item_data in data_cols:
         data_dir = item_data['dir']
         space = item_data['space']
         names = []
         for item in sorted(os.listdir(osp.join(data_dir, 'pose'))):
             names.append(osp.splitext(item)[0])
+        # names = names[900:1000]
         load_data(names[::space], data_dir)
 
 

@@ -1,6 +1,8 @@
 # -*- coding=utf-8 -*-
 
 import numpy as np
+import subprocess
+import logging
 
 
 def generate_pointcloud_NxN(rgb, depth, fx, fy, cx, cy, ply_file, sample_x, sample_y, valid_only, scale=1.0):
@@ -56,6 +58,10 @@ def generate_pointcloud_NxN(rgb, depth, fx, fy, cx, cy, ply_file, sample_x, samp
     file.close()
 
     if valid_only:
+        if n_valid == 0:
+            logging.warning(f'remove empty ply file: {ply_file}')
+            subprocess.call(['rm', '-f', ply_file])
+
         return cloud[:n_valid, :]
 
     return cloud

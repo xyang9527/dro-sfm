@@ -115,6 +115,9 @@ def create_obj_cloud(dir_root):
             cloud_downsample = generate_pointcloud_NxN(
                 np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy,
                 file_cloud_ply_downsample, sample_x, sample_y, valid_only, 1.0)
+            if cloud_downsample.shape[0] <= 0:
+                logging.warning(f'skip empty point cloud: {name}')
+                continue
 
             # rel_pose = np.matmul(pose_init, np.linalg.inv(data_pose)) # v1
             rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose) # v2
