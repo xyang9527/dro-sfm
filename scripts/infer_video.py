@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument('--ply_mode', action="store_true", help='vis point cloud')
     parser.add_argument('--use_depth_gt', action="store_true", help='use GT depth for vis')
     parser.add_argument('--use_pose_gt', action="store_true", help='use GT pose for vis')
+    parser.add_argument('--mix_video_mode', action="store_true", help="create video with 4 modes")
 
     parser.add_argument('--image_shape', type=int, nargs='+', default=None,
                         help='Input and output image shape '
@@ -745,14 +746,23 @@ def main():
     max_frames = args.max_frames
     use_depth_gt = args.use_depth_gt
     use_pose_gt = args.use_pose_gt
+    mix_video_mode = args.mix_video_mode
 
     os.makedirs(args.output, exist_ok=True)
     os.makedirs(output_tmp_dir, exist_ok=True)
 
-    inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
-              output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
-              output_tmp_dir=output_tmp_dir, data_type=data_type,
-              ply_mode=ply_mode, use_depth_gt=use_depth_gt, use_pose_gt=use_pose_gt, sfm_params=sfm_params)
+    if not mix_video_mode:
+        inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
+            output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
+            output_tmp_dir=output_tmp_dir, data_type=data_type,
+            ply_mode=ply_mode, use_depth_gt=use_depth_gt, use_pose_gt=use_pose_gt, sfm_params=sfm_params)
+    else:
+        modes = [(False, False), (False, True), (True, False), (True, True)]
+        for use_depth_gt, use_pose_gt in modes:
+            inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
+                output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
+                output_tmp_dir=output_tmp_dir, data_type=data_type,
+                ply_mode=ply_mode, use_depth_gt=use_depth_gt, use_pose_gt=use_pose_gt, sfm_params=sfm_params)
 
     # clean tmp dir
     # import shutil
