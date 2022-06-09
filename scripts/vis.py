@@ -164,10 +164,13 @@ def create_pointcloud_polydata(points, colors=None):
 
     Returns vtkPolyData object
     """
+    logging.warning(f'create_pointcloud_polydata(points={points.shape}, colors={colors.shape})')
     vpoints = vtk.vtkPoints()
     vpoints.SetNumberOfPoints(points.shape[0])
+
     for i in range(points.shape[0]):
         vpoints.SetPoint(i, points[i])
+
     vpoly = vtk.vtkPolyData()
     vpoly.SetPoints(vpoints)
     
@@ -255,8 +258,10 @@ def visualize_prediction(pointcloud, colors, poses=None, renwin=None):
 
 class vtkTimerCallback():
     def __init__(self, cinematic=False, render_path=None, clear_points=False, is_kitti=False):
+        logging.warning(f'vtkTimerCallback::__init__(cinematic={cinematic}, render_path={render_path}, clear_points={clear_points}, is_kitti={is_kitti})')
         self.timer_count = 0
         self.write_count = 0
+        self.null_loop_count = 0
 
         self.cinematic = cinematic
         self.render_path = render_path
@@ -268,14 +273,16 @@ class vtkTimerCallback():
         self.pt = None
         self.alpha = 0.2
 
-    def execute(self,obj,event):
+    def execute(self, obj, event):
+        logging.warning(f'vtkTimerCallback::execute(..)')
 
+        is_null_loop = True
         while not self.queue.empty():
+            is_null_loop = False
             renwin = obj.GetRenderWindow()
             renderer = renwin.GetRenderers().GetFirstRenderer()
 
             pointcloud, pose = self.queue.get(False)
-
 
             if pointcloud is not None:
                 if (self.point_actor is not None) and self.clear_points:
@@ -283,7 +290,7 @@ class vtkTimerCallback():
 
                 points, colors = pointcloud[0], pointcloud[1]
                 pointcloud_actor = create_pointcloud_actor(points, colors)
-                
+
                 renderer.AddActor(pointcloud_actor)
                 self.point_actor = pointcloud_actor
 
@@ -292,7 +299,7 @@ class vtkTimerCallback():
                 cam_actor = create_camera_actor(R,t)
                 cam_actor.GetProperty().SetColor((255, 255, 0))
                 renderer.AddActor(cam_actor)
-                
+
                 if self.cinematic:
                     camera = renderer.GetActiveCamera()
 
@@ -308,16 +315,14 @@ class vtkTimerCallback():
 
                     # self.pos = (1-self.alpha) * self.pos + self.alpha * pos
                     # camera.SetPosition(*self.pos)
-                    
                     # pose  = np.linalg.inv(pose)
                     R, T = pose[:3, :3], pose[:3, 3:4]
                     pos_our = -1 * np.matmul(R.transpose(), T)
                     pos_our = pos_our[:, 0]
 
-                    
                     forward = np.matmul(np.array([0, 0, 1]).reshape(1, 3), R)[0]
                     up = np.array([0, -1, 0])
-                    
+
                     if not self.is_kitti:
                         camera.SetPosition(pos_our - 1 * forward + 0.5 *up)                    
                         camera.SetFocalPoint(pos_our + 1 * forward + -0.1 * up)
@@ -326,8 +331,7 @@ class vtkTimerCallback():
                         # camera.SetFocalPoint(pos_our + 1 * forward + -1 * up)
                         camera.SetPosition(pos_our - 5 * forward + 48 *up)                    
                         camera.SetFocalPoint(pos_our + 1 * forward + -1 * up)
-                    
-                    
+
                     pt = np.array([0, 0.5, 3, 1])
                     pt = np.dot(np.linalg.inv(pose)[:3], pt)
 
@@ -350,14 +354,35 @@ class vtkTimerCallback():
                 writer.SetFileName(output_file)
                 writer.SetInputData(w2if.GetOutput())
                 writer.Write()
+                logging.info(f'  write {output_file}')
 
                 self.write_count += 1
+                self.null_loop_count = 0
 
+        if is_null_loop:
+            self.null_loop_count += 1
         self.timer_count += 1
+
+        logging.info(f'  self.write_count:      {self.write_count}')
+        logging.info(f'  self.timer_count:      {self.timer_count}')
+        logging.info(f'  self.null_loop_count:  {self.null_loop_count}')
+
+        if self.null_loop_count > 2 and self.write_count > 1:
+            # https://stackoverflow.com/questions/15639762/close-vtk-window-python
+            # close window
+            logging.warning(f'  close vtk window')
+            renwin = obj.GetRenderWindow()
+            renwin.Finalize()
+            logging.info(f'  renwin.Finalize() done.')
+            obj.TerminateApp()
+            logging.info(f'  obj.TerminateApp() done.')
+            # del renwin, obj
 
 
 class InteractiveViz(Process):
     def __init__(self, queue, cinematic, render_path, clear_points, win_size, is_kitti=False):
+        logging.warning(f'InteractiveViz::__init__(queue={queue.qsize()}, cinematic={cinematic}, render_path={render_path},'
+                        f'\n\tclear_points={clear_points}, win_size={win_size}, is_kitti={is_kitti})')
         super(InteractiveViz, self).__init__()
         self.queue = queue
         self.cinematic = cinematic
@@ -368,6 +393,7 @@ class InteractiveViz(Process):
         logging.info(f'  win_size: {win_size}')
 
     def run(self):
+        logging.warning(f'InteractiveViz::run()')
         renderer = vtk.vtkRenderer()
         renderer.SetBackground(0, 0, 0)
 
@@ -386,6 +412,7 @@ class InteractiveViz(Process):
 
         renwin = vtk.vtkRenderWindow()
         renwin.SetWindowName("Point Cloud Viewer")
+
         # renwin.SetSize(800, 600)
         # renwin.SetSize(640, 480)  # matterport
         # renwin.SetSize(1296, 968)  # scannet
@@ -406,6 +433,10 @@ class InteractiveViz(Process):
 
         interactor.AddObserver('TimerEvent', cb.execute)
         timerId = interactor.CreateRepeatingTimer(100);
+
+        logging.info(f'  renderer:   {type(renderer)}')
+        logging.info(f'  renwin:     {type(renwin)}')
+        logging.info(f'  interactor: {type(interactor)}')
 
         #start the interaction and timer
         interactor.Start()

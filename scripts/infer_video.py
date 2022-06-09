@@ -24,6 +24,8 @@ from scripts import vis
 from multiprocessing import Queue
 import cv2
 from dro_sfm.utils.setup_log import setup_log
+from dro_sfm.utils.horovod import print0
+from dro_sfm.utils.logging import pcolor
 
 
 def parse_args():
@@ -110,6 +112,7 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
     save: str
         Save format (npz or png)
     """
+    logging.warning(f'infer_and_save_pose(..)')
     base_name = os.path.splitext(os.path.basename(input_file))[0]
 
     image_raw_wh = load_image(input_file).size
@@ -190,9 +193,11 @@ def start_visualization(queue_g, win_size, cinematic=False, render_path=None, cl
 
 def get_coordinate_xy(coord_shape, device):
     """get meshgride coordinate of x, y and the shape is (B, H, W)"""
+    logging.warning(f'get_coordinate_xy({coord_shape}, {device})')
     bs, height, width = coord_shape
+    # https://github.com/pytorch/pytorch/issues/50276#issuecomment-945860735
     y_coord, x_coord = torch.meshgrid([torch.arange(0, height, dtype=torch.float32, device=device),\
-                                       torch.arange(0, width, dtype=torch.float32, device=device)])
+                                       torch.arange(0, width, dtype=torch.float32, device=device)], indexing='ij')
     y_coord, x_coord = y_coord.contiguous(), x_coord.contiguous()
     y_coord, x_coord = y_coord.unsqueeze(0).repeat(bs, 1, 1), \
                        x_coord.unsqueeze(0).repeat(bs, 1, 1)
@@ -202,6 +207,7 @@ def get_coordinate_xy(coord_shape, device):
 
 def reproject_with_depth_batch(depth_ref, depth_src, ref_pose, src_pose, xy_coords):
     """project the reference point cloud into the source view, then project back"""
+    logging.warning(f'reproject_with_depth_batch({depth_ref.shape}, {depth_src.shape}, {len(ref_pose)}, {len(src_pose)}, {len(xy_coords)})')
     intrinsics_ref, extrinsics_ref = ref_pose["intr"], ref_pose["extr"]
     intrinsics_src, extrinsics_src = src_pose["intr"], src_pose["extr"]
 
@@ -233,7 +239,7 @@ def reproject_with_depth_batch(depth_ref, depth_src, ref_pose, src_pose, xy_coor
     y_src_norm = y_src / ((height - 1) / 2) - 1
     xy_src_norm = torch.stack([x_src_norm, y_src_norm], dim=3)
     sampled_depth_src = torch.nn.functional.grid_sample(depth_src.unsqueeze(1), xy_src_norm, \
-                                                        mode="nearest", padding_mode="zeros")
+                                                        mode="nearest", padding_mode="zeros", align_corners=True)
     sampled_depth_src = sampled_depth_src.squeeze(1)
 
     # source 3D space
@@ -264,6 +270,7 @@ def check_geometric_consistency_batch(depth_ref, depth_src, ref_pose, src_pose, 
     1.disparity < 1
     2.relative depth differ ratio < 0.001
     """
+    logging.warning(f'check_geometric_consistency_batch(..)')
     x_ref, y_ref = xy_coords  # (B, H, W)
     depth_reprojected, x2d_reprojected, y2d_reprojected = \
         reproject_with_depth_batch(depth_ref, depth_src, ref_pose, src_pose, xy_coords)
@@ -283,6 +290,7 @@ def check_geometric_consistency_batch(depth_ref, depth_src, ref_pose, src_pose, 
 
 
 def gemo_filter_fusion(depth_ref, depth_srcs, ref_pose, src_poses, intr, thres_view):
+    logging.warning(f'gemo_filter_fusion(..)')
     depth_ref = torch.from_numpy(depth_ref).unsqueeze(0).to("cuda") #(1, H, W)
     ref_pose = torch.from_numpy(ref_pose).unsqueeze(0).to("cuda") #(1, 4, 4)
     intr = torch.from_numpy(intr).unsqueeze(0).to("cuda").float() #(1, 3, 3)
@@ -502,8 +510,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         img_sample = cv2.imread(files[0])
         print(f'  img_sample.shape: {img_sample.shape}')
 
-        start_visualization(queue_g, cinematic=True, render_path=render_path,
-                            clear_points=False, win_size=img_sample.shape[:2], is_kitti= data_type=="kitti")
+        start_visualization(
+            queue_g, cinematic=True, render_path=render_path,
+            clear_points=False, win_size=img_sample.shape[:2], is_kitti= data_type=="kitti")
 
     pose_prev = None
     pose_23_prev = None
@@ -528,12 +537,12 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                                                                 image_shape, data_type,
                                                                 save_depth_root, save_vis_root, idx_frame==0)
         depth_list.append(depth)
-        print(f'  idx_frame: {idx_frame:6d}')
-        print(f'    depth:  {type(depth)}  {depth.shape}  {depth.dtype}')
-        print(f'    pose21: {type(pose21)}  {pose21.shape}  {pose21.dtype}')
-        print(f'    pose23: {type(pose23)}  {pose23.shape}  {pose23.dtype}')
-        print(f'    intr:   {type(intr)}  {intr.shape}  {intr.dtype}')
-        print(f'    rgb:    {type(rgb)}  {rgb.shape}  {rgb.dtype}')
+        logging.info(f'  idx_frame: {idx_frame:6d}')
+        logging.info(f'    depth:  {type(depth)}  {depth.shape}  {depth.dtype}')
+        logging.info(f'    pose21: {type(pose21)}  {pose21.shape}  {pose21.dtype}')
+        logging.info(f'    pose23: {type(pose23)}  {pose23.shape}  {pose23.dtype}')
+        logging.info(f'    intr:   {type(intr)}  {intr.shape}  {intr.dtype}')
+        logging.info(f'    rgb:    {type(rgb)}  {rgb.shape}  {rgb.dtype}')
 
 
         if use_pose_gt:
@@ -541,7 +550,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             pose23 = np.matmul(np.linalg.inv(gt_pose_3), gt_pose_2).astype(np.float32)
 
         if use_depth_gt:
-            depth = depth_gt
+            # https://www.tutorialkart.com/opencv/python/opencv-python-resize-image/
+            depth_gt_resize = cv2.resize(depth_gt, (rgb.shape[1], rgb.shape[0]), interpolation=cv2.INTER_LINEAR)
+            depth = depth_gt_resize
 
         '''
         pose21[0][3] = -pose21[0][3]
@@ -552,7 +563,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         pose23[2][3] = -pose23[2][3]
         '''
 
-        logging.info(f'frame {idx_frame:6d}\npose21:\n{pose21}\npose23{pose23}\n')
+        logging.info(f'frame {idx_frame:6d}\npose21:\n{pose21}\npose23:\n{pose23}\n')
 
         if ply_mode:
             if pose_23_prev is not None:
@@ -599,6 +610,8 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 
             pcd_coords = p3d_trans.transpose(1, 0)
             pointcloud = (pcd_coords, pcd_colors)
+            logging.info(f'  pcd_coords: {pcd_coords.shape}')
+            logging.info(f'  pcd_colors: {pcd_colors.shape}')
 
             vis_counter += 1
             pose = np.linalg.inv(pose)
@@ -700,8 +713,6 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             else:
                 logging.info(f'  missing {traj_file}')
 
-
-
         video_writer.write(canvas)
 
     video_writer.release()
@@ -756,4 +767,4 @@ if __name__ == '__main__':
 
     time_end_infer_video = time.time()
     logging.warning(f'elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')
-    print(f'elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')
+    print0(pcolor(f'\nelapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.\n', 'red'))

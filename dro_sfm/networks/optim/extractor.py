@@ -85,17 +85,17 @@ class ResNetEncoder(models.ResNet):
         x = self.layer3(x)
 
         if self.stride == 8:
-            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode)
+            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode, align_corners=False)
             x = self.upconv1(x)
             x = self.upconv1_fusion(torch.cat([x, feats["s8"]], dim=1))
             x = self.out_conv(x)
             
         elif self.stride == 4:
-            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode)
+            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode, align_corners=False)
             x = self.upconv1(x)
             x = self.upconv1_fusion(torch.cat([x, feats["s8"]], dim=1)) 
             
-            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode)
+            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode, align_corners=False)
             x = self.upconv2(x)
             x = self.upconv2_fusion(torch.cat([x, feats["s4"]], dim=1))
             
@@ -298,22 +298,22 @@ class ResNetEncoderV2(models.ResNet):
         feats["s16"] = x
         x = self.layer4(x)
         x = self.upconv0(x)
-        x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode)
+        x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode, align_corners=False)
         x = self.upconv0_fusion(torch.cat([x, feats["s16"]], dim=1)) 
 
         if self.stride == 8:
             x = self.upconv1(x)
-            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode)
+            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode, align_corners=False)
             x = self.upconv1_fusion(torch.cat([x, feats["s8"]], dim=1))
             x = self.out_conv(x)
             
         elif self.stride == 4:
             x = self.upconv1(x)
-            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode)
+            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode, align_corners=False)
             x = self.upconv1_fusion(torch.cat([x, feats["s8"]], dim=1)) 
             
             x = self.upconv2(x)
-            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode)
+            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode, align_corners=False)
             x = self.upconv2_fusion(torch.cat([x, feats["s4"]], dim=1))
             
             x = self.out_conv(x)
