@@ -78,7 +78,8 @@ def generate_split():
         "train_val_test/matterport010_001"
     ]
     subdirs_test = [
-        "test/matterport014_000"
+        "test/matterport014_000",
+        "test/matterport005_000_0610"
     ]
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
@@ -263,14 +264,14 @@ def generate_split():
                 if osp.exists(case_dir):
                     for item in sorted(os.listdir(osp.join(case_dir, image_dir))):
                         if item.endswith('.jpg'):
-                            path_jpg = osp.join(dir_root, subdirs_test[0], image_dir, item)
+                            path_jpg = osp.join(dir_root, subdirs_test[idx_case], image_dir, item)
                             path_txt = path_jpg.replace('cam_left', 'pose').replace('.jpg', '.txt')
                             if not osp.exists(path_txt):
                                 print(f'skip {item} as missing {path_txt}')
                                 logging.info(f'skip {item} as missing {path_txt}')
                                 n_frame_missing_pose_info += 1
                                 continue
-                            f_test.write(f'{subdirs_test[0]}/{image_dir} {item}\n')
+                            f_test.write(f'{subdirs_test[idx_case]}/{image_dir} {item}\n')
                 else:
                     logging.warning(f'path not exist: {case_dir}')
 
