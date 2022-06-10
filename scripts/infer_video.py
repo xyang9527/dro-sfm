@@ -11,7 +11,10 @@ import torch
 from glob import glob
 import logging
 import time
+import datetime
 from PIL import Image
+import subprocess
+import git
 
 from dro_sfm.models.model_wrapper import ModelWrapper
 from dro_sfm.utils.horovod import hvd_disable
@@ -24,9 +27,45 @@ from dro_sfm.utils.image import write_image
 from scripts import vis
 from multiprocessing import Queue
 import cv2
-from dro_sfm.utils.setup_log import setup_log
+from dro_sfm.utils.setup_log import setup_log, git_info
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
+
+
+class VideoInfo:
+    def __init__(self):
+        self.hostname = subprocess.check_output(['hostname']).decode('UTF-8')[:-1]
+        self.pwd = subprocess.check_output(['pwd']).decode('UTF-8')[:-1]
+
+        dt_now = datetime.datetime.now()
+        self.datetime = f'{dt_now.year:04d}-{dt_now.month:02d}-{dt_now.day:02d}'
+
+        _, hexsha, is_dirty = git_info()
+        self.git_hexsha = hexsha
+        self.git_is_dirty = is_dirty
+
+        self.path_model = ''
+        self.path_data = ''
+
+        self.header_height = 150
+        self.footer_height = 100
+
+        self.sample_rate = 1
+        self.max_frames = 5
+        pass
+
+    def print_info(self):
+        print(f'  hostname:      {self.hostname}')
+        print(f'  pwd:           {self.pwd}')
+
+        print(f'  datatime:      {self.datetime}')
+
+        print(f'  git_hexsha:    {self.git_hexsha}')
+        print(f'  git_is_dirty:  {self.git_is_dirty}')
+        pass
+
+
+g_video_info = VideoInfo()
 
 
 def parse_args():
@@ -348,13 +387,13 @@ def parse_video(video_file, save_root, sample_rate=10):
             count += 1
         else:
             break
-    print(f"video total frames num: {count},  sampled frames num:{sample_count}")    
+    print0(pcolor(f'  video total frames num: {count},  sampled frames num:{sample_count}', 'yellow'))
 
 
 def init_model(args):
     logging.warning(f'init_model(..)')
 
-    print("init model start...................")
+    print0(pcolor(f'init model start .....................', 'green'))
     hvd_disable()
 
     # Parse arguments
@@ -364,7 +403,7 @@ def init_model(args):
     image_shape = args.image_shape
     if image_shape is None:
         image_shape = config.datasets.augmentation.image_shape
-    print(f"input image shape:{image_shape}")
+    print0(pcolor(f'  input image shape:{image_shape}', 'yellow'))
 
     # Set debug if requested
     # set_debug(config.debug)
@@ -384,7 +423,7 @@ def init_model(args):
     # Set to eval mode
     model_wrapper.eval()
 
-    print("init model finish...................")
+    print0(pcolor(f'init model finish .....................', 'blue'))
     return model_wrapper, image_shape
 
 
@@ -454,7 +493,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 
     # processs input data
     if not os.path.isdir(input):
-        print("processing video input:.........")
+        print0(pcolor(f'processing video input: .........', 'blue'))
 
         input_type = "video"
         assert os.path.splitext(input)[1] in [".mp4", ".avi", ".mov", ".mpeg", ".flv", ".wmv"]
@@ -469,14 +508,14 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         files.extend(glob((os.path.join(input, '*.{}'.format(ext)))))
 
     if input_type == "folder":
-        print("processing folder input:...........")
-        print(f"folder total frames num: {len(files)}")    
+        print0(pcolor(f'processing folder input: ...........', 'blue'))
+        print0(pcolor(f'    folder total frames num: {len(files)}', 'yellow'))
         files = files[::sample_rate]
 
     files.sort()
     if len(files) > max_frames:
         files = files[:max_frames]
-    print('Found total {} files'.format(len(files)))
+    print0(pcolor(f'    Found total {len(files)} files', 'yellow'))
     assert len(files) > 2
 
     # Process each file
@@ -640,14 +679,32 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     gap_size = 40
     tags = osp.splitext(output_vis_video)
 
-    video_writer = cv2.VideoWriter(f'{tags[0]}_{render_desc}{tags[1]}', fourcc, fps, (image_hw[1]*4+gap_size*3, image_hw[0]*2+gap_size*2))
+    h_header = g_video_info.header_height
+    h_footer = g_video_info.footer_height
 
-    canvas = np.full((image_hw[0]*2+gap_size*2, image_hw[1]*4+gap_size*3, 3), 128, np.uint8)
+    video_writer = cv2.VideoWriter(f'{tags[0]}_{render_desc}{tags[1]}', fourcc, fps, (image_hw[1]*4+gap_size*3, image_hw[0]*2+gap_size*2+h_header+h_footer))
+    canvas = np.full((image_hw[0]*2+gap_size*2+h_header+h_footer, image_hw[1]*4+gap_size*3, 3), 64, np.uint8)
+    canvas[:h_header, :] = 32
+    canvas[image_hw[0]*2+gap_size*2+h_header:image_hw[0]*2+gap_size*2+h_header+h_footer, :] = 128
 
-    cv2.putText(img=canvas, text='Left Camera', org=(150, image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, f'Traj-Vis {render_desc}', org=(image_hw[1]+gap_size+50, image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Predicted Depth', org=(150, image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Groundtruth Depth', org=(image_hw[1]+gap_size+150, image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text='Left Camera', org=(150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, f'Traj-Vis {render_desc}', org=(image_hw[1]+gap_size+50, h_header+image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Predicted Depth', org=(150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Groundtruth Depth', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+
+    # header section
+    cv2.putText(img=canvas, text=f'{g_video_info.datetime} @ {g_video_info.hostname} @ {g_video_info.git_hexsha} @ {g_video_info.git_is_dirty}',
+        org=(30, 35), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text=f'model: {g_video_info.path_model}',
+        org=(30, 70), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text=f'data:  {g_video_info.path_data}',
+        org=(30, 105), fontScale=1, color=(255, 255, 0), thickness=2, fontFace=cv2.LINE_AA)
+
+    # footer section
+    cv2.putText(img=canvas, text=f'sample_rate:  {g_video_info.sample_rate}',
+        org=(30, image_hw[0]*2+gap_size*2+h_header+35), fontScale=1, color=(255, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text=f'max_frames:  {g_video_info.max_frames}',
+        org=(30, image_hw[0]*2+gap_size*2+h_header+70), fontScale=1, color=(255, 255, 0), thickness=2, fontFace=cv2.LINE_AA)
 
     n_traj_modes = len(traj_modes)
     color_wrong_pose = (0, 255, 255)
@@ -662,9 +719,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             color_tag = color_right_pose
 
         if idx_mode % 2 == 0:
-            cv2.putText(canvas, f'Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, image_hw[0]+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
+            cv2.putText(canvas, f'Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, h_header+image_hw[0]+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
         else:
-            cv2.putText(canvas, f'Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, image_hw[0]*2+gap_size+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
+            cv2.putText(canvas, f'Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
 
     print(f'writing {output_vis_video}')
     logging.info(f'writing {output_vis_video}')
@@ -681,17 +738,17 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         data_color = cv2.imread(color_file)
         base_name = osp.splitext(osp.basename(file))[0]
         frame_text = f'[{idx_f:4d}] - {base_name}'
-        cv2.putText(data_color, frame_text, org=(gap_size, gap_size), fontScale=1, color=(0, 0, 255), thickness=3, fontFace=cv2.LINE_AA)
-        canvas[0:image_hw[0], 0:image_hw[1], :] = data_color
+        cv2.putText(data_color, frame_text, org=(gap_size, h_header+gap_size), fontScale=1, color=(0, 0, 255), thickness=3, fontFace=cv2.LINE_AA)
+        canvas[h_header:h_header+image_hw[0], 0:image_hw[1], :] = data_color
 
         data_depth = cv2.imread(file)
-        canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, 0:image_hw[1], :] = data_depth
+        canvas[h_header+image_hw[0]+gap_size:h_header+image_hw[0]*2+gap_size, 0:image_hw[1], :] = data_depth
 
         depth_gt_file = file.replace('depth_vis', 'depth_gt_vis')
         if osp.exists(depth_gt_file):
             data_depth_gt = cv2.imread(depth_gt_file)
             data_depth_gt_resize = cv2.resize(data_depth_gt, (image_hw[1], image_hw[0]), interpolation=cv2.INTER_LINEAR)
-            canvas[image_hw[0]+gap_size:image_hw[0]*2+gap_size, image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_depth_gt_resize
+            canvas[h_header+image_hw[0]+gap_size:h_header+image_hw[0]*2+gap_size, image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_depth_gt_resize
         else:
             logging.info(f'  missing {depth_gt_file}')
 
@@ -702,7 +759,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             if data_traj is not None:
                 # print(f'  data_traj: {data_traj.shape}')
                 # print(f'  image_hw:  {image_hw}')
-                canvas[0:image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
+                canvas[h_header:h_header+image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
         else:
             logging.info(f'  missing {traj_file}')
 
@@ -717,14 +774,14 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                 data_traj = cv2.imread(traj_file)
                 if data_traj is not None:
                     data_traj_resize = cv2.resize(data_traj, (image_hw[1], image_hw[0]), interpolation=cv2.INTER_LINEAR)
-                    canvas[(image_hw[0]+gap_size)*idx_row:(image_hw[0]+gap_size)*idx_row+image_hw[0], (image_hw[1]+gap_size)*idx_col:(image_hw[1]+gap_size)*idx_col+image_hw[1], :] = data_traj_resize
+                    canvas[h_header+(image_hw[0]+gap_size)*idx_row:h_header+(image_hw[0]+gap_size)*idx_row+image_hw[0], (image_hw[1]+gap_size)*idx_col:(image_hw[1]+gap_size)*idx_col+image_hw[1], :] = data_traj_resize
             else:
                 logging.info(f'  missing {traj_file}')
 
         video_writer.write(canvas)
 
     video_writer.release()
-    print("inference finish.....................")
+    print0(pcolor(f'inference finish .....................', 'blue'))
 
 
 def main():
@@ -756,6 +813,17 @@ def main():
     use_pose_gt = args.use_pose_gt
     mix_video_mode = args.mix_video_mode
 
+    # ======================================================================== #
+    # VideoInfo
+    g_video_info.path_model = osp.basename(args.checkpoint)
+    g_video_info.path_data = input
+
+    g_video_info.sample_rate = sample_rate
+    g_video_info.max_frames = max_frames
+
+    g_video_info.print_info()
+    # ======================================================================== #
+
     os.makedirs(args.output, exist_ok=True)
     os.makedirs(output_tmp_dir, exist_ok=True)
 
@@ -782,6 +850,7 @@ if __name__ == '__main__':
     time_beg_infer_video = time.time()
 
     main()
+    # g_video_info.print_info()
 
     time_end_infer_video = time.time()
     logging.warning(f'elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')

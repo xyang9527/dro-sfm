@@ -6,6 +6,16 @@ import subprocess
 # pip install gitpython
 import git
 
+
+def git_info():
+    # https://gitpython.readthedocs.io/en/stable/reference.html#module-git.objects.commit
+    # TestingTools/model_performance_evaluation_tool/src/common/job_runner.py
+    #     subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('ascii')
+    repo_path = osp.join(osp.dirname(__file__), '../../')
+    repo = git.Repo(repo_path)
+    return repo, repo.head.commit.hexsha, repo.is_dirty()
+
+
 def setup_log(log_name):
     # Initialize logging
     # simple_format = '%(levelname)s >>> %(message)s'
@@ -39,16 +49,12 @@ def setup_log(log_name):
         datetime.datetime.now())
     )
 
-    # https://gitpython.readthedocs.io/en/stable/reference.html#module-git.objects.commit
-    # TestingTools/model_performance_evaluation_tool/src/common/job_runner.py
-    #     subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip().decode('ascii')
-    repo_path = osp.join(osp.dirname(__file__), '../../')
-    repo = git.Repo(repo_path)
+    repo, hexsha, is_dirty = git_info()
     logging.info(f'  {type(repo)}')
-    logging.info(f'  repo.head.commit.hexsha: {repo.head.commit.hexsha}')
-    logging.info(f'  is_dirty():              {repo.is_dirty()}')
+    logging.info(f'  repo.head.commit.hexsha: {hexsha}')
+    logging.info(f'  is_dirty():              {is_dirty}')
 
-    if repo.is_dirty():
+    if is_dirty:
         git_diff = subprocess.check_output(['git', 'diff'])
         logging.info(f'  git diff\n{git_diff.decode()}')
         print(f'  git diff\n{git_diff.decode()}')

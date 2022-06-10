@@ -72,7 +72,7 @@ fi
 var_model_path=${model_matterport}
 
 var_sample_rate=3
-var_max_frames=450
+var_max_frames=15
 
 echo "var_data_path:    ${var_data_path}"
 echo "var_model_path:   ${var_model_path}"
