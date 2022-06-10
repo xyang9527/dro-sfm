@@ -167,8 +167,11 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
         else:
             depth_gt_int = np.array(Image.open(input_file.replace('color', 'depth').replace('jpg', 'png')), dtype=int)
 
+        mask_invalid = depth_gt_int == 0
         depth_gt_float = depth_gt_int.astype(np.float) / 1000.0
         vis_depth_gt = viz_inv_depth(depth_gt_float) * 255
+
+        vis_depth_gt[mask_invalid, :] = 0
 
         save_vis_root_gt = save_vis_root.replace('depth_vis', 'depth_gt_vis')
         if not os.path.exists(save_vis_root_gt):
@@ -415,7 +418,7 @@ def get_gt_depth(file, data_type):
 
     depth_gt_int = np.array(Image.open(depth_file), dtype=int)
     depth_gt_float = depth_gt_int.astype(np.float) / 1000.0
-    # depth_gt_gray_255 = depth_gt_float[:, :, 0] * 255
+
     return True, depth_gt_float
 
 
@@ -503,13 +506,10 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         queue_g = Queue()
         vis_counter = 0
 
-
         render_path=os.path.join(output_tmp_dir, f'{render_tag}_{render_desc}')
         os.makedirs(render_path, exist_ok=True)
 
         img_sample = cv2.imread(files[0])
-        print(f'  img_sample.shape: {img_sample.shape}')
-
         start_visualization(
             queue_g, cinematic=True, render_path=render_path,
             clear_points=False, win_size=img_sample.shape[:2], is_kitti= data_type=="kitti")
@@ -670,9 +670,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     for idx_f, file in enumerate(files):
         name_dir, name_base = osp.split(file)
         if data_type == 'matterport':
-            color_file = osp.join(name_dir, f'../../../cam_left/{name_base}')
+            color_file = osp.join(name_dir, f'../../../../cam_left/{name_base}')
         else:
-            color_file = osp.join(name_dir, f'../../../color/{name_base}')
+            color_file = osp.join(name_dir, f'../../../../color/{name_base}')
 
         data_color = cv2.imread(color_file)
         base_name = osp.splitext(osp.basename(file))[0]
@@ -724,6 +724,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 def main():
     logging.warning(f'main()')
     args = parse_args()
+    logging.info(f'  args: {args}')
 
     sfm_params = {
         "filer_depth_grad_max": 0.05,
