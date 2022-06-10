@@ -53,12 +53,54 @@ import os
 import os.path as osp
 import sys
 import time
+from PIL import Image
+import cv2
 
 lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
 
 from dro_sfm.utils.setup_log import setup_log
 from dro_sfm.visualization.gazebo_config import GazeboParam
+
+from dro_sfm.utils.depth import viz_inv_depth
+from dro_sfm.utils.image import write_image
+
+
+def generate_depth_vis(dir_root, subdirs):
+    logging.warning(f'generate_depth_vis({dir_root}, {subdirs})')
+    for item in subdirs:
+        case_dir = osp.join(dir_root, item)
+        if not osp.exists(case_dir):
+            logging.info(f'  skip {case_dir}')
+            continue
+
+        dir_depth_in = osp.join(case_dir, 'depth')
+        if not osp.exists(dir_depth_in):
+            logging.warning(f'  no depth in {case_dir}')
+            continue
+
+        dir_depth_vis = osp.join(case_dir, 'depth_vis')
+        if not osp.exists(dir_depth_vis):
+            os.mkdir(dir_depth_vis)
+        else:
+            logging.warning(f'  skip {dir_depth_vis}')
+            continue
+
+        depth_files = sorted(os.listdir(dir_depth_in))
+        for item_file in depth_files:
+            if not item_file.endswith('.png'):
+                continue
+
+            img = np.array(Image.open(osp.join(dir_depth_in, item_file)), dtype=int)
+            img_mask = img <= 0
+
+            img_float = img.astype(np.float) / 1000.0
+            img_vis = viz_inv_depth(img_float) * 255
+
+            img_vis[img_mask, :] = 0
+
+            save_name = osp.join(dir_depth_vis, item_file).replace('.png', '.jpg')
+            write_image(save_name, img_vis)
 
 
 def generate_split():
@@ -95,6 +137,9 @@ def generate_split():
         subdirs_pose.append(item)
     for item in subdirs_test:
         subdirs_pose.append(item)
+
+    # depth visualization
+    generate_depth_vis(dir_root, subdirs_pose)
 
     for item in subdirs_pose:
         cam_pose_file = osp.join(dir_root, item, 'cam_pose.txt')
