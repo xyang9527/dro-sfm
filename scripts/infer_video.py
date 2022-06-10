@@ -519,8 +519,12 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     depth_list = []
     pose_list = []
 
-    print(f"*********************\ndata_type: {data_type}")
-    print("inference start.....................")
+    print0(pcolor(f'data_type: {data_type}', 'yellow'))
+    print0(pcolor(f'inference start .....................', 'green'))
+
+    print0(pcolor(f'    use_depth_gt: {use_depth_gt}', 'yellow'))
+    print0(pcolor(f'    use_pose_gt:  {use_pose_gt}', 'yellow'))
+
     for idx_frame, fns in enumerate(list_of_files):
         fn1, fn2, fn3 = fns
         logging.info(f'  frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n    fn3={fn3}')
@@ -696,6 +700,8 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             logging.info(f'  load {traj_file}')
             data_traj = cv2.imread(traj_file)
             if data_traj is not None:
+                # print(f'  data_traj: {data_traj.shape}')
+                # print(f'  image_hw:  {image_hw}')
                 canvas[0:image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
         else:
             logging.info(f'  missing {traj_file}')

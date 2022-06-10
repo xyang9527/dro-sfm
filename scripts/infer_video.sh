@@ -1,13 +1,27 @@
 #!/bin/bash
 
+time_sh_start=$(date +"%s.%N")
+
 : '
 /home/sigma/Downloads/dro-sfm-bodong/home/bodong/playground/slam/dro-sfm/results/mdoel/scannet_gt_view2_ori/
 SupModelMF_DepthPoseNet_it12-h-out_epoch=27_test-test_split-groundtruth-abs_rel_pp_gt=0.057.ckpt
 
+train@sigma
 /home/sigma/slam/dro-sfm-xyang9527/results_20220604/model/matterport_gt/
 SupModelMF_DepthPoseNet_it12-h-out_epoch=106_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.060.ckpt
+
+train@trex
+/home/sigma/slam/models/24@trex_neg_xyz/
+SupModelMF_DepthPoseNet_it12-h-out_epoch=162_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.066.ckpt
+
+train@fox
+/home/sigma/slam/models/26@fox_without_neg_xyz/
+SupModelMF_DepthPoseNet_it12-h-out_epoch=198_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.063.ckpt
 '
-model_matterport=$(pwd)/results_20220604/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=106_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.060.ckpt
+# model_matterport=$(pwd)/results_20220604/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=106_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.060.ckpt
+model_matterport=/home/sigma/Downloads/dro-sfm-bodong/home/bodong/playground/slam/dro-sfm/results/mdoel/scannet_gt_view2_ori/SupModelMF_DepthPoseNet_it12-h-out_epoch=27_test-test_split-groundtruth-abs_rel_pp_gt=0.057.ckpt
+model_matterport=/home/sigma/slam/models/26@fox_without_neg_xyz/SupModelMF_DepthPoseNet_it12-h-out_epoch=198_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.063.ckpt
+model_matterport=/home/sigma/slam/models/24@trex_neg_xyz/SupModelMF_DepthPoseNet_it12-h-out_epoch=162_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.066.ckpt
 
 : '
 /mnt/datasets_open/dro-sfm_data/models/
@@ -26,10 +40,11 @@ matterport005_001
 matterport010_000
 matterport010_001
 
-/home/sigma/slam/matterport/test
+/home/sigma/slam/matterport/test/
 matterport005_000_0610
 matterport014_000
 '
+data_matterport=/home/sigma/slam/matterport/train_val_test/matterport010_001
 data_matterport=/home/sigma/slam/matterport/test/matterport005_000_0610
 
 : '
@@ -44,30 +59,38 @@ scene0600_00
 '
 data_scannet=/home/sigma/slam/scannet_train_data/scene0600_00
 
-is_scannet=true
-if [ "${is_scannet}" = true ] ; then
-  data_path=${data_scannet}/color
-  data_type=scannet
-else
-  data_path=${data_matterport}/cam_left
-  data_type=matterport
-fi
-echo "data_path:  ${data_path}"
-model_path=${model_scannet}
-echo "model_path: ${model_path}"
+is_scannet=false
 
-time_sh_start=$(date +"%s.%N")
+# set model_path and data_path
+if [ "${is_scannet}" = true ] ; then
+  var_data_path=${data_scannet}/color
+  var_data_type=scannet
+else
+  var_data_path=${data_matterport}/cam_left
+  var_data_type=matterport
+fi
+var_model_path=${model_matterport}
+
+var_sample_rate=3
+var_max_frames=450
+
+echo "var_data_path:    ${var_data_path}"
+echo "var_model_path:   ${var_model_path}"
+
+echo "var_sample_rate:  ${var_sample_rate}"
+echo "var_max_frames:   ${var_max_frames}"
 
 python scripts/infer_video.py \
-  --checkpoint ${model_path} \
-  --input ${data_path} \
-  --output $(dirname ${data_path})/infer_video/$(basename ${model_path}) \
-  --sample_rate 3 \
-  --data_type ${data_type} \
+  --checkpoint ${var_model_path} \
+  --input ${var_data_path} \
+  --output $(dirname ${var_data_path})/infer_video/$(basename ${var_model_path})_sample_rate-${var_sample_rate}_max_frames_${var_max_frames} \
+  --sample_rate ${var_sample_rate} \
+  --data_type ${var_data_type} \
   --ply_mode \
   --use_depth_gt \
   --use_pose_gt \
-  --max_frames 50
+  --max_frames ${var_max_frames} \
+  --mix_video_mode
 
 function text_info() {
   echo -e "\e[32m# $1\e[39m"
@@ -80,5 +103,5 @@ function text_warn() {
 time_sh_end=$(date +"%s.%N")
 time_diff_sh=$(bc <<< "$time_sh_end - $time_sh_start")
 text_warn "infer_video.sh elapsed:        $time_diff_sh   seconds. ($time_sh_end - $time_sh_start)"
-text_info "    ${model_path}"
-text_info "    ${data_path}"
+text_info "    ${var_model_path}"
+text_info "    ${var_data_path}"
