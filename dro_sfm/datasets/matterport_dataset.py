@@ -1,3 +1,4 @@
+
 # ref: scannet_dataset.py
 
 import re
@@ -70,7 +71,7 @@ class MatterportDataset(Dataset):
     def __init__(self, root_dir, split, data_transform=None,
                  forward_context=0, back_context=0, strides=(1,),
                  depth_type=None, **kwargs):
-        logging.warning(f'__init__('
+        logging.warning(f'MatterportDataset::__init__('
                         f'\n  root_dir={root_dir},'
                         f'\n  split={split},'
                         f'\n  data_transform={data_transform},'
@@ -129,7 +130,11 @@ class MatterportDataset(Dataset):
             for data in split_data:
                 scene, filename = data.split()
                 self.file_tree[scene].append(filename)
-        
+
+        logging.warning(f'========== before downsample file_tree: ==========')
+        for k, v in self.file_tree.items():
+            logging.info(f'    {k}: {len(v)}')
+
         # downsample by 5
         for k in self.file_tree:
             self.file_tree[k] = self.file_tree[k][::5]
@@ -138,6 +143,12 @@ class MatterportDataset(Dataset):
             file_list = v
             files = [fname for fname in file_list if self._has_context(k, fname, file_list)]
             self.files.extend([[k, fname] for fname in files])
+
+        logging.warning(f'========== file_tree: ==========')
+        for k, v in self.file_tree.items():
+            logging.info(f'    {k}: {len(v)}')
+        logging.info(f'  files:          {len(files)}')
+
 
         self.data_transform = data_transform
 

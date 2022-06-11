@@ -116,12 +116,12 @@ def generate_split():
     subdirs_train_val_test = [
         "train_val_test/matterport005_000",
         "train_val_test/matterport005_001",
-        "train_val_test/matterport010_000",
-        "train_val_test/matterport010_001"
+        # "train_val_test/matterport010_000",
+        # "train_val_test/matterport010_001"
     ]
     subdirs_test = [
-        "test/matterport014_000",
-        "test/matterport005_000_0610"
+        # "test/matterport014_000",
+        # "test/matterport005_000_0610"
     ]
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
@@ -312,8 +312,8 @@ def generate_split():
                             path_jpg = osp.join(dir_root, subdirs_test[idx_case], image_dir, item)
                             path_txt = path_jpg.replace('cam_left', 'pose').replace('.jpg', '.txt')
                             if not osp.exists(path_txt):
-                                print(f'skip {item} as missing {path_txt}')
-                                logging.info(f'skip {item} as missing {path_txt}')
+                                # print(f'skip {item} as missing {path_txt}')
+                                logging.debug(f'skip {item} as missing {path_txt}')
                                 n_frame_missing_pose_info += 1
                                 continue
                             f_test.write(f'{subdirs_test[idx_case]}/{image_dir} {item}\n')
@@ -331,8 +331,8 @@ def generate_split():
                             path_jpg = osp.join(dir_root, subdirs_train_val_test[id_case], image_dir, item)
                             path_txt = path_jpg.replace('cam_left', 'pose').replace('.jpg', '.txt')
                             if not osp.exists(path_txt):
-                                print(f'skip {item} as missing {path_txt}')
-                                logging.info(f'skip {item} as missing {path_txt}')
+                                # print(f'skip {item} as missing {path_txt}')
+                                logging.debug(f'skip {item} as missing {path_txt}')
                                 n_frame_missing_pose_info += 1
                                 continue
                             image_names.append(item)
@@ -347,7 +347,7 @@ def generate_split():
                         f_test.write(f'{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
                 else:
                     logging.warning(f'path not exist: {case_dir}')
-    print(f'n_frame_missing_pose_info: {n_frame_missing_pose_info}')
+    print(f'\nn_frame_missing_pose_info: {n_frame_missing_pose_info}')
 
 
 if __name__ == '__main__':
@@ -357,4 +357,5 @@ if __name__ == '__main__':
     generate_split()
 
     time_end_matterport_split_gen = time.time()
+    logging.warning(f'matterport_split_gen.py elapsed {time_end_matterport_split_gen - time_beg_matterport_split_gen:.6f} seconds.')
     print(f'matterport_split_gen.py elapsed {time_end_matterport_split_gen - time_beg_matterport_split_gen:.6f} seconds.')

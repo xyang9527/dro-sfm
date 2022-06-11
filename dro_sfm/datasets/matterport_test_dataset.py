@@ -70,6 +70,14 @@ class MatterportTestDataset(Dataset):
     def __init__(self, root_dir, split, data_transform=None,
                  forward_context=0, back_context=0, strides=(5,),
                  depth_type=None, **kwargs):
+        logging.warning(f'MatterportTestDataset::__init__('
+                        f'\n  root_dir={root_dir},'
+                        f'\n  split={split},'
+                        f'\n  data_transform={data_transform},'
+                        f'\n  forward_context={forward_context},'
+                        f'\n  back_context={back_context},'
+                        f'\n  strides={strides},'
+                        f'\n  depth_type={depth_type}, ..)')
         super().__init__()
 
         self.depth_type = depth_type
@@ -120,6 +128,15 @@ class MatterportTestDataset(Dataset):
         self.context2_files = []
         self.context3_files = []
         self.context4_files = []
+
+        logging.warning(f'========== file_tree: ==========')
+        for k, v in self.file_tree.items():
+            logging.info(f'    {k}: {len(v)}')
+        logging.info(f'  split_data:     {len(split_data)}')
+        logging.info(f'  split_data1:    {len(split_data1)}')
+        logging.info(f'  split_data2:    {len(split_data2)}')
+        logging.info(f'  files:          {len(files)}')
+        logging.info(f'  context_files:  {len(context_files)}')
 
         is_continuous_id = True
 
