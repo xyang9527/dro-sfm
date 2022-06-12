@@ -60,6 +60,7 @@ scene0600_00
 data_scannet=/home/sigma/slam/scannet_train_data/scene0600_00
 
 is_scannet=false
+var_archive_video=/home/sigma/slam/demo
 
 # set model_path and data_path
 if [ "${is_scannet}" = true ] ; then
@@ -90,7 +91,8 @@ python scripts/infer_video.py \
   --use_depth_gt \
   --use_pose_gt \
   --max_frames ${var_max_frames} \
-  --mix_video_mode
+  --mix_video_mode \
+  --archive_video ${var_archive_video}
 
 function text_info() {
   echo -e "\e[32m# $1\e[39m"

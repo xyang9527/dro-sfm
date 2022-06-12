@@ -129,7 +129,7 @@ def generate_split():
                     [ 0., -1.,  0.,  0.],
                     [ 0.,  0.,  0.,  1.]], dtype=np.float)
 
-    enable_neg_xyz = True
+    enable_neg_xyz = False
 
     # create pose file
     subdirs_pose = []

@@ -20,6 +20,7 @@ file_data=${PWD}/scripts/path_data_list
 
 var_sample_rate=3
 var_max_frames=15
+var_archive_video=/home/sigma/slam/demo
 
 function dro_sfm_benchmark() {
     var_filename_model=$1
@@ -82,7 +83,8 @@ function dro_sfm_benchmark() {
                 --use_depth_gt \
                 --use_pose_gt \
                 --max_frames ${var_max_frames} \
-                --mix_video_mode
+                --mix_video_mode \
+                --archive_video ${var_archive_video}
 
         done < ${var_filename_data}
 

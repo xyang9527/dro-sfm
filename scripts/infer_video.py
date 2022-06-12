@@ -80,6 +80,7 @@ def parse_args():
     parser.add_argument('--use_depth_gt', action="store_true", help='use GT depth for vis')
     parser.add_argument('--use_pose_gt', action="store_true", help='use GT pose for vis')
     parser.add_argument('--mix_video_mode', action="store_true", help="create video with 4 modes")
+    parser.add_argument('--archive_video', type=str, help='folder to archive videos', default='/tmp/dro-sfm-demo')
 
     parser.add_argument('--image_shape', type=int, nargs='+', default=None,
                         help='Input and output image shape '
@@ -814,6 +815,7 @@ def main():
     use_depth_gt = args.use_depth_gt
     use_pose_gt = args.use_pose_gt
     mix_video_mode = args.mix_video_mode
+    archive_video = args.archive_video
 
     # ======================================================================== #
     # VideoInfo
@@ -841,6 +843,19 @@ def main():
                 output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
                 output_tmp_dir=output_tmp_dir, data_type=data_type,
                 ply_mode=ply_mode, use_depth_gt=use_depth_gt, use_pose_gt=use_pose_gt, sfm_params=sfm_params)
+
+        # archive final video
+        if not osp.exists(archive_video):
+            os.makedirs(archive_video)
+        desc = 'depth-GT_pose-GT'
+        tmp_tags = osp.splitext(output_vis_video)
+        src_name = f'{tmp_tags[0]}_{desc}{tmp_tags[1]}'
+        data_case_name = input.split('/')[-2]
+        dst_name = osp.join(archive_video,
+            f'{data_case_name}_SR{sample_rate:03d}_MF{max_frames:04d}'
+            f'_{g_video_info.datetime}@{g_video_info.hostname}@{g_video_info.git_hexsha[:8]}@{g_video_info.git_is_dirty}'
+            f'_{osp.basename(g_video_info.path_model)}.avi')
+        subprocess.call(['cp', src_name, dst_name])
 
     # clean tmp dir
     # import shutil
