@@ -47,7 +47,7 @@ class VideoInfo:
         self.path_model = ''
         self.path_data = ''
 
-        self.header_height = 150
+        self.header_height = 180
         self.footer_height = 100
 
         self.sample_rate = 1
@@ -695,10 +695,12 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     # header section
     cv2.putText(img=canvas, text=f'{g_video_info.datetime} @ {g_video_info.hostname} @ {g_video_info.git_hexsha} @ {g_video_info.git_is_dirty}',
         org=(30, 35), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(img=canvas, text=f'model: {g_video_info.path_model}',
-        org=(30, 70), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(img=canvas, text=f'data:  {g_video_info.path_data}',
-        org=(30, 105), fontScale=1, color=(255, 255, 0), thickness=2, fontFace=cv2.LINE_AA)
+        org=(30, 70), fontScale=1, color=(255, 255, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text=f'model: {osp.dirname(g_video_info.path_model)}',
+        org=(30, 105), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text=f'       {osp.basename(g_video_info.path_model)}',
+        org=(30, 140), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
 
     # footer section
     cv2.putText(img=canvas, text=f'sample_rate:  {g_video_info.sample_rate}',
@@ -815,7 +817,7 @@ def main():
 
     # ======================================================================== #
     # VideoInfo
-    g_video_info.path_model = osp.basename(args.checkpoint)
+    g_video_info.path_model = args.checkpoint
     g_video_info.path_data = input
 
     g_video_info.sample_rate = sample_rate

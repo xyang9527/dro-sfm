@@ -110,6 +110,7 @@ test_inputs
 
 results/
 results_*
+*_results_*
 logs/
 log/
 nohup.out
