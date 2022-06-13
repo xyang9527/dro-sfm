@@ -2,8 +2,10 @@
 # str
 # (path to pytorch ckpt file)
 # ============================================================================ #
-/home/sigma/Downloads/dro-sfm-bodong/home/bodong/playground/slam/dro-sfm/results/mdoel/scannet_gt_view2_ori/SupModelMF_DepthPoseNet_it12-h-out_epoch=27_test-test_split-groundtruth-abs_rel_pp_gt=0.057.ckpt
-/home/sigma/slam/models/26@fox_without_neg_xyz/SupModelMF_DepthPoseNet_it12-h-out_epoch=198_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.063.ckpt
-/home/sigma/slam/models/24@trex_neg_xyz/SupModelMF_DepthPoseNet_it12-h-out_epoch=162_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.066.ckpt
-/home/sigma/slam/dro-sfm-xyang9527/no_neg_xyz_results_20220612/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=427_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.047.ckpt
-/mnt/datasets_open/dro-sfm_data/models/indoor_scannet.ckpt
+# /home/sigma/Downloads/dro-sfm-bodong/home/bodong/playground/slam/dro-sfm/results/mdoel/scannet_gt_view2_ori/SupModelMF_DepthPoseNet_it12-h-out_epoch=27_test-test_split-groundtruth-abs_rel_pp_gt=0.057.ckpt
+# /home/sigma/slam/models/26@fox_without_neg_xyz/SupModelMF_DepthPoseNet_it12-h-out_epoch=198_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.063.ckpt
+# /home/sigma/slam/models/24@trex_neg_xyz/SupModelMF_DepthPoseNet_it12-h-out_epoch=162_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.066.ckpt
+# /home/sigma/slam/dro-sfm-xyang9527/no_neg_xyz_results_20220612/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=427_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.047.ckpt
+# /mnt/datasets_open/dro-sfm_data/models/indoor_scannet.ckpt
+# /home/sigma/slam/dro-sfm-xyang9527/no_neg_xyz_results_20220612/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=427_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.047.ckpt
+/home/sigma/slam/dro-sfm-xyang9527/neg_xyz_results_20220611/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=49_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.052.ckpt

@@ -2,7 +2,16 @@
 # bool str
 # (is scannet dataset) (path to dataset)
 # ============================================================================ #
-# false /home/sigma/slam/matterport/train_val_test/matterport010_001
-# false /home/sigma/slam/matterport/test/matterport005_000_0610
 false /home/sigma/slam/matterport/train_val_test/matterport005_000
-false /home/sigma/slam/matterport/train_val_test/matterport005_001
+# false /home/sigma/slam/matterport/train_val_test/matterport005_001
+# false /home/sigma/slam/matterport/train_val_test/matterport010_000
+# false /home/sigma/slam/matterport/train_val_test/matterport010_001
+false /home/sigma/slam/matterport/test/matterport005_000_0610
+# false /home/sigma/slam/matterport/test/matterport014_000
+# true /home/sigma/slam/scannet_train_data/scene0000_00
+# true /home/sigma/slam/scannet_train_data/scene0100_00
+# true /home/sigma/slam/scannet_train_data/scene0200_00
+# true /home/sigma/slam/scannet_train_data/scene0300_00
+# true /home/sigma/slam/scannet_train_data/scene0400_00
+# true /home/sigma/slam/scannet_train_data/scene0500_00
+# true /home/sigma/slam/scannet_train_data/scene0600_00

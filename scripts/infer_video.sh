@@ -46,6 +46,7 @@ matterport014_000
 '
 data_matterport=/home/sigma/slam/matterport/train_val_test/matterport010_001
 data_matterport=/home/sigma/slam/matterport/test/matterport005_000_0610
+data_matterport=/home/sigma/slam/matterport/train_val_test/matterport005_000
 
 : '
 /home/sigma/slam/scannet_train_data/
@@ -93,6 +94,8 @@ python scripts/infer_video.py \
   --max_frames ${var_max_frames} \
   --mix_video_mode \
   --archive_video ${var_archive_video}
+
+cp -f ${PWD}/logs/kneron_infer_video.log ${var_archive_video}/
 
 function text_info() {
   echo -e "\e[32m# $1\e[39m"

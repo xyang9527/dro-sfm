@@ -19,7 +19,7 @@ file_data=${PWD}/scripts/path_data_list
 # echo $(wc -l ${file_data})
 
 var_sample_rate=3
-var_max_frames=15
+var_max_frames=80
 var_archive_video=/home/sigma/slam/demo
 
 function dro_sfm_benchmark() {
@@ -92,6 +92,8 @@ function dro_sfm_benchmark() {
 }
 
 dro_sfm_benchmark ${file_model} ${file_data}
+
+cp -f ${PWD}/logs/kneron_infer_video.log ${var_archive_video}/
 
 time_sh_end=$(date +"%s.%N")
 time_diff_sh=$(bc <<< "$time_sh_end - $time_sh_start")

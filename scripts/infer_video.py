@@ -48,7 +48,7 @@ class VideoInfo:
         self.path_data = ''
 
         self.header_height = 180
-        self.footer_height = 100
+        self.footer_height = 150
 
         self.sample_rate = 1
         self.max_frames = 5
@@ -510,13 +510,13 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 
     if input_type == "folder":
         print0(pcolor(f'processing folder input: ...........', 'blue'))
-        print0(pcolor(f'    folder total frames num: {len(files)}', 'yellow'))
+        print0(pcolor(f'  folder total frames num: {len(files)}', 'yellow'))
         files = files[::sample_rate]
 
     files.sort()
     if len(files) > max_frames:
         files = files[:max_frames]
-    print0(pcolor(f'    Found total {len(files)} files', 'yellow'))
+    print0(pcolor(f'  Found total {len(files)} files', 'yellow'))
     assert len(files) > 2
 
     # Process each file
@@ -562,8 +562,8 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     print0(pcolor(f'data_type: {data_type}', 'yellow'))
     print0(pcolor(f'inference start .....................', 'green'))
 
-    print0(pcolor(f'    use_depth_gt: {use_depth_gt}', 'yellow'))
-    print0(pcolor(f'    use_pose_gt:  {use_pose_gt}', 'yellow'))
+    print0(pcolor(f'  use_depth_gt: {use_depth_gt}', 'yellow'))
+    print0(pcolor(f'  use_pose_gt:  {use_pose_gt}', 'yellow'))
 
     for idx_frame, fns in enumerate(list_of_files):
         fn1, fn2, fn3 = fns
@@ -588,10 +588,24 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         logging.info(f'    intr:   {type(intr)}  {intr.shape}  {intr.dtype}')
         logging.info(f'    rgb:    {type(rgb)}  {rgb.shape}  {rgb.dtype}')
 
-
         if use_pose_gt:
+            for idx_t in range(3):
+                gt_pose_1[idx_t, 3] = -gt_pose_1[idx_t, 3]
+                gt_pose_2[idx_t, 3] = -gt_pose_2[idx_t, 3]
+                gt_pose_3[idx_t, 3] = -gt_pose_3[idx_t, 3]
+
             pose21 = np.matmul(np.linalg.inv(gt_pose_1), gt_pose_2).astype(np.float32)
             pose23 = np.matmul(np.linalg.inv(gt_pose_3), gt_pose_2).astype(np.float32)
+
+            # pose21 = np.linalg.inv(pose21)
+            # pose23 = np.linalg.inv(pose23)
+            # for idx_t in range(3):
+            #    pose21[idx_t, 3] = pose21[idx_t, 3]
+            #    pose23[idx_t, 3] = pose23[idx_t, 3]
+        else:
+            for idx_t in range(3):
+                pose21[idx_t, 3] = -pose21[idx_t, 3]
+                pose23[idx_t, 3] = -pose23[idx_t, 3]
 
         if use_depth_gt:
             # https://www.tutorialkart.com/opencv/python/opencv-python-resize-image/
@@ -704,10 +718,12 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         org=(30, 140), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
 
     # footer section
-    cv2.putText(img=canvas, text=f'sample_rate:  {g_video_info.sample_rate}',
+    cv2.putText(img=canvas, text=f'sample_rate: {g_video_info.sample_rate:4d}',
         org=(30, image_hw[0]*2+gap_size*2+h_header+35), fontScale=1, color=(255, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(img=canvas, text=f'max_frames:  {g_video_info.max_frames}',
+    cv2.putText(img=canvas, text=f'max_frames:  {g_video_info.max_frames:4d}',
         org=(30, image_hw[0]*2+gap_size*2+h_header+70), fontScale=1, color=(255, 255, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text=f'fps:         {fps:4.1f}',
+        org=(30, image_hw[0]*2+gap_size*2+h_header+105), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
 
     n_traj_modes = len(traj_modes)
     color_wrong_pose = (0, 255, 255)
@@ -731,6 +747,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 
     if len(files) > max_frames:
         files = files[:max_frames]
+
     for idx_f, file in enumerate(files):
         name_dir, name_base = osp.split(file)
         if data_type == 'matterport':
@@ -741,6 +758,19 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         data_color = cv2.imread(color_file)
         base_name = osp.splitext(osp.basename(file))[0]
         frame_text = f'[{idx_f:4d}] - {base_name}'
+        cv2.putText(data_color, frame_text, org=(gap_size, h_header+gap_size), fontScale=1, color=(0, 0, 255), thickness=3, fontFace=cv2.LINE_AA)
+
+        if idx_f > 0:
+            dt_curr = np.int64(osp.splitext(osp.basename(files[idx_f]))[0])
+            dt_prev = np.int64(osp.splitext(osp.basename(files[idx_f-1]))[0])
+            ts_diff = int((dt_curr - dt_prev) / 1e6)
+            cv2.putText(data_color, f'  time-diff prev: {ts_diff:4d} ms', org=(gap_size, h_header+gap_size+35), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
+        if idx_f < len(files) - 1:
+            dt_curr = np.int64(osp.splitext(osp.basename(files[idx_f]))[0])
+            dt_next = np.int64(osp.splitext(osp.basename(files[idx_f+1]))[0])
+            ts_diff = int((dt_next - dt_curr) / 1e6)
+            cv2.putText(data_color, f'  time-diff next: {ts_diff:4d} ms', org=(gap_size, h_header+gap_size+70), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
+
         cv2.putText(data_color, frame_text, org=(gap_size, h_header+gap_size), fontScale=1, color=(0, 0, 255), thickness=3, fontFace=cv2.LINE_AA)
         canvas[h_header:h_header+image_hw[0], 0:image_hw[1], :] = data_color
 
@@ -832,6 +862,8 @@ def main():
     os.makedirs(output_tmp_dir, exist_ok=True)
 
     if not mix_video_mode:
+        print0(pcolor(f'  model: {args.checkpoint}', 'magenta'))
+        print0(pcolor(f'  data:  {input}', 'magenta'))
         inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
             output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
             output_tmp_dir=output_tmp_dir, data_type=data_type,
@@ -839,6 +871,9 @@ def main():
     else:
         modes = [(False, False), (False, True), (True, False), (True, True)]
         for use_depth_gt, use_pose_gt in modes:
+            # color: red, blue, green, cyan, magenta, yellow
+            print0(pcolor(f'  model: {args.checkpoint}', 'magenta'))
+            print0(pcolor(f'  data:  {input}', 'magenta'))
             inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
                 output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
                 output_tmp_dir=output_tmp_dir, data_type=data_type,

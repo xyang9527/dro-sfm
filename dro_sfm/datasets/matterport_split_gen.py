@@ -116,12 +116,12 @@ def generate_split():
     subdirs_train_val_test = [
         "train_val_test/matterport005_000",
         "train_val_test/matterport005_001",
-        # "train_val_test/matterport010_000",
-        # "train_val_test/matterport010_001"
+        "train_val_test/matterport010_000",
+        "train_val_test/matterport010_001"
     ]
     subdirs_test = [
-        # "test/matterport014_000",
-        # "test/matterport005_000_0610"
+        "test/matterport014_000",
+        "test/matterport005_000_0610"
     ]
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
