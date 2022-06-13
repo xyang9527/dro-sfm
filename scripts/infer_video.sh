@@ -18,10 +18,7 @@ train@fox
 /home/sigma/slam/models/26@fox_without_neg_xyz/
 SupModelMF_DepthPoseNet_it12-h-out_epoch=198_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.063.ckpt
 '
-# model_matterport=$(pwd)/results_20220604/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=106_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.060.ckpt
-model_matterport=/home/sigma/Downloads/dro-sfm-bodong/home/bodong/playground/slam/dro-sfm/results/mdoel/scannet_gt_view2_ori/SupModelMF_DepthPoseNet_it12-h-out_epoch=27_test-test_split-groundtruth-abs_rel_pp_gt=0.057.ckpt
-model_matterport=/home/sigma/slam/models/26@fox_without_neg_xyz/SupModelMF_DepthPoseNet_it12-h-out_epoch=198_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.063.ckpt
-model_matterport=/home/sigma/slam/models/24@trex_neg_xyz/SupModelMF_DepthPoseNet_it12-h-out_epoch=162_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.066.ckpt
+model_matterport=/home/sigma/slam/dro-sfm-xyang9527/neg_xyz_results_20220611/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=49_matterport-val_all_list-groundtruth-abs_rel_pp_gt=0.052.ckpt
 
 : '
 /mnt/datasets_open/dro-sfm_data/models/
@@ -44,9 +41,7 @@ matterport010_001
 matterport005_000_0610
 matterport014_000
 '
-data_matterport=/home/sigma/slam/matterport/train_val_test/matterport010_001
 data_matterport=/home/sigma/slam/matterport/test/matterport005_000_0610
-data_matterport=/home/sigma/slam/matterport/train_val_test/matterport005_000
 
 : '
 /home/sigma/slam/scannet_train_data/
@@ -74,7 +69,7 @@ fi
 var_model_path=${model_matterport}
 
 var_sample_rate=3
-var_max_frames=15
+var_max_frames=150
 
 echo "var_data_path:    ${var_data_path}"
 echo "var_model_path:   ${var_model_path}"
@@ -92,8 +87,9 @@ python scripts/infer_video.py \
   --use_depth_gt \
   --use_pose_gt \
   --max_frames ${var_max_frames} \
-  --mix_video_mode \
   --archive_video ${var_archive_video}
+
+#   --mix_video_mode \
 
 cp -f ${PWD}/logs/kneron_infer_video.log ${var_archive_video}/
 

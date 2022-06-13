@@ -15,6 +15,7 @@ import datetime
 from PIL import Image
 import subprocess
 import git
+import copy
 
 from dro_sfm.models.model_wrapper import ModelWrapper
 from dro_sfm.utils.horovod import hvd_disable
@@ -652,7 +653,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             pose_list.append(pose)
             num_view = sfm_params["fusion_view_num"]
 
-            if len(pose_list) >= num_view:
+            if len(pose_list) >= num_view and not use_depth_gt:
                 depth = gemo_filter_fusion(depth_list[-1], depth_list[-num_view:-1], pose_list[-1],
                                         pose_list[-num_view:-1], intr, thres_view=sfm_params["fusion_thres_view"])
 

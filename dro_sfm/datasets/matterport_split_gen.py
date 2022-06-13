@@ -55,6 +55,7 @@ import sys
 import time
 from PIL import Image
 import cv2
+import copy
 
 lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
@@ -86,6 +87,11 @@ def generate_depth_vis(dir_root, subdirs):
             logging.warning(f'  skip {dir_depth_vis}')
             continue
 
+        dir_image_in = osp.join(case_dir, 'cam_left')
+        dir_image_vis = osp.join(case_dir, 'cam_left_vis')
+        if not osp.exists(dir_image_vis):
+            os.mkdir(dir_image_vis)
+
         depth_files = sorted(os.listdir(dir_depth_in))
         for item_file in depth_files:
             if not item_file.endswith('.png'):
@@ -101,6 +107,19 @@ def generate_depth_vis(dir_root, subdirs):
 
             save_name = osp.join(dir_depth_vis, item_file).replace('.png', '.jpg')
             write_image(save_name, img_vis)
+
+            # image with mask
+            name_src_image = osp.join(dir_image_in, osp.basename(item_file).replace('.png', '.jpg'))
+            name_dst_image = osp.join(dir_image_vis, osp.basename(item_file).replace('.png', '.jpg'))
+            src_image = np.array(Image.open(name_src_image))
+
+            src_image_copy = copy.deepcopy(src_image)
+            src_image_copy[img_mask, :] = 0
+
+            tmp_src_image = cv2.bitwise_and(src_image, src_image_copy)
+            dst_image = cv2.addWeighted(src_image, 0.15, tmp_src_image, 0.85, 0)
+
+            write_image(name_dst_image, dst_image)
 
 
 def generate_split():

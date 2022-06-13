@@ -19,7 +19,7 @@ file_data=${PWD}/scripts/path_data_list
 # echo $(wc -l ${file_data})
 
 var_sample_rate=3
-var_max_frames=80
+var_max_frames=300
 var_archive_video=/home/sigma/slam/demo
 
 function dro_sfm_benchmark() {
