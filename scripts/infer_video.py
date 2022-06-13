@@ -653,7 +653,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             pose_list.append(pose)
             num_view = sfm_params["fusion_view_num"]
 
-            if len(pose_list) >= num_view and not use_depth_gt:
+            if len(pose_list) >= num_view and not use_depth_gt and False:
                 depth = gemo_filter_fusion(depth_list[-1], depth_list[-num_view:-1], pose_list[-1],
                                         pose_list[-num_view:-1], intr, thres_view=sfm_params["fusion_thres_view"])
 
@@ -704,7 +704,8 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     canvas[image_hw[0]*2+gap_size*2+h_header:image_hw[0]*2+gap_size*2+h_header+h_footer, :] = 128
 
     cv2.putText(img=canvas, text='Left Camera', org=(150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, f'Traj-Vis {render_desc}', org=(image_hw[1]+gap_size+50, h_header+image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    # cv2.putText(canvas, f'Traj-Vis {render_desc}', org=(image_hw[1]+gap_size+50, h_header+image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, 'Left Camera + Mask', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(canvas, 'Predicted Depth', org=(150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(canvas, 'Groundtruth Depth', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
 
@@ -719,11 +720,11 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         org=(30, 140), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
 
     # footer section
-    cv2.putText(img=canvas, text=f'sample_rate: {g_video_info.sample_rate:4d}',
+    cv2.putText(img=canvas, text=f'sample_rate:  {g_video_info.sample_rate:4d}',
         org=(30, image_hw[0]*2+gap_size*2+h_header+35), fontScale=1, color=(255, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(img=canvas, text=f'max_frames:  {g_video_info.max_frames:4d}',
         org=(30, image_hw[0]*2+gap_size*2+h_header+70), fontScale=1, color=(255, 255, 0), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(img=canvas, text=f'fps:         {fps:4.1f}',
+    cv2.putText(img=canvas, text=f'fps:             {fps:4.1f}',
         org=(30, image_hw[0]*2+gap_size*2+h_header+105), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
 
     n_traj_modes = len(traj_modes)
@@ -756,6 +757,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         else:
             color_file = osp.join(name_dir, f'../../../../color/{name_base}')
 
+        # subfig(0, 0)
         data_color = cv2.imread(color_file)
         base_name = osp.splitext(osp.basename(file))[0]
         frame_text = f'[{idx_f:4d}] - {base_name}'
@@ -775,9 +777,11 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         cv2.putText(data_color, frame_text, org=(gap_size, h_header+gap_size), fontScale=1, color=(0, 0, 255), thickness=3, fontFace=cv2.LINE_AA)
         canvas[h_header:h_header+image_hw[0], 0:image_hw[1], :] = data_color
 
+        # subfig(1, 0)
         data_depth = cv2.imread(file)
         canvas[h_header+image_hw[0]+gap_size:h_header+image_hw[0]*2+gap_size, 0:image_hw[1], :] = data_depth
 
+        # subfig(1, 1)
         depth_gt_file = file.replace('depth_vis', 'depth_gt_vis')
         if osp.exists(depth_gt_file):
             data_depth_gt = cv2.imread(depth_gt_file)
@@ -786,16 +790,22 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         else:
             logging.info(f'  missing {depth_gt_file}')
 
+        # subfig(0, 1)
+        '''
         traj_file = osp.join(osp.dirname(osp.dirname(file)), f'{render_tag}_{render_desc}/{idx_f:06d}.png')
         if osp.exists(traj_file):
             logging.info(f'  load {traj_file}')
             data_traj = cv2.imread(traj_file)
             if data_traj is not None:
-                # print(f'  data_traj: {data_traj.shape}')
-                # print(f'  image_hw:  {image_hw}')
                 canvas[h_header:h_header+image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_traj
         else:
             logging.info(f'  missing {traj_file}')
+        '''
+        if data_type == 'matterport':
+            file_color_mask = color_file.replace('/cam_left/', '/cam_left_vis/')
+            if osp.exists(file_color_mask):
+                data_color_mask = cv2.imread(file_color_mask)
+                canvas[h_header:h_header+image_hw[0], image_hw[1]+gap_size:image_hw[1]*2+gap_size, :] = data_color_mask
 
         for idx_mode in range(n_traj_modes):
             mode_text = traj_modes[idx_mode]
@@ -816,6 +826,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 
     video_writer.release()
     print0(pcolor(f'inference finish .....................', 'blue'))
+    return render_desc
 
 
 def main():
@@ -865,7 +876,7 @@ def main():
     if not mix_video_mode:
         print0(pcolor(f'  model: {args.checkpoint}', 'magenta'))
         print0(pcolor(f'  data:  {input}', 'magenta'))
-        inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
+        desc = inference(model_wrapper, image_shape, input, sample_rate=sample_rate, max_frames=max_frames,
             output_depths_npy=output_depths_npy, output_vis_video=output_vis_video, 
             output_tmp_dir=output_tmp_dir, data_type=data_type,
             ply_mode=ply_mode, use_depth_gt=use_depth_gt, use_pose_gt=use_pose_gt, sfm_params=sfm_params)
@@ -880,18 +891,20 @@ def main():
                 output_tmp_dir=output_tmp_dir, data_type=data_type,
                 ply_mode=ply_mode, use_depth_gt=use_depth_gt, use_pose_gt=use_pose_gt, sfm_params=sfm_params)
 
-        # archive final video
-        if not osp.exists(archive_video):
-            os.makedirs(archive_video)
         desc = 'depth-GT_pose-GT'
-        tmp_tags = osp.splitext(output_vis_video)
-        src_name = f'{tmp_tags[0]}_{desc}{tmp_tags[1]}'
-        data_case_name = input.split('/')[-2]
-        dst_name = osp.join(archive_video,
-            f'{data_case_name}_SR{sample_rate:03d}_MF{max_frames:04d}'
-            f'_{g_video_info.datetime}@{g_video_info.hostname}@{g_video_info.git_hexsha[:8]}@{g_video_info.git_is_dirty}'
-            f'_{osp.basename(g_video_info.path_model)}.avi')
-        subprocess.call(['cp', src_name, dst_name])
+
+    # archive final video
+    if not osp.exists(archive_video):
+        os.makedirs(archive_video)
+
+    tmp_tags = osp.splitext(output_vis_video)
+    src_name = f'{tmp_tags[0]}_{desc}{tmp_tags[1]}'
+    data_case_name = input.split('/')[-2]
+    dst_name = osp.join(archive_video,
+        f'{data_case_name}_SR{sample_rate:03d}_MF{max_frames:04d}'
+        f'_{g_video_info.datetime}@{g_video_info.hostname}@{g_video_info.git_hexsha[:8]}@{g_video_info.git_is_dirty}'
+        f'_{osp.basename(g_video_info.path_model)}.avi')
+    subprocess.call(['cp', src_name, dst_name])
 
     # clean tmp dir
     # import shutil
