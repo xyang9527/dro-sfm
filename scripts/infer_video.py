@@ -538,6 +538,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 
     traj_modes = ['depth-GT_pose-GT', 'depth-GT_pose-pred', 'depth-pred_pose-GT', 'depth-pred_pose-pred']
 
+    print0(pcolor(f'  use_depth_gt: {use_depth_gt}', 'yellow'))
+    print0(pcolor(f'  use_pose_gt:  {use_pose_gt}', 'yellow'))
+
     if ply_mode:
         logging.info(f'  ply_mode')
 
@@ -561,9 +564,6 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 
     print0(pcolor(f'data_type: {data_type}', 'yellow'))
     print0(pcolor(f'inference start .....................', 'green'))
-
-    print0(pcolor(f'  use_depth_gt: {use_depth_gt}', 'yellow'))
-    print0(pcolor(f'  use_pose_gt:  {use_pose_gt}', 'yellow'))
 
     for idx_frame, fns in enumerate(list_of_files):
         fn1, fn2, fn3 = fns
@@ -602,10 +602,16 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             # for idx_t in range(3):
             #    pose21[idx_t, 3] = pose21[idx_t, 3]
             #    pose23[idx_t, 3] = pose23[idx_t, 3]
+
         else:
-            for idx_t in range(3):
-                pose21[idx_t, 3] = -pose21[idx_t, 3]
-                pose23[idx_t, 3] = -pose23[idx_t, 3]
+            case_inv = False
+            if case_inv:
+                pose21 = np.linalg.inv(pose21)
+                pose23 = np.linalg.inv(pose23)
+            else:
+                for idx_t in range(3):
+                    pose21[idx_t, 3] = -pose21[idx_t, 3]
+                    pose23[idx_t, 3] = -pose23[idx_t, 3]
 
         if use_depth_gt:
             # https://www.tutorialkart.com/opencv/python/opencv-python-resize-image/
