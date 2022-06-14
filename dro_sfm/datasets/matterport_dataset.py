@@ -105,7 +105,7 @@ class MatterportDataset(Dataset):
             with open(os.path.join(os.path.dirname(self.root_dir), "splits/test_split.txt"), "r") as f:
                 test_data = f.readlines()
             test_scenes = [d.split('/')[0] for d in test_data]
-            
+
             self.file_tree = read_files(root_dir)
             # remove test scenes
             for scene in test_scenes:
@@ -149,7 +149,6 @@ class MatterportDataset(Dataset):
             logging.info(f'    {k}: {len(v)}')
         logging.info(f'  files:          {len(files)}')
 
-
         self.data_transform = data_transform
 
     def __len__(self):
@@ -172,7 +171,7 @@ class MatterportDataset(Dataset):
 
     def _read_rgb_context_files(self, session, filename):
         context_paths = self._get_context_file_paths(filename, self.file_tree[session])
-        
+
         return [load_image(os.path.join(self.root_dir, session, filename))
                 for filename in context_paths]
 

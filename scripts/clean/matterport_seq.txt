@@ -1,0 +1,6 @@
+matterport/test/matterport005_000_0610
+matterport/test/matterport014_000
+matterport/train_val_test/matterport005_000
+matterport/train_val_test/matterport005_001
+matterport/train_val_test/matterport010_000
+matterport/train_val_test/matterport010_001

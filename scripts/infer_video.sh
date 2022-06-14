@@ -41,7 +41,7 @@ matterport010_001
 matterport005_000_0610
 matterport014_000
 '
-data_matterport=/home/sigma/slam/matterport/test/matterport005_000_0610
+data_matterport=/home/sigma/slam/matterport/train_val_test/matterport005_000
 
 : '
 /home/sigma/slam/scannet_train_data/

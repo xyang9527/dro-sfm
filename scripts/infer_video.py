@@ -53,7 +53,6 @@ class VideoInfo:
 
         self.sample_rate = 1
         self.max_frames = 5
-        pass
 
     def print_info(self):
         print(f'  hostname:      {self.hostname}')
@@ -63,7 +62,6 @@ class VideoInfo:
 
         print(f'  git_hexsha:    {self.git_hexsha}')
         print(f'  git_is_dirty:  {self.git_is_dirty}')
-        pass
 
 
 g_video_info = VideoInfo()
@@ -131,7 +129,7 @@ def get_intrinsics(image_shape_raw, image_shape, data_type):
     intr[0] *= out_w / orig_w
     intr[1] *= out_h / orig_h
 
-    return  intr
+    return intr
 
 
 @torch.no_grad()
@@ -515,8 +513,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         files = files[::sample_rate]
 
     files.sort()
-    if len(files) > max_frames:
-        files = files[:max_frames]
+    skip_first_n = 30
+    if len(files) > max_frames + skip_first_n:
+        files = files[skip_first_n:max_frames+skip_first_n]
     print0(pcolor(f'  Found total {len(files)} files', 'yellow'))
     assert len(files) > 2
 
@@ -703,11 +702,11 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     canvas[:h_header, :] = 32
     canvas[image_hw[0]*2+gap_size*2+h_header:image_hw[0]*2+gap_size*2+h_header+h_footer, :] = 128
 
-    cv2.putText(img=canvas, text='Left Camera', org=(150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(img=canvas, text='(a) Left Camera', org=(150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
     # cv2.putText(canvas, f'Traj-Vis {render_desc}', org=(image_hw[1]+gap_size+50, h_header+image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Left Camera + Mask', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Predicted Depth', org=(150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
-    cv2.putText(canvas, 'Groundtruth Depth', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, '(b) Left Camera + Mask', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, '(e) Predicted Depth', org=(150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    cv2.putText(canvas, '(f) Groundtruth Depth', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
 
     # header section
     cv2.putText(img=canvas, text=f'{g_video_info.datetime} @ {g_video_info.hostname} @ {g_video_info.git_hexsha} @ {g_video_info.git_is_dirty}',

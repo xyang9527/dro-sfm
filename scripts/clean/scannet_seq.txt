@@ -1,0 +1,7 @@
+scannet_train_data/scene0000_00
+scannet_train_data/scene0100_00
+scannet_train_data/scene0200_00
+scannet_train_data/scene0300_00
+scannet_train_data/scene0400_00
+scannet_train_data/scene0500_00
+scannet_train_data/scene0600_00
