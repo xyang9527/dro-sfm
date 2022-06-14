@@ -13,8 +13,6 @@ import cv2
 
 from dro_sfm.utils.setup_log import setup_log
 from dro_sfm.utils.image import load_image
-from scripts.infer import generate_pointcloud
-from dro_sfm.visualization.gazebo_config import GazeboParam
 from dro_sfm.visualization.pointcloud_downsample import generate_pointcloud_NxN
 
 """
@@ -57,9 +55,6 @@ def load_data(names, data_dir):
     valid_only = True
 
     dir_root = data_dir
-    # dir_cloud_ply_camera_coord = osp.join(dir_root, 'demo/unaligned_ply_camera_coord')
-    # dir_cloud_obj_camera_coord = osp.join(dir_root, 'demo/aligned_obj_camera_coord')
-    # dir_cloud_obj_world_coord = osp.join(dir_root, 'demo/aligned_obj_world_coord')
     dir_cloud_jpg = osp.join(dir_root, 'demo/jpg')
 
     dir_cloud_ply_camera_coord_downsample = osp.join(dir_root, f'demo/unaligned_ply_camera_coord_downsample_{sample_x}x{sample_y}')
@@ -67,14 +62,12 @@ def load_data(names, data_dir):
     dir_cloud_obj_world_coord_downsample = osp.join(dir_root, f'demo/aligned_obj_world_coord_downsample_{sample_x}x{sample_y}')
 
     folders_need = [
-        # dir_cloud_ply_camera_coord,
-        # dir_cloud_obj_camera_coord,
-        # dir_cloud_obj_world_coord,
         dir_cloud_jpg,
         dir_cloud_ply_camera_coord_downsample,
         dir_cloud_obj_camera_coord_downsample,
         dir_cloud_obj_world_coord_downsample
     ]
+
     for item_dir in folders_need:
         if not osp.exists(item_dir):
             os.makedirs(item_dir)
@@ -130,13 +123,9 @@ def load_data(names, data_dir):
             pose_init = data_pose
             pose_init_world_coord = data_pose_world_coord
 
-        # file_cloud_ply = osp.join(dir_cloud_ply_camera_coord, f'{name}.ply')
         file_cloud_ply_downsample = osp.join(dir_cloud_ply_camera_coord_downsample, f'{name}.ply')
         data_depth_resized = cv2.resize(data_depth, data_color.size, interpolation = cv2.INTER_NEAREST)
 
-        # cloud = generate_pointcloud(
-        #     np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy,
-        #     file_cloud_ply, 1.0)
         cloud_downsample = generate_pointcloud_NxN(
             np.array(data_color, dtype=int), data_depth_resized, fx, fy, cx, cy,
             file_cloud_ply_downsample, sample_x, sample_y, valid_only, 1.0)
@@ -145,20 +134,6 @@ def load_data(names, data_dir):
             continue
 
         rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose)
-
-        # initial point cloud in camera coord
-        # cloud_xyz = cloud[:, :3]
-        # cloud_rgb = cloud[:, 3:]
-        # cloud_xyz_hom = np.transpose(np.hstack((cloud_xyz, np.ones((cloud_xyz.shape[0], 1)))))
-        # cloud_xyz_align = np.dot(rel_pose, cloud_xyz_hom)
-        # cloud_xyz_align_t = np.transpose(cloud_xyz_align)
-
-        # with open(osp.join(dir_cloud_obj_camera_coord, f'camera_coord_pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:
-        #     n_vert = cloud_xyz.shape[0]
-        #     for i in range(n_vert):
-        #         x, y, z, w = cloud_xyz_align_t[i]
-        #         r, g, b = cloud_rgb[i]
-        #         f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
 
         # downsampled point cloud in camera coord
         cloud_xyz_downsample = cloud_downsample[:, :3]
@@ -173,15 +148,6 @@ def load_data(names, data_dir):
                 x, y, z, w = cloud_xyz_align_t_downsample[i]
                 r, g, b = cloud_rgb_downsample[i]
                 f_ou_align_rgb_downsample.write(f'v {x} {y} {z} {r} {g} {b}\n')
-
-        # point cloud in world coord
-        # with open(osp.join(dir_cloud_obj_world_coord, f'world_coord_pose_T05_{name}.obj'), 'w') as f_ou_align_rgb:
-        #     n_vert = cloud_xyz.shape[0]
-        #     cloud_xyz_temp = np.transpose(np.dot(data_pose_world_coord, np.dot(T05, cloud_xyz_hom)))
-        #     for i in range(n_vert):
-        #         x, y, z, w = cloud_xyz_temp[i]
-        #         r, g, b = cloud_rgb[i]
-        #         f_ou_align_rgb.write(f'v {x} {y} {z} {r} {g} {b}\n')
 
         # downsampled point cloud in world coord
         with open(osp.join(dir_cloud_obj_world_coord_downsample, f'world_coord_pose_T05_{name}.obj'), 'w') as f_ou_align_rgb_downsample:
@@ -211,17 +177,24 @@ def load_data(names, data_dir):
 
 
 def create_obj_cloud():
-    data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 100},
-                 {'dir': '/home/sigma/slam/matterport/test/matterport014_000_0601', 'space': 5}]
-    data_cols = [{'dir': '/home/sigma/slam/matterport/test/matterport014_000', 'space': 20}]
-    # data_cols = [{'dir': '/home/sigma/slam/matterport/train_val_test/matterport010_000', 'space': 10}]
+    matterport_home = '/home/sigma/slam/matterport'
+    data_cols = [
+        {'dir': 'test/matterport005_000_0610', 'space': 42}, # 4199
+        {'dir': 'test/matterport014_000', 'space': 36}, # 3620
+        {'dir': 'train_val_test/matterport005_000', 'space': 41}, # 4098
+        {'dir': 'train_val_test/matterport005_001', 'space': 54}, # 5438
+        {'dir': 'train_val_test/matterport010_000', 'space': 41}, # 4146
+        {'dir': 'train_val_test/matterport010_001', 'space': 34}, # 3448
+        ]
+
     for item_data in data_cols:
-        data_dir = item_data['dir']
+        data_dir = osp.join(matterport_home, item_data['dir'])
         space = item_data['space']
+
         names = []
         for item in sorted(os.listdir(osp.join(data_dir, 'pose'))):
             names.append(osp.splitext(item)[0])
-        # names = names[900:1000]
+
         load_data(names[::space], data_dir)
 
 

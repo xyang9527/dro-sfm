@@ -276,7 +276,6 @@ class SupervisedDepthPoseLoss(LossBase):
         
         return total_loss / total_w
 
-    
     def get_ref_coords(self, pose, K, ref_K, depth, scale_factor, device):
         if not isinstance(pose, Pose):
             pose = Pose(pose)
@@ -290,8 +289,7 @@ class SupervisedDepthPoseLoss(LossBase):
         ref_coords = ref_cam.project(world_points, frame='w', normalize=True) #(b, h, w,2)
         valid_mask = (ref_coords >= -1) & (ref_coords <= 1)
         return ref_coords, valid_mask
-    
-        
+
     def calc_pose_loss(self, pred_poses, gt_pose_context, gt_depth, K, ref_K):
         device = gt_pose_context[0].device
         scale_factor = 1
