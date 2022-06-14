@@ -100,3 +100,11 @@ time_diff_sh=$(bc <<< "$time_sh_end - $time_sh_start")
 text_warn "infer_video_ex.sh elapsed:        $time_diff_sh   seconds. ($time_sh_end - $time_sh_start)"
 text_info "    ${file_model}"
 text_info "    ${file_data}"
+
+: '
+conda activate dro-sfm-latest
+cd slam/dro-sfm-xyang9527
+bash scripts/infer_video_ex.sh
+
+bash scripts/infer_video_ex.sh 2>&1 | tee -a logs/infer_video_ex.log
+'

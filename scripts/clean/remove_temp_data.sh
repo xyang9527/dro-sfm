@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function text_info() {
-  echo -e "\e[32m# $1\e[39m"
+  echo -e "\e[32m#   $1\e[39m"
 }
 
 function text_warn() {
@@ -49,7 +49,7 @@ function remove_temp_data() {
         continue
       fi
 
-      text_info "rm -rf ${slam_home}/${line_seq}/${line_folder}"
+      text_warn "rm -rf ${slam_home}/${line_seq}/${line_folder}"
       rm -rf "${slam_home}/${line_seq}/${line_folder}"
 
     done < ${var_filename_folder}
@@ -69,4 +69,6 @@ text_warn "remove_temp_data.sh elapsed:        $time_diff_sh   seconds. ($time_s
 conda activate dro-sfm-latest
 cd slam/dro-sfm-xyang9527
 bash scripts/clean/remove_temp_data.sh
+
+bash scripts/clean/remove_temp_data.sh 2>&1 | tee -a logs/remove_temp_data.log
 '

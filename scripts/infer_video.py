@@ -693,17 +693,24 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     fps = 4.0
     gap_size = 40
     tags = osp.splitext(output_vis_video)
+    video_name = f'{tags[0]}_{render_desc}{tags[1]}'
+
+    # pose list to obj
+    obj_name = video_name.replace('.avi', '_pose.obj')
+    with open(obj_name, 'w') as f_ou:
+        for item in pose_list:
+            f_ou.write(f'v {item[0, 3]} {item[1, 3]} {item[2, 3]}\n')
 
     h_header = g_video_info.header_height
     h_footer = g_video_info.footer_height
 
-    video_writer = cv2.VideoWriter(f'{tags[0]}_{render_desc}{tags[1]}', fourcc, fps, (image_hw[1]*4+gap_size*3, image_hw[0]*2+gap_size*2+h_header+h_footer))
+    video_writer = cv2.VideoWriter(video_name, fourcc, fps, (image_hw[1]*4+gap_size*3, image_hw[0]*2+gap_size*2+h_header+h_footer))
     canvas = np.full((image_hw[0]*2+gap_size*2+h_header+h_footer, image_hw[1]*4+gap_size*3, 3), 64, np.uint8)
     canvas[:h_header, :] = 32
     canvas[image_hw[0]*2+gap_size*2+h_header:image_hw[0]*2+gap_size*2+h_header+h_footer, :] = 128
 
     cv2.putText(img=canvas, text='(a) Left Camera', org=(150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
-    # cv2.putText(canvas, f'Traj-Vis {render_desc}', org=(image_hw[1]+gap_size+50, h_header+image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    # cv2.putText(canvas, f'(b) Traj-Vis {render_desc}', org=(image_hw[1]+gap_size+50, h_header+image_hw[0]+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(canvas, '(b) Left Camera + Mask', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(canvas, '(e) Predicted Depth', org=(150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(canvas, '(f) Groundtruth Depth', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
@@ -739,9 +746,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             color_tag = color_right_pose
 
         if idx_mode % 2 == 0:
-            cv2.putText(canvas, f'Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, h_header+image_hw[0]+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
+            cv2.putText(canvas, f'({chr(ord("a") + idx_row * 4 + idx_col)}) Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, h_header+image_hw[0]+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
         else:
-            cv2.putText(canvas, f'Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
+            cv2.putText(canvas, f'({chr(ord("a") + idx_row * 4 + idx_col)}) Traj-Vis {mode_text}', org=((image_hw[1]+gap_size)*idx_col+50, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=color_tag, thickness=2, fontFace=cv2.LINE_AA)
 
     print(f'writing {output_vis_video}')
     logging.info(f'writing {output_vis_video}')
@@ -914,6 +921,7 @@ if __name__ == '__main__':
     setup_log('kneron_infer_video.log')
     time_beg_infer_video = time.time()
 
+    np.set_printoptions(precision=6, suppress=True)
     main()
     # g_video_info.print_info()
 
