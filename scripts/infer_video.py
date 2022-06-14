@@ -589,10 +589,10 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         logging.info(f'    rgb:    {type(rgb)}  {rgb.shape}  {rgb.dtype}')
 
         if use_pose_gt:
-            for idx_t in range(3):
-                gt_pose_1[idx_t, 3] = -gt_pose_1[idx_t, 3]
-                gt_pose_2[idx_t, 3] = -gt_pose_2[idx_t, 3]
-                gt_pose_3[idx_t, 3] = -gt_pose_3[idx_t, 3]
+            # for idx_t in range(3):
+            #    gt_pose_1[idx_t, 3] = -gt_pose_1[idx_t, 3]
+            #    gt_pose_2[idx_t, 3] = -gt_pose_2[idx_t, 3]
+            #    gt_pose_3[idx_t, 3] = -gt_pose_3[idx_t, 3]
 
             pose21 = np.matmul(np.linalg.inv(gt_pose_1), gt_pose_2).astype(np.float32)
             pose23 = np.matmul(np.linalg.inv(gt_pose_3), gt_pose_2).astype(np.float32)
@@ -700,6 +700,10 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     with open(obj_name, 'w') as f_ou:
         for item in pose_list:
             f_ou.write(f'v {item[0, 3]} {item[1, 3]} {item[2, 3]}\n')
+
+        n_pose = len(pose_list)
+        for idx_p in range(1, n_pose-1, 2):
+            f_ou.write(f'f {idx_p} {idx_p+1} {idx_p+2}\n')
 
     h_header = g_video_info.header_height
     h_footer = g_video_info.footer_height

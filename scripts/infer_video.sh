@@ -41,7 +41,7 @@ matterport010_001
 matterport005_000_0610
 matterport014_000
 '
-data_matterport=/home/sigma/slam/matterport/train_val_test/matterport005_000
+data_matterport=/home/sigma/slam/matterport/test/matterport005_000_0610
 
 : '
 /home/sigma/slam/scannet_train_data/
@@ -69,7 +69,7 @@ fi
 var_model_path=${model_matterport}
 
 var_sample_rate=3
-var_max_frames=150
+var_max_frames=400
 
 echo "var_data_path:    ${var_data_path}"
 echo "var_model_path:   ${var_model_path}"
@@ -84,12 +84,12 @@ python scripts/infer_video.py \
   --sample_rate ${var_sample_rate} \
   --data_type ${var_data_type} \
   --ply_mode \
-  --use_depth_gt \
-  --use_pose_gt \
   --max_frames ${var_max_frames} \
   --archive_video ${var_archive_video}
 
-#   --mix_video_mode \
+# --use_depth_gt \
+# --use_pose_gt \
+# --mix_video_mode \
 
 cp -f ${PWD}/logs/kneron_infer_video.log ${var_archive_video}/
 
