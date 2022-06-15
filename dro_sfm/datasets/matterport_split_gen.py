@@ -143,6 +143,33 @@ def generate_split():
         "test/matterport005_000_0610"
     ]
 
+    # dataset 0614
+    dir_root = '/home/sigma/slam/matterport0614'
+
+    if not osp.exists(dir_root):
+        raise ValueError(f'path not exist: {dir_root}')
+
+    dir_save = osp.join(dir_root, 'splits')
+    if not osp.exists(dir_save):
+        os.mkdir(dir_save)
+
+    subdirs_train_val_test = [
+        "train_val_test/matterport005_000_0516",
+        "train_val_test/matterport005_001_0516",
+        "train_val_test/matterport005_0614",
+        "train_val_test/matterport010_000_0516",
+        "train_val_test/matterport010_001_0516",
+        "train_val_test/matterport010_0614",
+        "train_val_test/matterport047_0614",
+        "train_val_test/matterport063_0614",
+        "train_val_test/matterport071_0614",
+    ]
+    subdirs_test = [
+        "test/matterport014_000_0516",
+        "test/matterport014_001_0516",
+        "test/matterport014_0614",
+    ]
+
     T05 = np.array([[ 0.,  0., -1.,  0.],
                     [ 1.,  0.,  0.,  0.],
                     [ 0., -1.,  0.,  0.],

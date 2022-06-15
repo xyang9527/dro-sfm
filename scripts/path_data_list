@@ -8,6 +8,18 @@ false /home/sigma/slam/matterport/train_val_test/matterport010_000
 false /home/sigma/slam/matterport/train_val_test/matterport010_001
 false /home/sigma/slam/matterport/test/matterport005_000_0610
 false /home/sigma/slam/matterport/test/matterport014_000
+false /home/sigma/slam/matterport0614/train_val_test/matterport005_000_0516
+false /home/sigma/slam/matterport0614/train_val_test/matterport005_001_0516
+false /home/sigma/slam/matterport0614/train_val_test/matterport005_0614
+false /home/sigma/slam/matterport0614/train_val_test/matterport010_000_0516
+false /home/sigma/slam/matterport0614/train_val_test/matterport010_001_0516
+false /home/sigma/slam/matterport0614/train_val_test/matterport010_0614
+false /home/sigma/slam/matterport0614/train_val_test/matterport047_0614
+false /home/sigma/slam/matterport0614/train_val_test/matterport063_0614
+false /home/sigma/slam/matterport0614/train_val_test/matterport071_0614
+false /home/sigma/slam/matterport0614/test/matterport014_000_0516
+false /home/sigma/slam/matterport0614/test/matterport014_001_0516
+false /home/sigma/slam/matterport0614/test/matterport014_0614
 # true /home/sigma/slam/scannet_train_data/scene0000_00
 # true /home/sigma/slam/scannet_train_data/scene0100_00
 # true /home/sigma/slam/scannet_train_data/scene0200_00

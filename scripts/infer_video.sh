@@ -66,7 +66,8 @@ else
   var_data_path=${data_matterport}/cam_left
   var_data_type=matterport
 fi
-var_model_path=${model_matterport}
+# var_model_path=${model_matterport}
+var_model_path=${model_scannet}
 
 var_sample_rate=3
 var_max_frames=400
@@ -85,6 +86,7 @@ python scripts/infer_video.py \
   --data_type ${var_data_type} \
   --ply_mode \
   --max_frames ${var_max_frames} \
+  --mix_video_mode \
   --archive_video ${var_archive_video}
 
 # --use_depth_gt \

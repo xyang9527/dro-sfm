@@ -604,14 +604,16 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             #    pose23[idx_t, 3] = pose23[idx_t, 3]
 
         else:
-            case_inv = False
-            if case_inv:
-                pose21 = np.linalg.inv(pose21)
-                pose23 = np.linalg.inv(pose23)
-            else:
-                for idx_t in range(3):
-                    pose21[idx_t, 3] = -pose21[idx_t, 3]
-                    pose23[idx_t, 3] = -pose23[idx_t, 3]
+            is_matterport_model=False
+            if is_matterport_model:
+                case_inv = False
+                if case_inv:
+                    pose21 = np.linalg.inv(pose21)
+                    pose23 = np.linalg.inv(pose23)
+                else:
+                    for idx_t in range(3):
+                        pose21[idx_t, 3] = -pose21[idx_t, 3]
+                        pose23[idx_t, 3] = -pose23[idx_t, 3]
 
         if use_depth_gt:
             # https://www.tutorialkart.com/opencv/python/opencv-python-resize-image/
