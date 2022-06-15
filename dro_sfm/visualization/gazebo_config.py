@@ -131,3 +131,41 @@ class GazeboParam:
     @property
     def get_cam2gazebo(self):
         return self.cam2gazebo
+
+
+if __name__ == '__main__':
+    np.set_printoptions(precision=6, suppress=True)
+
+    # weita   x: -0.5, y: -0.5, z: 0.5, w: 0.5
+    # bodong: -0.5 0.5 -0.5 0.5
+    T_weita = GazeboPose(-0.5, -0.5, 0.5, 0.5, 0, 0, 0)
+    print(f'\n=== T_weita: ===\n{T_weita.get_T()}')
+
+    print(f'\n=== T_weita.inv: ===\n{np.linalg.inv(T_weita.get_T())}')
+
+
+    T_bodong = GazeboPose(-0.5, 0.5, -0.5, 0.5, 0, 0, 0)
+    print(f'\n=== T_bodong: ===\n{T_bodong.get_T()}')
+
+    print(f'\n=== T_bodong.inv: ===\n{np.linalg.inv(T_bodong.get_T())}')
+
+
+    T_05 = np.array([
+            [ 0.0,  0.0, -1.0, 0.0],
+            [ 1.0,  0.0,  0.0, 0.0],
+            [ 0.0, -1.0,  0.0, 0.0],
+            [ 0.0,  0.0,  0.0, 1.0]], dtype=float)
+    print(f'\n=== T_05: ===\n{T_05}')
+
+    print(f'\n=== T_05.inv: ===\n{np.linalg.inv(T_05)}')
+
+
+    T_mirror = np.array([
+        [-1.0,  0.0,  0.0,  0.0],
+        [ 0.0, -1.0,  0.0,  0.0],
+        [ 0.0,  0.0,  1.0,  0.0],
+        [ 0.0,  0.0,  0.0,  1.0]], dtype=float)
+    T_new = np.matmul(T_mirror, T_05)
+    print(f'\n=== T_new: ===\n{T_new}')
+
+    print(f'\n=== T_new.inv: ===\n{np.linalg.inv(T_new)}')
