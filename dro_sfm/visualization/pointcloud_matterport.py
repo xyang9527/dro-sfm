@@ -99,6 +99,12 @@ def load_data(names, data_dir):
                     [ 1.,  0.,  0.,  0.],
                     [ 0., -1.,  0.,  0.],
                     [ 0.,  0.,  0.,  1.]], dtype=np.float)
+    T_mirror = np.array([
+        [-1.0,  0.0,  0.0,  0.0],
+        [ 0.0, -1.0,  0.0,  0.0],
+        [ 0.0,  0.0,  1.0,  0.0],
+        [ 0.0,  0.0,  0.0,  1.0]], dtype=float)
+    T05 = np.matmul(T_mirror, T05)
     T05_inv = np.linalg.inv(T05)
 
     pose_init = None
@@ -189,6 +195,9 @@ def create_obj_cloud():
 
     for item_data in data_cols:
         data_dir = osp.join(matterport_home, item_data['dir'])
+        if not osp.exists(data_dir):
+            logging.warning(f'skip {data_dir}')
+            continue
         space = item_data['space']
 
         names = []

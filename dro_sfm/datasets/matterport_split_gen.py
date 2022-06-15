@@ -144,6 +144,7 @@ def generate_split():
     ]
 
     # dataset 0614
+    '''
     dir_root = '/home/sigma/slam/matterport0614'
 
     if not osp.exists(dir_root):
@@ -169,13 +170,20 @@ def generate_split():
         "test/matterport014_001_0516",
         "test/matterport014_0614",
     ]
+    '''
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
                     [ 1.,  0.,  0.,  0.],
                     [ 0., -1.,  0.,  0.],
                     [ 0.,  0.,  0.,  1.]], dtype=np.float)
+    T_mirror = np.array([
+        [-1.0,  0.0,  0.0,  0.0],
+        [ 0.0, -1.0,  0.0,  0.0],
+        [ 0.0,  0.0,  1.0,  0.0],
+        [ 0.0,  0.0,  0.0,  1.0]], dtype=float)
+    T05 = np.matmul(T_mirror, T05)
 
-    enable_neg_xyz = True
+    enable_neg_xyz = False
 
     # create pose file
     subdirs_pose = []
