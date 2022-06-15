@@ -137,7 +137,9 @@ class MatterportDataset(Dataset):
 
         # downsample by 5
         for k in self.file_tree:
-            self.file_tree[k] = self.file_tree[k][::5]
+            self.file_tree[k] = self.file_tree[k][50::5]  # ignore first 50 frames
+
+        # todo: cut sequences: percent of invalid depth / large camere movemoment between consecutive frames
 
         for k, v in self.file_tree.items():
             file_list = v
