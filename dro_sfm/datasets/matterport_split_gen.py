@@ -123,54 +123,57 @@ def generate_depth_vis(dir_root, subdirs):
 
 
 def generate_split():
-    dir_root = '/home/sigma/slam/matterport'
+    use_data_0516 = False
 
-    if not osp.exists(dir_root):
-        raise ValueError(f'path not exist: {dir_root}')
+    if use_data_0516:
+        # matterport dataset 0516
+        dir_root = '/home/sigma/slam/matterport0516'
 
-    dir_save = osp.join(dir_root, 'splits')
-    if not osp.exists(dir_save):
-        os.mkdir(dir_save)
+        if not osp.exists(dir_root):
+            raise ValueError(f'path not exist: {dir_root}')
 
-    subdirs_train_val_test = [
-        "train_val_test/matterport005_000",
-        "train_val_test/matterport005_001",
-        "train_val_test/matterport010_000",
-        "train_val_test/matterport010_001"
-    ]
-    subdirs_test = [
-        "test/matterport014_000",
-        "test/matterport005_000_0610"
-    ]
+        dir_save = osp.join(dir_root, 'splits')
+        if not osp.exists(dir_save):
+            os.mkdir(dir_save)
 
-    # dataset 0614
-    '''
-    dir_root = '/home/sigma/slam/matterport0614'
+        subdirs_train_val_test = [
+            "train_val_test/matterport005_000",
+            "train_val_test/matterport005_001",
+            "train_val_test/matterport010_000",
+            "train_val_test/matterport010_001"
+        ]
+        subdirs_test = [
+            "test/matterport014_000",
+            "test/matterport005_000_0610"
+        ]
 
-    if not osp.exists(dir_root):
-        raise ValueError(f'path not exist: {dir_root}')
+    else:
+        # matterport dataset 0614
+        dir_root = '/home/sigma/slam/matterport0614'
 
-    dir_save = osp.join(dir_root, 'splits')
-    if not osp.exists(dir_save):
-        os.mkdir(dir_save)
+        if not osp.exists(dir_root):
+            raise ValueError(f'path not exist: {dir_root}')
 
-    subdirs_train_val_test = [
-        "train_val_test/matterport005_000_0516",
-        "train_val_test/matterport005_001_0516",
-        "train_val_test/matterport005_0614",
-        "train_val_test/matterport010_000_0516",
-        "train_val_test/matterport010_001_0516",
-        "train_val_test/matterport010_0614",
-        "train_val_test/matterport047_0614",
-        "train_val_test/matterport063_0614",
-        "train_val_test/matterport071_0614",
-    ]
-    subdirs_test = [
-        "test/matterport014_000_0516",
-        "test/matterport014_001_0516",
-        "test/matterport014_0614",
-    ]
-    '''
+        dir_save = osp.join(dir_root, 'splits')
+        if not osp.exists(dir_save):
+            os.mkdir(dir_save)
+
+        subdirs_train_val_test = [
+            "train_val_test/matterport005_000_0516", # 4199
+            "train_val_test/matterport005_001_0516", # 5500
+            "train_val_test/matterport005_0614", # 4721
+            "train_val_test/matterport010_000_0516", # 4186
+            "train_val_test/matterport010_001_0516", # 3452
+            "train_val_test/matterport010_0614", # 7173
+            "train_val_test/matterport047_0614", # 3345
+            "train_val_test/matterport063_0614", # 3942
+            "train_val_test/matterport071_0614", # 5881
+        ]
+        subdirs_test = [
+            "test/matterport014_000_0516", # 3624
+            "test/matterport014_001_0516", # 7787
+            "test/matterport014_0614", # 13912
+        ]
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
                     [ 1.,  0.,  0.,  0.],
@@ -182,8 +185,6 @@ def generate_split():
         [ 0.0,  0.0,  1.0,  0.0],
         [ 0.0,  0.0,  0.0,  1.0]], dtype=float)
     T05 = np.matmul(T_mirror, T05)
-
-    enable_neg_xyz = False
 
     # create pose file
     subdirs_pose = []
@@ -197,15 +198,15 @@ def generate_split():
 
     for item in subdirs_pose:
         cam_pose_file = osp.join(dir_root, item, 'cam_pose.txt')
-        cam_traj_file_world_coord = osp.join(dir_root, item, 'traj_cam_pose_world_coord.obj')
-        cam_traj_file_camera_coord = osp.join(dir_root, item, 'traj_cam_pose_camera_coord.obj')
+        cam_traj_file_world_coord = osp.join(dir_root, item, 'camera_trajectory_w.obj')
+        cam_traj_file_camera_coord = osp.join(dir_root, item, 'camera_trajectory_c.obj')
 
         if not osp.exists(cam_pose_file):
             logging.warning(f'file not exist: {cam_pose_file}')
             continue
 
         pose_dir = osp.join(dir_root, item, 'pose')
-        pose_dir_world_coord = osp.join(dir_root, item, 'pose_world_coord')
+        pose_dir_world_coord = osp.join(dir_root, item, 'pose_w')
 
         folders_need = [pose_dir, pose_dir_world_coord]
         for item_dir in folders_need:
@@ -240,8 +241,6 @@ def generate_split():
                 #     q = [q0 q1 q2 q3]^T = [qw qx qy qz]^T
                 #     |q|^2 = q0^2 + q1^2 + q2^2 + q3^2 = qw^2 + qx^2 + qy^2 + qz^2 = 1
                 x, y, z, i, j, k, r = params
-                if enable_neg_xyz:
-                    x, y, z = -x, -y, -z
 
                 with open(osp.join(pose_dir, words[0].zfill(15) + '.txt'), 'w') as f_ou, \
                     open(osp.join(pose_dir_world_coord, words[0].zfill(15) + '.txt'), 'w') as f_ou_world_coord:
@@ -309,8 +308,8 @@ def generate_split():
         # ==================================================================== #
         # groundtruth.txt
         gt_pose_file = osp.join(dir_root, item, 'groundtruth.txt')
-        gt_traj_file_world_coord = osp.join(dir_root, item, 'traj_groundtruth_world_coord.obj')
-        gt_traj_file_camera_coord = osp.join(dir_root, item, 'traj_groundtruth_camera_coord.obj')
+        gt_traj_file_world_coord = osp.join(dir_root, item, 'gt_trajectory_w.obj')
+        gt_traj_file_camera_coord = osp.join(dir_root, item, 'gt_trajectory_c.obj')
         if not osp.exists(gt_pose_file):
             logging.warning(f'file not exist: {gt_pose_file}')
             continue
@@ -335,8 +334,6 @@ def generate_split():
                     print(f'unexpected format: {words}')
                 params = [float(v) for v in words[1:]]
                 x, y, z, r, i, j, k = params
-                if enable_neg_xyz:
-                    x, y, z = -x, -y, -z
 
                 n_valid += 1
                 f_ou_traj_world_coord.write(f'v {x} {y} {z}\n')
