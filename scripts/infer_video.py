@@ -38,8 +38,11 @@ class VideoInfo:
         self.hostname = subprocess.check_output(['hostname']).decode('UTF-8')[:-1]
         self.pwd = subprocess.check_output(['pwd']).decode('UTF-8')[:-1]
 
+        # https://docs.python.org/3/library/datetime.html#datetime-objects
         dt_now = datetime.datetime.now()
         self.datetime = f'{dt_now.year:04d}-{dt_now.month:02d}-{dt_now.day:02d}'
+        minute_ex = (dt_now.minute // 10) * 10
+        self.datetime_ex = f'{dt_now.year:04d}-{dt_now.month:02d}-{dt_now.day:02d} {dt_now.hour:02d}:{minute_ex:02d}'
 
         _, hexsha, is_dirty = git_info()
         self.git_hexsha = hexsha
@@ -58,7 +61,8 @@ class VideoInfo:
         print(f'  hostname:      {self.hostname}')
         print(f'  pwd:           {self.pwd}')
 
-        print(f'  datatime:      {self.datetime}')
+        print(f'  datetime:      {self.datetime}')
+        print(f'  datetime_ex:   {self.datetime_ex}')
 
         print(f'  git_hexsha:    {self.git_hexsha}')
         print(f'  git_is_dirty:  {self.git_is_dirty}')
@@ -604,7 +608,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             #    pose23[idx_t, 3] = pose23[idx_t, 3]
 
         else:
-            is_matterport_model=False
+            is_matterport_model=True
             if is_matterport_model:
                 case_inv = False
                 if case_inv:
@@ -728,7 +732,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     cv2.putText(canvas, '(f) Groundtruth Depth', org=(image_hw[1]+gap_size+150, h_header+image_hw[0]*2+gap_size+30), fontScale=1, color=(255, 0, 0), thickness=2, fontFace=cv2.LINE_AA)
 
     # header section
-    cv2.putText(img=canvas, text=f'{g_video_info.datetime} @ {g_video_info.hostname} @ {g_video_info.git_hexsha} @ {g_video_info.git_is_dirty}',
+    cv2.putText(img=canvas, text=f'{g_video_info.datetime_ex} @ {g_video_info.hostname} @ {g_video_info.git_hexsha} @ {g_video_info.git_is_dirty}',
         org=(30, 35), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
     cv2.putText(img=canvas, text=f'data:  {g_video_info.path_data}',
         org=(30, 70), fontScale=1, color=(255, 255, 0), thickness=2, fontFace=cv2.LINE_AA)

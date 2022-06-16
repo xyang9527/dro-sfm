@@ -65,11 +65,17 @@ from dro_sfm.visualization.gazebo_config import GazeboParam
 
 from dro_sfm.utils.depth import viz_inv_depth
 from dro_sfm.utils.image import write_image
+from dro_sfm.utils.horovod import print0
+from dro_sfm.utils.logging import pcolor
 
 
 def generate_depth_vis(dir_root, subdirs):
     logging.warning(f'generate_depth_vis({dir_root}, {subdirs})')
+
     for item in subdirs:
+        logging.info(f'  {item} ..')
+        print0(pcolor(f'  generate_depth_vis( {item} ) ..', 'green'))
+
         case_dir = osp.join(dir_root, item)
         if not osp.exists(case_dir):
             logging.info(f'  skip {case_dir}')
@@ -117,7 +123,7 @@ def generate_depth_vis(dir_root, subdirs):
             src_image_copy[img_mask, :] = 0
 
             tmp_src_image = cv2.bitwise_and(src_image, src_image_copy)
-            dst_image = cv2.addWeighted(src_image, 0.15, tmp_src_image, 0.85, 0)
+            dst_image = cv2.addWeighted(src_image, 0.25, tmp_src_image, 0.75, 0)
 
             write_image(name_dst_image, dst_image)
 
@@ -197,6 +203,8 @@ def generate_split():
     generate_depth_vis(dir_root, subdirs_pose)
 
     for item in subdirs_pose:
+        print0(pcolor(f'  pose: {item} ..', 'blue'))
+
         cam_pose_file = osp.join(dir_root, item, 'cam_pose.txt')
         cam_traj_file_world_coord = osp.join(dir_root, item, 'camera_trajectory_w.obj')
         cam_traj_file_camera_coord = osp.join(dir_root, item, 'camera_trajectory_c.obj')
@@ -353,6 +361,8 @@ def generate_split():
     with open(osp.join(dir_save, 'train_all_list.txt'), 'w') as f_train, \
         open(osp.join(dir_save, 'val_all_list.txt'), 'w') as f_val, \
         open(osp.join(dir_save, 'test_all_list.txt'), 'w') as f_test:
+            print0(pcolor(f'  split dateset ..', 'blue'))
+
             # test part
             n_case = len(subdirs_test)
             for idx_case in range(n_case):
@@ -398,7 +408,7 @@ def generate_split():
                         f_test.write(f'{subdirs_train_val_test[id_case]}/{image_dir} {item}\n')
                 else:
                     logging.warning(f'path not exist: {case_dir}')
-    print(f'\nn_frame_missing_pose_info: {n_frame_missing_pose_info}')
+    print0(pcolor(f'\nn_frame_missing_pose_info: {n_frame_missing_pose_info}', 'yellow'))
 
 
 if __name__ == '__main__':
@@ -409,4 +419,4 @@ if __name__ == '__main__':
 
     time_end_matterport_split_gen = time.time()
     logging.warning(f'matterport_split_gen.py elapsed {time_end_matterport_split_gen - time_beg_matterport_split_gen:.6f} seconds.')
-    print(f'matterport_split_gen.py elapsed {time_end_matterport_split_gen - time_beg_matterport_split_gen:.6f} seconds.')
+    print0(pcolor(f'matterport_split_gen.py elapsed {time_end_matterport_split_gen - time_beg_matterport_split_gen:.6f} seconds.', 'yellow'))
