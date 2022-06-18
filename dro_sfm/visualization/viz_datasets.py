@@ -10,6 +10,7 @@ import logging
 import numpy as np
 import subprocess
 import cv2
+from collections import OrderedDict
 
 from dro_sfm.utils.setup_log import setup_log
 from dro_sfm.utils.image import load_image
@@ -48,8 +49,13 @@ def generate_matterport_videos(names):
     for item in names:
         print0(pcolor(f'  {item}', 'green'))
 
-        sub_dirs = ['cam_left', 'cam_left_vis', 'depth_vis', 'pose']
+        sub_dirs = OrderedDict()
+        sub_dirs['cam_left'] = '.jpg'
+        sub_dirs['cam_left_vis'] = '.jpg'
+        sub_dirs['depth_vis'] = '.jpg'
+        # sub_dirs['pose'] = '.txt'
         video_name = osp.join(item, 'summary.avi')
+
         generate_video(item, sub_dirs, 480, 640, 2, 2, video_name)
         break
     pass
@@ -66,7 +72,10 @@ def generate_scannet_videos(names):
 
 def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name):
     logging.warning(f'generate_video(..)')
-    str_dir = osp.join(rootdir, subdirs[0])
+    if len(subdirs) < 1:
+        return
+
+    str_dir = osp.join(rootdir, list(subdirs.keys())[0])
     names = []
     for item in sorted(os.listdir(str_dir)):
         ext = osp.splitext(item)[1].lower()
@@ -78,23 +87,39 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name):
     canvas_row = grid.canvas_row
     canvas_col = grid.canvas_col
 
-    fps = 4.0
+    fps = 25.0
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video_writer = cv2.VideoWriter(video_name, fourcc, fps, (canvas_col, canvas_row))
 
     print(f'write {video_name}')
 
     for idx_frame, item_name in enumerate(names):
-        filename = osp.join(rootdir, subdirs[0], item_name + '.jpg')
+        '''
+        filename = osp.join(rootdir, list(subdirs.keys())[0], item_name + '.jpg')
         if osp.exists(filename):
             data = cv2.imread(filename)
         else:
             continue
-        grid.subplot(0, 0, data, 'Left Camera')
+        grid.subplot(0, 0, data, '(a) Left Camera')
+        '''
+        has_data = False
+        for idx, (k, v) in enumerate(subdirs.items()):
+            filename = osp.join(rootdir, k, item_name + v)
+            if osp.exists(filename):
+                has_data = True
+                data = cv2.imread(filename)
+            else:
+                continue
+            id_row = idx // n_col
+            id_col = idx % n_col
+            grid.subplot(id_row, id_col, data, f'({chr(ord("a") + idx)}) {k}')
+        if not has_data:
+            continue
+
         video_writer.write(grid.canvas)
-        if idx_frame > 100:
+        if idx_frame > 1000:
             break
-        print(f'write {filename}')
+        # print(f'write {filename}')
     video_writer.release()
 
     pass

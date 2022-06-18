@@ -86,7 +86,7 @@ class VizImageGrid:
 
         if len(data_shape) != 3:
             raise ValueError
-        if data_shape[0] != self.cell_row or data_shape[1] != self.cell_col\
+        if data_shape[0] != self.cell_row or data_shape[1] != self.cell_col \
                 or data_shape[2] != 3:
             raise ValueError
 
@@ -155,8 +155,11 @@ class VizImageGrid:
                     color = self.color_subcaption
                 else:
                     color = self.color_subsubcaption
+
                 pos_col = col_beg + self.text_offset
                 pos_row = row_beg + self.text_offset + i * box_row * 2
+                pos_row = row_end + 30
+
                 cv2.putText(self.canvas, str_line, (pos_col, pos_row),
                             self.font_face_subcaption,
                             self.font_scale_subcaption,
