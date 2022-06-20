@@ -65,12 +65,12 @@ class VizImageGrid:
         self.grid_row = grid_row  # 2
         self.grid_col = grid_col  # 4
 
-        self.gap_sz = 50
-        self.border_sz = 25
+        self.gap_sz = 40
+        self.border_sz = 0 # 25
         self.text_offset = 30
 
         self.canvas_row = (self.cell_row * self.grid_row
-                           + self.gap_sz * (self.grid_row - 1)
+                           + self.gap_sz * self.grid_row
                            + self.border_sz * 2)
         self.canvas_col = (self.cell_col * self.grid_col
                            + self.gap_sz * (self.grid_col - 1)

@@ -22,6 +22,46 @@ from dro_sfm.utils.logging import pcolor
 from dro_sfm.geometry.pose_trans import matrix_to_euler_angles
 
 
+class CameraMove:
+    def __init__(self, desc):
+        self.desc = desc
+        self.init = False
+
+        self.d_tx = None
+        self.d_ty = None
+        self.d_tz = None
+
+        self.d_rx = None
+        self.d_ry = None
+        self.d_rz = None
+
+    def update(self, tx, ty, tz, rx, ry, rz):
+        if not self.init:
+            self.d_tx, self.d_ty, self.d_tz = tx, ty, tz
+            self.d_rx, self.d_ry, self.d_rz = rx, ry, rz
+            self.init = True
+            return
+
+        if np.abs(self.d_tx) < np.abs(tx):
+            self.d_tx = tx
+        if np.abs(self.d_ty) < np.abs(ty):
+            self.d_ty = ty
+        if np.abs(self.d_tz) < np.abs(tz):
+            self.d_tz = tz
+
+        if np.abs(self.d_rx) < np.abs(rx):
+            self.d_rx = rx
+        if np.abs(self.d_ry) < np.abs(ry):
+            self.d_ry = ry
+        if np.abs(self.d_rz) < np.abs(rz):
+            self.d_rz = rz
+
+    def __repr__(self) -> str:
+        sqrt_t = np.math.sqrt(self.d_tx ** 2 + self.d_ty ** 2 + self.d_tz ** 2)
+        sqrt_r = np.math.sqrt(self.d_rx ** 2 + self.d_ry ** 2 + self.d_rz ** 2)
+        return f'\n{self.desc}:\n  max_t: ({self.d_tx}, {self.d_ty}, {self.d_tz}) @ {sqrt_t}\n  max_r: ({self.d_rx}, {self.d_ry}, {self.d_rz}) @ {sqrt_r}\n'
+
+
 def get_datasets():
     logging.warning(f'get_datasets()')
     slam_home = osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__)))))
@@ -58,9 +98,8 @@ def generate_matterport_videos(names):
         sub_dirs['pose'] = '.txt'
         video_name = osp.join(item, 'summary.avi')
 
-        generate_video(item, sub_dirs, 480, 640, 2, 2, video_name)
+        generate_video(item, sub_dirs, 480, 640, 2, 2, video_name, False)
         break
-    pass
 
 
 def generate_scannet_videos(names):
@@ -68,8 +107,12 @@ def generate_scannet_videos(names):
     for item in names:
         print0(pcolor(f'  {item}', 'blue'))
 
-        sub_dirs = ['color', 'depth', 'pose']
-    pass
+        sub_dirs = OrderedDict()
+        sub_dirs['color'] = '.jpg'
+        sub_dirs['pose'] = '.txt'
+        video_name = osp.join(item, 'summary.avi')
+        generate_video(item, sub_dirs, 968, 1296, 2, 2, video_name, True)
+        break
 
 
 def is_image(path):
@@ -79,7 +122,7 @@ def is_image(path):
     return False
 
 
-def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name):
+def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_scannet=False):
     logging.warning(f'generate_video(..)')
     if len(subdirs) < 1:
         return
@@ -105,6 +148,8 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name):
     mats = []
     datetimes = []
     null_image = np.full((im_h, im_w, 3), 255, np.uint8)
+    cam_move_1 = CameraMove(f'{osp.basename(rootdir)} max( to_prev_1 )')
+    cam_move_5 = CameraMove(f'{osp.basename(rootdir)} max( to_prev_5 )')
 
     for idx_frame, item_name in enumerate(names):
         has_data = False
@@ -135,15 +180,17 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name):
                         xyz_degree = xyz.detach() * 180.0 / np.math.pi
                         dx, dy, dz = xyz_degree[:]
 
-                        text.append(f'[{idx_frame:6d}] {item_name}')
+                        text.append(f'[{idx_frame:4d}] {item_name} fps: {fps}')
                         text.append('to-prev-1:')
-                        text.append(f'  dt:   {datetimes[-1] - datetimes[-2]:6d} ms')
+                        if not is_scannet:
+                            text.append(f'  dt:   {datetimes[-1] - datetimes[-2]:6d} ms')
                         text.append(f'  d_tx: {rel_pose[0, 3]*1000.0:6.3f} mm')
                         text.append(f'  d_ty: {rel_pose[1, 3]*1000.0:6.3f} mm')
                         text.append(f'  d_tz: {rel_pose[2, 3]*1000.0:6.3f} mm')
                         text.append(f'  d_rx: {dx:6.3f} deg')
                         text.append(f'  d_ry: {dy:6.3f} deg')
                         text.append(f'  d_rz: {dz:6.3f} deg')
+                        cam_move_1.update(rel_pose[0, 3]*1000.0, rel_pose[1, 3]*1000.0, rel_pose[2, 3]*1000.0, dx, dy, dz)
 
                     if len(mats) > 5:
                         rel_pose = np.matmul(np.linalg.inv(mats[-6]), mats[-1])
@@ -152,10 +199,12 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name):
                         xyz_degree = xyz.detach() * 180.0 / np.math.pi
                         dx, dy, dz = xyz_degree[:]
                         text.append('to-prev-5:')
-                        text.append(f'  dt:   {datetimes[-1] - datetimes[-6]:6d} ms')
+                        if not is_scannet:
+                            text.append(f'  dt:   {datetimes[-1] - datetimes[-6]:6d} ms')
                         text.append(f'  d_t_xyz: ({rel_pose[0, 3]*1000.0:.3f}, {rel_pose[1, 3]*1000.0:.3f}, {rel_pose[2, 3]*1000.0:.3f})')
                         text.append(f'  d_r_xyz: ({dx:.3f}, {dy:.3f}, {dz:.3f})')
-                        pass
+                        cam_move_5.update(rel_pose[0, 3]*1000.0, rel_pose[1, 3]*1000.0, rel_pose[2, 3]*1000.0, dx, dy, dz)
+
                     grid.subtext(id_row, id_col, text)
             else:
                 continue
@@ -169,6 +218,8 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name):
             break
 
     # // for idx_frame, item_name in enumerate(names):
+    print(f'{cam_move_1}')
+    print(f'{cam_move_5}')
     video_writer.release()
 
 
