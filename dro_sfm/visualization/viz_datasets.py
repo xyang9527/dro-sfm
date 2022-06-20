@@ -1,5 +1,6 @@
 # -*-  coding=utf-8 -*-
 
+from typing import List
 import os
 import os.path as osp
 import sys
@@ -8,15 +9,12 @@ sys.path.append(lib_dir)
 import time
 import logging
 import numpy as np
-# import subprocess
 import cv2
 from collections import OrderedDict
 from PIL import Image
 import torch
 
 from dro_sfm.utils.setup_log import setup_log
-# from dro_sfm.utils.image import load_image
-# from dro_sfm.visualization.pointcloud_downsample import generate_pointcloud_NxN
 from dro_sfm.visualization.viz_image_grid import VizImageGrid
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
@@ -64,6 +62,31 @@ class CameraMove:
         return f'\n{self.desc}:\n  max_t: ({self.d_tx}, {self.d_ty}, {self.d_tz}) @ {sqrt_t}\n  max_r: ({self.d_rx}, {self.d_ry}, {self.d_rz}) @ {sqrt_r}\n'
 
 
+class HoleInfo:
+    def __init__(self, desc: str, im_h: int, im_w:int , pixels_invalid: List[int]):
+        self.desc = desc
+        self.im_h = im_h
+        self.im_w = im_w
+        self.pixels_invalid = pixels_invalid
+
+        self.n_frame = len(pixels_invalid)
+        self.pixels_total = self.im_h * self.im_w
+
+        self.max = max(self.pixels_invalid)
+        self.min = min(self.pixels_invalid)
+        self.mean = np.float(sum(self.pixels_invalid)) / np.float(self.n_frame)
+
+        self.max_percent = self.max * 100.0 / np.float(self.pixels_total)
+        self.min_percent = self.min * 100.0 / np.float(self.pixels_total)
+        self.mean_percent = self.mean * 100.0 / np.float(self.pixels_total)
+
+    def __repr__(self) -> str:
+        text_max = f'  max:       {self.max:10d} ({self.max_percent:5.2f}%)'
+        text_min = f'  min:       {self.min:10d} ({self.min_percent:5.2f}%)'
+        text_mean = f'  mean:      {self.mean:10.0f} ({self.mean_percent:5.2f}%)'
+        return f'\n{self.desc}\n{text_max}\n{text_min}\n{text_mean}\n'
+
+
 def get_datasets():
     logging.warning(f'get_datasets()')
     slam_home = osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__)))))
@@ -96,7 +119,8 @@ def generate_matterport_videos(names):
         sub_dirs = OrderedDict()
         sub_dirs['cam_left'] = '.jpg'
         sub_dirs['cam_left_vis'] = '.jpg'
-        sub_dirs['depth_vis'] = '.jpg'
+        # sub_dirs['depth_vis'] = '.jpg'
+        sub_dirs['depth'] = '.png'
         sub_dirs['pose'] = '.txt'
         video_name = osp.join(item, 'summary.avi')
 
@@ -153,6 +177,8 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
     null_image = np.full((im_h, im_w, 3), 255, np.uint8)
     cam_move_1 = CameraMove(f'{osp.basename(rootdir)} max( to_prev_1 )')
     cam_move_5 = CameraMove(f'{osp.basename(rootdir)} max( to_prev_5 )')
+    arr_pix_invalid = []
+    depth_h, depth_w = None, None
 
     for idx_frame, item_name in enumerate(names):
         has_data = False
@@ -165,16 +191,18 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                 id_col = idx % n_col
 
                 if is_image(filename):
-                    if k == 'depth' and is_scannet and v == '.png':
+                    if k == 'depth' and v == '.png': # and is_scannet 
                         depth_png = np.array(Image.open(filename), dtype=int)
                         depth_mask = depth_png <= 0
                         depth = depth_png.astype(np.float) / 1000.0
                         data = viz_inv_depth(depth) * 255
                         data[depth_mask, :] = 0
+                        data = data[..., ::-1].copy()
 
-                        h_temp, w_temp = depth_png.shape
-                        pixel_total = h_temp * w_temp
+                        depth_h, depth_w = depth_png.shape
+                        pixel_total = depth_h * depth_w
                         pixel_invalid = np.count_nonzero(depth_mask)
+                        arr_pix_invalid.append(pixel_invalid)
                         percent = 100.0 * np.float(pixel_invalid) / np.float(pixel_total)
 
                         cv2.putText(img=data, text=f'invalid depth: {pixel_invalid:6d} ({percent:5.2f}%)',
@@ -237,12 +265,15 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
             continue
 
         video_writer.write(grid.canvas)
-        if idx_frame > 300:
-            break
+        # if idx_frame > 300:
+        #    break
 
     # // for idx_frame, item_name in enumerate(names):
     print(f'{cam_move_1}')
     print(f'{cam_move_5}')
+    hole_info = HoleInfo(f'{osp.basename(rootdir)} invalid pixels', depth_h, depth_w, arr_pix_invalid)
+    print(f'{hole_info}')
+
     video_writer.release()
 
 
