@@ -193,6 +193,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
     cam_move_5 = CameraMove(f'{osp.basename(rootdir)} max( to_prev_5 )')
     arr_pix_invalid = []
     depth_h, depth_w = None, None
+    unique_value_max = 0
 
     for idx_frame, item_name in enumerate(names):
         has_data = False
@@ -207,6 +208,12 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                 if is_image(filename):
                     if k == 'depth' and v == '.png': # and is_scannet 
                         depth_png = np.array(Image.open(filename), dtype=int)
+                        unique_depth = np.unique(depth_png)
+                        num_unique_depth = unique_depth.shape[0]
+
+                        if unique_value_max < num_unique_depth:
+                            unique_value_max = num_unique_depth
+
                         depth_mask = depth_png <= 0
                         depth = depth_png.astype(np.float) / 1000.0
                         data = viz_inv_depth(depth) * 255
@@ -221,6 +228,8 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
 
                         cv2.putText(img=data, text=f'invalid depth: {pixel_invalid:6d} ({percent:5.2f}%)',
                             org=(30, 50), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+                        cv2.putText(img=data, text=f'unique depth:  {num_unique_depth:6d}',
+                            org=(30, 85), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
                     else:
                         data = cv2.imread(filename)
 
@@ -302,7 +311,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
 
 if __name__ == '__main__':
     setup_log('kneron_viz_datasets.log')
-    time_beg_pointcloud = time.time()
+    time_beg_viz_datasets = time.time()
 
     np.set_printoptions(precision=6, suppress=True)
 
@@ -318,5 +327,5 @@ if __name__ == '__main__':
     generate_matterport_videos(save_dir, datasets['matterport'])
     generate_scannet_videos(save_dir, datasets['scannet'])
 
-    time_end_pointcloud = time.time()
-    print(f'viz_datasets.py elapsed {time_end_pointcloud - time_beg_pointcloud:.6f} seconds.')
+    time_end_viz_datasets = time.time()
+    print0(pcolor(f'viz_datasets.py elapsed {time_end_viz_datasets - time_beg_viz_datasets:.6f} seconds.', 'red'))
