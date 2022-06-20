@@ -9,13 +9,14 @@ sys.path.append(lib_dir)
 import time
 import logging
 import numpy as np
+import subprocess
 import cv2
 from collections import OrderedDict
 from PIL import Image
 import torch
 
 from dro_sfm.utils.setup_log import setup_log
-from dro_sfm.visualization.viz_image_grid import VizImageGrid
+from dro_sfm.visualization.viz_image_grid import VizImageGrid, Colors
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
 from dro_sfm.geometry.pose_trans import matrix_to_euler_angles
@@ -59,7 +60,12 @@ class CameraMove:
     def __repr__(self) -> str:
         sqrt_t = np.math.sqrt(self.d_tx ** 2 + self.d_ty ** 2 + self.d_tz ** 2)
         sqrt_r = np.math.sqrt(self.d_rx ** 2 + self.d_ry ** 2 + self.d_rz ** 2)
-        return f'\n{self.desc}:\n  max_t: ({self.d_tx}, {self.d_ty}, {self.d_tz}) @ {sqrt_t}\n  max_r: ({self.d_rx}, {self.d_ry}, {self.d_rz}) @ {sqrt_r}\n'
+
+        text_t = f'  max_t: ({self.d_tx:.3f}, {self.d_ty:.3f}, {self.d_tz:.3f}) @ {sqrt_t:.3f} (mm)'
+        text_r = f'  max_r: ({self.d_rx:.3f}, {self.d_ry:.3f}, {self.d_rz:.3f}) @ {sqrt_r:.3f} (degree)'
+
+        # return f'\n{self.desc}:\n  max_t: ({self.d_tx}, {self.d_ty}, {self.d_tz}) @ {sqrt_t}\n  max_r: ({self.d_rx}, {self.d_ry}, {self.d_rz}) @ {sqrt_r}\n'
+        return f'\n== {self.desc} ==\n{text_t}\n{text_r}\n'
 
 
 class HoleInfo:
@@ -84,7 +90,8 @@ class HoleInfo:
         text_max = f'  max:       {self.max:10d} ({self.max_percent:5.2f}%)'
         text_min = f'  min:       {self.min:10d} ({self.min_percent:5.2f}%)'
         text_mean = f'  mean:      {self.mean:10.0f} ({self.mean_percent:5.2f}%)'
-        return f'\n{self.desc}\n{text_max}\n{text_min}\n{text_mean}\n'
+
+        return f'\n== {self.desc} ==\n{text_max}\n{text_min}\n{text_mean}\n'
 
 
 def get_datasets():
@@ -111,8 +118,8 @@ def get_datasets():
     return datasets
 
 
-def generate_matterport_videos(names):
-    logging.warning(f'generate_matterport_videos({len(names)})')
+def generate_matterport_videos(demo_dir, names):
+    logging.warning(f'generate_matterport_videos({demo_dir}, {len(names)})')
     for item in names:
         print0(pcolor(f'  {item}', 'green'))
 
@@ -122,14 +129,17 @@ def generate_matterport_videos(names):
         # sub_dirs['depth_vis'] = '.jpg'
         sub_dirs['depth'] = '.png'
         sub_dirs['pose'] = '.txt'
-        video_name = osp.join(item, 'summary.avi')
 
+        video_name = osp.join(item, f'viz_{osp.basename(item)}.avi')
         generate_video(item, sub_dirs, 480, 640, 2, 2, video_name, False)
-        break
+
+        dst_video = osp.join(demo_dir, osp.basename(video_name))
+        subprocess.call(['cp', video_name, dst_video])
+        # break
 
 
-def generate_scannet_videos(names):
-    logging.warning(f'generate_scannet_videos({len(names)})')
+def generate_scannet_videos(demo_dir, names):
+    logging.warning(f'generate_scannet_videos({demo_dir}, {len(names)})')
     for item in names:
         print0(pcolor(f'  {item}', 'blue'))
 
@@ -137,9 +147,13 @@ def generate_scannet_videos(names):
         sub_dirs['color'] = '.jpg'
         sub_dirs['depth'] = '.png'
         sub_dirs['pose'] = '.txt'
-        video_name = osp.join(item, 'summary.avi')
+
+        video_name = osp.join(item, f'viz_{osp.basename(item)}.avi')
         generate_video(item, sub_dirs, 968, 1296, 2, 2, video_name, True)
-        break
+
+        dst_video = osp.join(demo_dir, osp.basename(video_name))
+        subprocess.call(['cp', video_name, dst_video])
+        # break
 
 
 def is_image(path):
@@ -269,10 +283,19 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
         #    break
 
     # // for idx_frame, item_name in enumerate(names):
+
+    # statistics
     print(f'{cam_move_1}')
     print(f'{cam_move_5}')
     hole_info = HoleInfo(f'{osp.basename(rootdir)} invalid pixels', depth_h, depth_w, arr_pix_invalid)
     print(f'{hole_info}')
+
+    video_info = f'===== statistical information =====\n{cam_move_1}\n{cam_move_5}\n{hole_info}'
+    grid.reset_canvas()
+    colors = Colors()
+    grid.subtext(0, 0, video_info, text_is_list=False, text_color=colors.yellow)
+    for i in range(int(fps) * 2):
+        video_writer.write(grid.canvas)
 
     video_writer.release()
 
@@ -288,8 +311,12 @@ if __name__ == '__main__':
     for v, k in datasets.items():
         print(f'{v:<12s} {len(k):3d}')
 
-    generate_matterport_videos(datasets['matterport'])
-    generate_scannet_videos(datasets['scannet'])
+    save_dir = '/home/sigma/slam/demo'
+    if not osp.exists(save_dir):
+        os.makedirs(save_dir)
+
+    generate_matterport_videos(save_dir, datasets['matterport'])
+    generate_scannet_videos(save_dir, datasets['scannet'])
 
     time_end_pointcloud = time.time()
     print(f'viz_datasets.py elapsed {time_end_pointcloud - time_beg_pointcloud:.6f} seconds.')

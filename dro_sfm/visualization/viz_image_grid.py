@@ -109,6 +109,10 @@ class VizImageGrid:
         self.color_subcaption = self.colors.yellow  # (0, 255, 255)
         self.color_subsubcaption = self.colors.magenta  # (255, 0, 255)
 
+    def reset_canvas(self):
+        self.canvas = np.full((self.canvas_row, self.canvas_col, 3),
+                              self.color_bg, np.uint8)
+
     def _check_input(self, row, col, data=None):
         if not isinstance(row, int) or not isinstance(col, int):
             raise ValueError
@@ -209,16 +213,26 @@ class VizImageGrid:
                             self.font_scale_subcaption,
                             color, self.thickness_subcaption)
 
-    def subtext(self, row, col, text, caption=None):
+    def subtext(self, row, col, text, caption=None, text_is_list=True, text_color=None):
         logging.warning(f'subtext({row}, {col}, {text})')
+
+        if text_color is None:
+            text_color = self.colors.magenta
 
         self._check_input(row, col)
         row_beg = (self.cell_row + self.gap_sz) * row + self.border_sz
         row_end = row_beg + self.cell_row
         col_beg = (self.cell_col + self.gap_sz) * col + self.border_sz
 
+        if text_is_list:
+            text_new = text
+        else:
+            text_new = []
+            for str_line in text.split('\n'):
+                text_new.append(str_line)
+
         # text
-        for idx_line, str_line in enumerate(text):
+        for idx_line, str_line in enumerate(text_new):
             retval, _ = cv2.getTextSize(
                 str_line, self.font_face_subcaption, self.font_scale_subcaption,
                 self.thickness_subcaption)
@@ -236,7 +250,7 @@ class VizImageGrid:
             cv2.putText(self.canvas, str_line, org=(pos_col, pos_row),
                         fontFace=cv2.LINE_AA,
                         fontScale=1,
-                        color=self.colors.magenta, thickness=2)
+                        color=text_color, thickness=2)
 
         # caption
         if caption is not None:
