@@ -8,18 +8,20 @@ sys.path.append(lib_dir)
 import time
 import logging
 import numpy as np
-import subprocess
+# import subprocess
 import cv2
 from collections import OrderedDict
+from PIL import Image
 import torch
 
 from dro_sfm.utils.setup_log import setup_log
-from dro_sfm.utils.image import load_image
-from dro_sfm.visualization.pointcloud_downsample import generate_pointcloud_NxN
+# from dro_sfm.utils.image import load_image
+# from dro_sfm.visualization.pointcloud_downsample import generate_pointcloud_NxN
 from dro_sfm.visualization.viz_image_grid import VizImageGrid
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
 from dro_sfm.geometry.pose_trans import matrix_to_euler_angles
+from dro_sfm.utils.depth import viz_inv_depth
 
 
 class CameraMove:
@@ -109,6 +111,7 @@ def generate_scannet_videos(names):
 
         sub_dirs = OrderedDict()
         sub_dirs['color'] = '.jpg'
+        sub_dirs['depth'] = '.png'
         sub_dirs['pose'] = '.txt'
         video_name = osp.join(item, 'summary.avi')
         generate_video(item, sub_dirs, 968, 1296, 2, 2, video_name, True)
@@ -162,7 +165,27 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                 id_col = idx % n_col
 
                 if is_image(filename):
-                    data = cv2.imread(filename)
+                    if k == 'depth' and is_scannet and v == '.png':
+                        depth_png = np.array(Image.open(filename), dtype=int)
+                        depth_mask = depth_png <= 0
+                        depth = depth_png.astype(np.float) / 1000.0
+                        data = viz_inv_depth(depth) * 255
+                        data[depth_mask, :] = 0
+
+                        h_temp, w_temp = depth_png.shape
+                        pixel_total = h_temp * w_temp
+                        pixel_invalid = np.count_nonzero(depth_mask)
+                        percent = 100.0 * np.float(pixel_invalid) / np.float(pixel_total)
+
+                        cv2.putText(img=data, text=f'invalid depth: {pixel_invalid:6d} ({percent:5.2f}%)',
+                            org=(30, 50), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+                    else:
+                        data = cv2.imread(filename)
+
+                    w, h, c = data.shape
+                    if w != im_w or h != im_h:
+                        data = cv2.resize(data, (im_w, im_h), interpolation=cv2.INTER_LINEAR)
+
                     grid.subplot(id_row, id_col, data, f'({chr(ord("a") + idx)}) {k}')
                 else:  # pose
                     data = np.genfromtxt(filename)
