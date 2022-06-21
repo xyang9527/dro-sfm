@@ -117,15 +117,19 @@ def generate_depth_vis(dir_root, subdirs):
             # image with mask
             name_src_image = osp.join(dir_image_in, osp.basename(item_file).replace('.png', '.jpg'))
             name_dst_image = osp.join(dir_image_vis, osp.basename(item_file).replace('.png', '.jpg'))
-            src_image = np.array(Image.open(name_src_image))
+            if osp.exists(name_src_image):
+                src_image = np.array(Image.open(name_src_image))
 
-            src_image_copy = copy.deepcopy(src_image)
-            src_image_copy[img_mask, :] = 0
+                src_image_copy = copy.deepcopy(src_image)
+                src_image_copy[img_mask, :] = 0
 
-            tmp_src_image = cv2.bitwise_and(src_image, src_image_copy)
-            dst_image = cv2.addWeighted(src_image, 0.25, tmp_src_image, 0.75, 0)
+                tmp_src_image = cv2.bitwise_and(src_image, src_image_copy)
+                dst_image = cv2.addWeighted(src_image, 0.25, tmp_src_image, 0.75, 0)
 
-            write_image(name_dst_image, dst_image)
+                write_image(name_dst_image, dst_image)
+            else:
+                print(f'  skip {name_src_image}')
+                logging.warning(f'  skip {name_src_image}')
 
 
 def generate_split():
@@ -180,6 +184,10 @@ def generate_split():
             "test/matterport014_001_0516", # 7787
             "test/matterport014_0614", # 13912
         ]
+
+    dir_root = '/home/sigma/slam/matterport0621'
+    subdirs_train_val_test = []
+    subdirs_test = ['test/matterport005_0621']
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
                     [ 1.,  0.,  0.,  0.],

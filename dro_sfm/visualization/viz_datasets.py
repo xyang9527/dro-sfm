@@ -63,8 +63,6 @@ class CameraMove:
 
         text_t = f'  max_t: ({self.d_tx:.3f}, {self.d_ty:.3f}, {self.d_tz:.3f}) @ {sqrt_t:.3f} (mm)'
         text_r = f'  max_r: ({self.d_rx:.3f}, {self.d_ry:.3f}, {self.d_rz:.3f}) @ {sqrt_r:.3f} (degree)'
-
-        # return f'\n{self.desc}:\n  max_t: ({self.d_tx}, {self.d_ty}, {self.d_tz}) @ {sqrt_t}\n  max_r: ({self.d_rx}, {self.d_ry}, {self.d_rz}) @ {sqrt_r}\n'
         return f'\n== {self.desc} ==\n{text_t}\n{text_r}\n'
 
 
@@ -90,7 +88,6 @@ class HoleInfo:
         text_max = f'  max:       {self.max:10d} ({self.max_percent:5.2f}%)'
         text_min = f'  min:       {self.min:10d} ({self.min_percent:5.2f}%)'
         text_mean = f'  mean:      {self.mean:10.0f} ({self.mean_percent:5.2f}%)'
-
         return f'\n== {self.desc} ==\n{text_max}\n{text_min}\n{text_mean}\n'
 
 
@@ -197,18 +194,23 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
 
     for idx_frame, item_name in enumerate(names):
         has_data = False
+
+        # if idx_frame > 100:
+        #    break
+
         for idx, (k, v) in enumerate(subdirs.items()):
             filename = osp.join(rootdir, k, item_name + v)
 
+            id_row = idx // n_col
+            id_col = idx % n_col
+
             if osp.exists(filename):
                 has_data = True
-                id_row = idx // n_col
-                id_col = idx % n_col
 
                 if is_image(filename):
                     if k == 'depth' and v == '.png': # and is_scannet 
                         depth_png = np.array(Image.open(filename), dtype=int)
-                        unique_depth = np.unique(depth_png)
+                        unique_depth, occur_count = np.unique(depth_png, return_counts=True)
                         num_unique_depth = unique_depth.shape[0]
 
                         if unique_value_max < num_unique_depth:
@@ -230,6 +232,22 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                             org=(30, 50), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
                         cv2.putText(img=data, text=f'unique depth:  {num_unique_depth:6d}',
                             org=(30, 85), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+
+                        # todo: min / max valid depth
+                        # print(f'unique_depth: {type(unique_depth)} {unique_depth.dtype} {unique_depth.shape}')
+                        # print(f'occur_count:  {type(occur_count)} {occur_count.dtype} {occur_count.shape}')
+                        # print(f'    max_depth: {np.amax(unique_depth)} {unique_depth[-1]}')
+                        # print(f'    min_depth: {np.amin(unique_depth)} {unique_depth[0]} {unique_depth[1]}')
+                        cv2.putText(img=data, text=f'  min depth:  {unique_depth[0]:5d} (pixels: {occur_count[0]})',
+                            org=(30, 130), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+                        if unique_depth.shape[0] > 1:
+                            cv2.putText(img=data, text=f'  min2 depth: {unique_depth[1]:5d} (pixels: {occur_count[1]})',
+                                org=(30, 165), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+                        else:
+                            logging.warning(f'  -> [{idx_frame:4d}] only one depth value in {filename} unique_depth: {unique_depth}, occur_count: {occur_count}')
+                            print0(pcolor(f'  -> [{idx_frame:4d}] only one depth value in {filename} unique_depth: {unique_depth}, occur_count: {occur_count}', 'red'))
+                        cv2.putText(img=data, text=f'  max depth:  {unique_depth[-1]:5d} (pixels: {occur_count[-1]})',
+                            org=(30, 200), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
                     else:
                         data = cv2.imread(filename)
 
@@ -280,12 +298,16 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                         cam_move_5.update(rel_pose[0, 3]*1000.0, rel_pose[1, 3]*1000.0, rel_pose[2, 3]*1000.0, dx, dy, dz)
 
                     grid.subtext(id_row, id_col, text)
-            else:
+            else: # // if osp.exists(filename):
+                grid.subplot(id_row, id_col, null_image, f'({chr(ord("a") + idx)}) {k}')
                 continue
         # // for idx, (k, v) in enumerate(subdirs.items()):
 
         if not has_data:
             continue
+
+        # if idx_frame < 4600 or idx_frame > 5100:
+        #    continue
 
         video_writer.write(grid.canvas)
         # if idx_frame > 300:
@@ -326,6 +348,7 @@ if __name__ == '__main__':
 
     generate_matterport_videos(save_dir, datasets['matterport'])
     generate_scannet_videos(save_dir, datasets['scannet'])
+    # generate_matterport_videos(save_dir, ['/home/sigma/slam/matterport0621/test/matterport005_0621'])
 
     time_end_viz_datasets = time.time()
     print0(pcolor(f'viz_datasets.py elapsed {time_end_viz_datasets - time_beg_viz_datasets:.6f} seconds.', 'red'))
