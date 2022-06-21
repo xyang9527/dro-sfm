@@ -1,6 +1,6 @@
 # -*-  coding=utf-8 -*-
 
-from typing import List
+from typing import List, Dict
 import os
 import os.path as osp
 import sys
@@ -91,8 +91,9 @@ class HoleInfo:
         return f'\n== {self.desc} ==\n{text_max}\n{text_min}\n{text_mean}\n'
 
 
-def get_datasets():
+def get_datasets() -> Dict[str, List[str]]:
     logging.warning(f'get_datasets()')
+
     slam_home = osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__)))))
     clean_home = osp.join(osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__)))), 'scripts/clean')
 
@@ -101,16 +102,12 @@ def get_datasets():
     for k, v in names.items():
         with open(osp.join(clean_home, v), 'r') as f_in:
             lines = f_in.readlines()
-
             for line in lines:
                 line = line.strip()
-
                 if line.startswith('#'):
                     continue
-
                 if len(line) < 1:
                     continue
-
                 datasets.setdefault(k, []).append(osp.join(slam_home, line))
     return datasets
 
@@ -132,7 +129,6 @@ def generate_matterport_videos(demo_dir, names):
 
         dst_video = osp.join(demo_dir, osp.basename(video_name))
         subprocess.call(['cp', video_name, dst_video])
-        # break
 
 
 def generate_scannet_videos(demo_dir, names):
@@ -150,7 +146,6 @@ def generate_scannet_videos(demo_dir, names):
 
         dst_video = osp.join(demo_dir, osp.basename(video_name))
         subprocess.call(['cp', video_name, dst_video])
-        # break
 
 
 def is_image(path):
@@ -192,11 +187,12 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
     depth_h, depth_w = None, None
     unique_value_max = 0
 
+    # depth threshold
+    clip_thr_depth_min = 400
+    clip_thr_depth_max = 10000
+
     for idx_frame, item_name in enumerate(names):
         has_data = False
-
-        # if idx_frame > 100:
-        #    break
 
         for idx, (k, v) in enumerate(subdirs.items()):
             filename = osp.join(rootdir, k, item_name + v)
@@ -208,8 +204,14 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                 has_data = True
 
                 if is_image(filename):
-                    if k == 'depth' and v == '.png': # and is_scannet 
+                    if k == 'depth' and v == '.png':
                         depth_png = np.array(Image.open(filename), dtype=int)
+
+                        clip_mask_max = depth_png > clip_thr_depth_max
+                        clip_mask_min = depth_png < clip_thr_depth_min
+                        clip_mask = np.logical_or(clip_mask_max, clip_mask_min)
+                        depth_png[clip_mask] = 0
+
                         unique_depth, occur_count = np.unique(depth_png, return_counts=True)
                         num_unique_depth = unique_depth.shape[0]
 
@@ -233,19 +235,17 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                         cv2.putText(img=data, text=f'unique depth:  {num_unique_depth:6d}',
                             org=(30, 85), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
 
-                        # todo: min / max valid depth
-                        # print(f'unique_depth: {type(unique_depth)} {unique_depth.dtype} {unique_depth.shape}')
-                        # print(f'occur_count:  {type(occur_count)} {occur_count.dtype} {occur_count.shape}')
-                        # print(f'    max_depth: {np.amax(unique_depth)} {unique_depth[-1]}')
-                        # print(f'    min_depth: {np.amin(unique_depth)} {unique_depth[0]} {unique_depth[1]}')
+                        # min / max valid depth
                         cv2.putText(img=data, text=f'  min depth:  {unique_depth[0]:5d} (pixels: {occur_count[0]})',
                             org=(30, 130), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+
                         if unique_depth.shape[0] > 1:
                             cv2.putText(img=data, text=f'  min2 depth: {unique_depth[1]:5d} (pixels: {occur_count[1]})',
                                 org=(30, 165), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
                         else:
                             logging.warning(f'  -> [{idx_frame:4d}] only one depth value in {filename} unique_depth: {unique_depth}, occur_count: {occur_count}')
                             print0(pcolor(f'  -> [{idx_frame:4d}] only one depth value in {filename} unique_depth: {unique_depth}, occur_count: {occur_count}', 'red'))
+
                         cv2.putText(img=data, text=f'  max depth:  {unique_depth[-1]:5d} (pixels: {occur_count[-1]})',
                             org=(30, 200), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
                     else:
@@ -265,7 +265,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                     grid.subplot(id_row, id_col, null_image, f'({chr(ord("a") + idx)}) {k}')
 
                     text = []
-                    if len(mats) > 1:
+                    if len(mats) > 1: # to-prev-1
                         rel_pose = np.matmul(np.linalg.inv(mats[-2]), mats[-1])
                         xyz = matrix_to_euler_angles(torch.from_numpy(rel_pose[:3, :3]), 'XYZ')
 
@@ -284,7 +284,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                         text.append(f'  d_rz: {dz:6.3f} deg')
                         cam_move_1.update(rel_pose[0, 3]*1000.0, rel_pose[1, 3]*1000.0, rel_pose[2, 3]*1000.0, dx, dy, dz)
 
-                    if len(mats) > 5:
+                    if len(mats) > 5: # to-prev-5
                         rel_pose = np.matmul(np.linalg.inv(mats[-6]), mats[-1])
                         xyz = matrix_to_euler_angles(torch.from_numpy(rel_pose[:3, :3]), 'XYZ')
 
@@ -306,13 +306,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
         if not has_data:
             continue
 
-        # if idx_frame < 4600 or idx_frame > 5100:
-        #    continue
-
         video_writer.write(grid.canvas)
-        # if idx_frame > 300:
-        #    break
-
     # // for idx_frame, item_name in enumerate(names):
 
     # statistics
@@ -324,8 +318,9 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
     video_info = f'===== statistical information =====\n{cam_move_1}\n{cam_move_5}\n{hole_info}'
     grid.reset_canvas()
     colors = Colors()
+    n_seconds = 7.0
     grid.subtext(0, 0, video_info, text_is_list=False, text_color=colors.yellow)
-    for i in range(int(fps) * 2):
+    for i in range(int(fps * n_seconds)):
         video_writer.write(grid.canvas)
 
     video_writer.release()

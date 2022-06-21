@@ -72,6 +72,10 @@ from dro_sfm.utils.logging import pcolor
 def generate_depth_vis(dir_root, subdirs):
     logging.warning(f'generate_depth_vis({dir_root}, {subdirs})')
 
+    # depth threshold
+    clip_thr_depth_min = 400
+    clip_thr_depth_max = 10000
+
     for item in subdirs:
         logging.info(f'  {item} ..')
         print0(pcolor(f'  generate_depth_vis( {item} ) ..', 'green'))
@@ -104,6 +108,12 @@ def generate_depth_vis(dir_root, subdirs):
                 continue
 
             img = np.array(Image.open(osp.join(dir_depth_in, item_file)), dtype=int)
+
+            clip_mask_max = img > clip_thr_depth_max
+            clip_mask_min = img < clip_thr_depth_min
+            clip_mask = np.logical_or(clip_mask_max, clip_mask_min)
+            img[clip_mask] = 0
+
             img_mask = img <= 0
 
             img_float = img.astype(np.float) / 1000.0
@@ -185,9 +195,11 @@ def generate_split():
             "test/matterport014_0614", # 13912
         ]
 
+    '''
     dir_root = '/home/sigma/slam/matterport0621'
     subdirs_train_val_test = []
     subdirs_test = ['test/matterport005_0621']
+    '''
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
                     [ 1.,  0.,  0.,  0.],
