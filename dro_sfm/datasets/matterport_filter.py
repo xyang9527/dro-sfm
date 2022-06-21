@@ -74,12 +74,23 @@ def sequence_filter():
             pose_data.append((str_name, pose, num_unique_depth, num_pix_invalid, num_pix_total))
 
         # load depth info
-        depth_data = []
+        save_dir = osp.join(item_seq, 'filtered_split')
+        if not osp.exists(save_dir):
+            os.makedirs(save_dir)
+
+        # archive (debug)
+        save_name = osp.join(save_dir, 'all.txt')
+        with open(save_name, 'w') as f_ou:
+            for idx, item in enumerate(pose_data):
+                v0, v1, v2, v3, v4 = item
+                f_ou.write(f'[{idx:4d}] {v0} {v2} {v3} {v4}\n')
+
+
         for idx, item in enumerate(pose_data):
             # print(f'    {idx:6d} - {item}')
             pass
-
-
+        break
+    # // for idx_seq, item_seq in enumerate(matterport_seqs):
 
     pass
 

@@ -1,3 +1,5 @@
+# -*- coding=utf-8 -*-
+
 # generate split for matterport dataset
 
 """
@@ -67,14 +69,11 @@ from dro_sfm.utils.depth import viz_inv_depth
 from dro_sfm.utils.image import write_image
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
+from dro_sfm.datasets.depth_filter import clip_depth
 
 
 def generate_depth_vis(dir_root, subdirs):
     logging.warning(f'generate_depth_vis({dir_root}, {subdirs})')
-
-    # depth threshold
-    clip_thr_depth_min = 400
-    clip_thr_depth_max = 10000
 
     for item in subdirs:
         logging.info(f'  {item} ..')
@@ -108,11 +107,7 @@ def generate_depth_vis(dir_root, subdirs):
                 continue
 
             img = np.array(Image.open(osp.join(dir_depth_in, item_file)), dtype=int)
-
-            clip_mask_max = img > clip_thr_depth_max
-            clip_mask_min = img < clip_thr_depth_min
-            clip_mask = np.logical_or(clip_mask_max, clip_mask_min)
-            img[clip_mask] = 0
+            img = clip_depth(img)
 
             img_mask = img <= 0
 

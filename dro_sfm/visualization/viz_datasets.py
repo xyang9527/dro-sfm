@@ -21,6 +21,7 @@ from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
 from dro_sfm.geometry.pose_trans import matrix_to_euler_angles
 from dro_sfm.utils.depth import viz_inv_depth
+from dro_sfm.datasets.depth_filter import clip_depth
 
 
 class CameraMove:
@@ -187,10 +188,6 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
     depth_h, depth_w = None, None
     unique_value_max = 0
 
-    # depth threshold
-    clip_thr_depth_min = 400
-    clip_thr_depth_max = 10000
-
     for idx_frame, item_name in enumerate(names):
         has_data = False
 
@@ -206,11 +203,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                 if is_image(filename):
                     if k == 'depth' and v == '.png':
                         depth_png = np.array(Image.open(filename), dtype=int)
-
-                        clip_mask_max = depth_png > clip_thr_depth_max
-                        clip_mask_min = depth_png < clip_thr_depth_min
-                        clip_mask = np.logical_or(clip_mask_max, clip_mask_min)
-                        depth_png[clip_mask] = 0
+                        depth_png = clip_depth(depth_png)
 
                         unique_depth, occur_count = np.unique(depth_png, return_counts=True)
                         num_unique_depth = unique_depth.shape[0]
