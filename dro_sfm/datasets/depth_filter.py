@@ -14,8 +14,8 @@ def clip_depth(depth):
     np.ndarray
     """
     # depth threshold
-    clip_thr_depth_min = 400
-    clip_thr_depth_max = 10000
+    clip_thr_depth_min = 400   #  0.4 m
+    clip_thr_depth_max = 10000 # 10.0 m
 
     clip_mask_max = depth > clip_thr_depth_max
     clip_mask_min = depth < clip_thr_depth_min
