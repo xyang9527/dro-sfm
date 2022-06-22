@@ -58,7 +58,9 @@ class CameraMove:
         if np.abs(self.d_rz) < np.abs(rz):
             self.d_rz = rz
 
-    def __repr__(self) -> str:
+    def __repr__(self):
+        if not self.init:
+            return ''
         sqrt_t = np.math.sqrt(self.d_tx ** 2 + self.d_ty ** 2 + self.d_tz ** 2)
         sqrt_r = np.math.sqrt(self.d_rx ** 2 + self.d_ry ** 2 + self.d_rz ** 2)
 
@@ -85,7 +87,7 @@ class HoleInfo:
         self.min_percent = self.min * 100.0 / np.float(self.pixels_total)
         self.mean_percent = self.mean * 100.0 / np.float(self.pixels_total)
 
-    def __repr__(self) -> str:
+    def __repr__(self):
         text_max = f'  max:       {self.max:10d} ({self.max_percent:5.2f}%)'
         text_min = f'  min:       {self.min:10d} ({self.min_percent:5.2f}%)'
         text_mean = f'  mean:      {self.mean:10.0f} ({self.mean_percent:5.2f}%)'
@@ -156,7 +158,7 @@ def is_image(path):
     return False
 
 
-def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_scannet=False):
+def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_scannet=False, basenames=None):
     logging.warning(f'generate_video(..)')
     if len(subdirs) < 1:
         return
@@ -167,6 +169,9 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
         ext = osp.splitext(item)[1].lower()
         if ext in ['.jpg', '.png']:
             names.append(osp.splitext(item)[0])
+
+    if basenames is not None:
+        names = basenames
 
     # video config
     grid = VizImageGrid(im_h, im_w, n_row, n_col)
@@ -237,7 +242,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                                 org=(30, 165), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
                         else:
                             logging.warning(f'  -> [{idx_frame:4d}] only one depth value in {filename} unique_depth: {unique_depth}, occur_count: {occur_count}')
-                            print0(pcolor(f'  -> [{idx_frame:4d}] only one depth value in {filename} unique_depth: {unique_depth}, occur_count: {occur_count}', 'red'))
+                            # print0(pcolor(f'  -> [{idx_frame:4d}] only one depth value in {filename} unique_depth: {unique_depth}, occur_count: {occur_count}', 'red'))
 
                         cv2.putText(img=data, text=f'  max depth:  {unique_depth[-1]:5d} (pixels: {occur_count[-1]})',
                             org=(30, 200), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)

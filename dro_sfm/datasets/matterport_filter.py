@@ -8,9 +8,13 @@ lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
 import logging
 import numpy as np
+import subprocess
+import cv2
+from collections import OrderedDict
 from PIL import Image
 import time
 import yaml
+import re
 import torch
 
 from dro_sfm.utils.setup_log import setup_log
@@ -20,6 +24,7 @@ from dro_sfm.utils.logging import pcolor
 from dro_sfm.geometry.pose_trans import matrix_to_euler_angles
 from dro_sfm.visualization.viz_datasets import get_datasets
 from dro_sfm.datasets.depth_filter import clip_depth
+from dro_sfm.visualization.viz_datasets import generate_video
 
 
 def is_invalid_pose(pose: np.ndarray):
@@ -227,7 +232,9 @@ def sequence_filter():
                 str_name, _, _, _, _ = pose_data[i]
                 if to_drop[i]:
                     f_ou_drop.write(f'{words[-2]}/{words[-1]}/cam_left {str_name}.jpg\n')
+                    # f_ou_all.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg -1\n')
                     continue
+
                 if not to_split[i]:
                     names_sub_seq.append(str_name)
                 else:
@@ -235,12 +242,79 @@ def sequence_filter():
                     with open(name_seq, 'w') as f_ou_seq:
                         for idx_name in names_sub_seq:
                             f_ou_seq.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg\n')
-                            f_ou_all.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg {sub_seq:2d}\n')
+                            f_ou_all.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg {sub_seq}\n')
                     names_sub_seq.clear()
                     names_sub_seq.append(str_name)
                     sub_seq += 1
-        # break
+        seq_to_video(item_seq)
+        break
     # // for idx_seq, item_seq in enumerate(matterport_seqs):
+
+
+def seq_to_video(root_dir):
+    logging.warning(f'seq_to_video({root_dir})')
+    filtered_dir = osp.join(root_dir, 'filtered_split')
+    if not osp.exists(filtered_dir):
+        logging.warning(f'path not exist: {filtered_dir}')
+        return
+
+    sub_dirs = OrderedDict()
+    sub_dirs['cam_left'] = '.jpg'
+    sub_dirs['cam_left_vis'] = '.jpg'
+    sub_dirs['depth'] = '.png'
+    sub_dirs['pose'] = '.txt'
+
+    # invalid frames
+    filename_in = osp.join(filtered_dir, 'invalid.txt')
+    filename_ou = filename_in.replace('.txt', '.avi')
+    name_list = []
+    with open(filename_in, 'r') as f_in:
+        text = f_in.readlines()
+        for line in text:
+            line = line.strip()
+            words = line.split(' ')
+            if len(words) == 2:
+                basename = osp.splitext(words[1])[0]
+                name_list.append(basename)
+            else:
+                print(f'  unknown line: {line}')
+    generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list)
+
+    # seq_xxx.txt
+    re_seq = re.compile('seq_[\d]+\.txt')
+    for item in sorted(os.listdir(filtered_dir)):
+        m = re_seq.match(item)
+        if m is not None:
+            filename_in = osp.join(filtered_dir, item)
+            filename_ou = filename_in.replace('.txt', '.avi')
+            name_list = []
+            with open(filename_in, 'r') as f_in:
+                text = f_in.readlines()
+                for line in text:
+                    line = line.strip()
+                    words = line.split(' ')
+                    if len(words) == 2:
+                        basename = osp.splitext(words[1])[0]
+                        name_list.append(basename)
+                    else:
+                        print(f'  unknown line: {line}')
+            generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list)
+
+    # sub sequece frames
+    filename_in = osp.join(filtered_dir, 'seq_all.txt')
+    filename_ou = filename_in.replace('.txt', '.avi')
+    name_list = []
+    with open(filename_in, 'r') as f_in:
+        text = f_in.readlines()
+        for line in text:
+            line = line.strip()
+            words = line.split(' ')
+            if len(words) == 3:
+                basename = osp.splitext(words[1])[0]
+                name_list.append(basename)
+            else:
+                print(f'  unknown line: {line}')
+    generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list)
 
 
 if __name__ == '__main__':
@@ -264,6 +338,15 @@ if __name__ == '__main__':
     print(f'  d_rx: {d_rx}')
     print(f'  d_ry: {d_ry}')
     print(f'  d_rz: {d_rz}')
+    '''
+
+    '''
+    seq = re.compile('seq_[\d]+\.txt')
+    path_dir = '/home/sigma/slam/matterport0614/test/matterport014_000_0516/filtered_split'
+    for item in os.listdir(path_dir):
+        m = seq.match(item)
+        if m is not None:
+            print(f'{item} {m} {m.group()}')
     '''
 
     time_end_matterport_filter = time.time()
