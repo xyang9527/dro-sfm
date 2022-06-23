@@ -247,7 +247,7 @@ def sequence_filter():
                     names_sub_seq.append(str_name)
                     sub_seq += 1
         seq_to_video(item_seq)
-        break
+        # break
     # // for idx_seq, item_seq in enumerate(matterport_seqs):
 
 
@@ -278,7 +278,11 @@ def seq_to_video(root_dir):
                 name_list.append(basename)
             else:
                 print(f'  unknown line: {line}')
-    generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list)
+    if len(name_list) > 0:
+        generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list)
+    else:
+        print0(pcolor(f'  - empty {filename_in}', 'yellow'))
+        logging.warning('f  - empty {filename_in}')
 
     # seq_xxx.txt
     re_seq = re.compile('seq_[\d]+\.txt')
@@ -298,7 +302,11 @@ def seq_to_video(root_dir):
                         name_list.append(basename)
                     else:
                         print(f'  unknown line: {line}')
-            generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list)
+            if len(name_list) > 0:
+                generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list, 3.0)
+            else:
+                print0(pcolor(f'  - empty {filename_in}', 'yellow'))
+                logging.warning('f  - empty {filename_in}')
 
     # sub sequece frames
     filename_in = osp.join(filtered_dir, 'seq_all.txt')
@@ -314,7 +322,11 @@ def seq_to_video(root_dir):
                 name_list.append(basename)
             else:
                 print(f'  unknown line: {line}')
-    generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list)
+    if len(name_list) > 0:
+        generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list)
+    else:
+        print0(pcolor(f'  - empty {filename_in}', 'yellow'))
+        logging.warning('f  - empty {filename_in}')
 
 
 if __name__ == '__main__':

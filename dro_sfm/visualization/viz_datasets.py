@@ -158,7 +158,7 @@ def is_image(path):
     return False
 
 
-def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_scannet=False, basenames=None):
+def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_scannet=False, basenames=None, fps=25.0):
     logging.warning(f'generate_video(..)')
     if len(subdirs) < 1:
         return
@@ -178,7 +178,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
     canvas_row = grid.canvas_row
     canvas_col = grid.canvas_col
 
-    fps = 25.0
+    # fps = 25.0
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     video_writer = cv2.VideoWriter(video_name, fourcc, fps, (canvas_col, canvas_row))
 
