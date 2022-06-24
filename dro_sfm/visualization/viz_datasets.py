@@ -21,7 +21,7 @@ from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
 from dro_sfm.geometry.pose_trans import matrix_to_euler_angles
 from dro_sfm.utils.depth import viz_inv_depth
-from dro_sfm.datasets.depth_filter import clip_depth
+from dro_sfm.datasets.depth_filter import clip_depth, pose_in_threshold_1
 
 
 class CameraMove:
@@ -43,6 +43,9 @@ class CameraMove:
             self.d_rx, self.d_ry, self.d_rz = rx, ry, rz
             self.init = True
             return
+
+        # if tz > 300:
+        #    raise ValueError
 
         if np.abs(self.d_tx) < np.abs(tx):
             self.d_tx = tx
@@ -158,7 +161,7 @@ def is_image(path):
     return False
 
 
-def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_scannet=False, basenames=None, fps=25.0):
+def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_scannet=False, basenames=None, fps=25.0, enable_check=False):
     logging.warning(f'generate_video(..)')
     if len(subdirs) < 1:
         return
@@ -270,6 +273,12 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                         xyz_degree = xyz.detach() * 180.0 / np.math.pi
                         dx, dy, dz = xyz_degree[:]
 
+                        if enable_check:
+                            if not pose_in_threshold_1(
+                                [rel_pose[0, 3]*1000.0, rel_pose[1, 3]*1000.0, rel_pose[2, 3]*1000.0,
+                                dx, dy, dz]):
+                                raise ValueError
+
                         text.append(f'[{idx_frame:4d}] {item_name} fps: {fps}')
                         text.append('to-prev-1:')
                         if not is_scannet:
@@ -280,6 +289,7 @@ def generate_video(rootdir, subdirs, im_h, im_w, n_row, n_col, video_name, is_sc
                         text.append(f'  d_rx: {dx:6.3f} deg')
                         text.append(f'  d_ry: {dy:6.3f} deg')
                         text.append(f'  d_rz: {dz:6.3f} deg')
+
                         cam_move_1.update(rel_pose[0, 3]*1000.0, rel_pose[1, 3]*1000.0, rel_pose[2, 3]*1000.0, dx, dy, dz)
 
                     if len(mats) > 5: # to-prev-5

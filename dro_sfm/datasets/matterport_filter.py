@@ -23,113 +23,8 @@ from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
 from dro_sfm.geometry.pose_trans import matrix_to_euler_angles
 from dro_sfm.visualization.viz_datasets import get_datasets
-from dro_sfm.datasets.depth_filter import clip_depth
+from dro_sfm.datasets.depth_filter import clip_depth, is_invalid_pose, find_idx_of_prev_n, matrix_to_6d_pose, pose_in_threshold_1
 from dro_sfm.visualization.viz_datasets import generate_video
-
-
-def is_invalid_pose(pose: np.ndarray):
-    """
-    Returns
-    -------
-    bool
-    """
-    has_illegal_value = False
-    h, w = pose.shape
-
-    for j in range(h):
-        if has_illegal_value:
-            break
-
-        for i in range(w):
-            v = pose[j, i]
-            if np.isnan(v) or np.isneginf(v) or np.isposinf(v):
-                has_illegal_value = True
-                break
-    return has_illegal_value
-
-
-def find_idx_of_prev_n(arr_is_invalid: List[bool], arr_accum_valid: List[int], curr_idx: int, prev_n: int):
-    """
-    Returns
-    -------
-    int
-    """
-    assert curr_idx > 0, f'curr_idx = {curr_idx}'
-    assert prev_n > 0, f'prev_n = {prev_n}'
-    assert arr_accum_valid[curr_idx - 1] >= prev_n
-
-    n = prev_n
-    for idx in range(curr_idx - 1, -1, -1):
-        if arr_is_invalid[idx]:
-            continue
-        n -= 1
-        if n == 0:
-            return idx
-    raise ValueError
-
-
-def matrix_to_6d_pose(pose_curr: np.ndarray, pose_prev: np.ndarray):
-    """
-    Returns
-    -------
-    List[float]
-    """
-    rel_pose = np.matmul(np.linalg.inv(pose_prev), pose_curr)
-
-    xyz = matrix_to_euler_angles(torch.from_numpy(rel_pose[:3, :3]), 'XYZ')
-    xyz_degree = xyz.detach() * 180.0 / np.math.pi
-    d_rx, d_ry, d_rz = xyz_degree[:]
-    d_tx, d_ty, d_tz = rel_pose[0, 3] * 1000.0, rel_pose[1, 3] * 1000.0, rel_pose[2, 3] * 1000.0
-    return [d_tx, d_ty, d_tz, d_rx, d_ry, d_rz]
-
-
-def pose_in_thr(pose_6d: List[float], d_t, d_ts, d_r, d_rs):
-    """
-    Returns
-    -------
-    bool
-    """
-    tx, ty, tz, rx, ry, rz = pose_6d
-    ts = np.math.sqrt(tx ** 2 + ty ** 2 + tz ** 2)
-    rs = np.math.sqrt(rx ** 2 + ry ** 2 + rz ** 2)
-    if ts > d_ts or rs > d_rs:
-        return False
-
-    for t in [tx, ty, tz]:
-        if np.abs(t) > np.abs(d_t):
-            return False
-
-    for r in [rx, ry, rz]:
-        if np.abs(r) > np.abs(d_r):
-            return False
-    return True
-
-
-def pose_in_threshold_1(pose_6d: List[float]):
-    """
-    Returns
-    -------
-    bool
-    """
-    # ref: statistical info of viz_scene0600_00.avi
-    thr_d_t = 90.0    # mm
-    thr_d_ts = 120.0  # mm
-    thr_d_r = 5.0     # degree
-    thr_d_rs = 7.5    # degree
-    return pose_in_thr(pose_6d, thr_d_t, thr_d_ts, thr_d_r, thr_d_rs)
-
-
-def pose_in_threshold_5(pose_6d: List[float]):
-    """
-    Returns
-    -------
-    bool
-    """
-    thr_d_t = 145.0   # mm
-    thr_d_ts = 205.0  # mm
-    thr_d_r = 14.5    # degree
-    thr_d_rs = 21.5   # degree
-    return pose_in_thr(pose_6d, thr_d_t, thr_d_ts, thr_d_r, thr_d_rs)
 
 
 def sequence_filter():
@@ -138,6 +33,7 @@ def sequence_filter():
 
     matterport_seqs = datasets['matterport']
     # matterport_seqs = ['/home/sigma/slam/matterport0621/test/matterport005_0621']
+    matterport_seqs = ['/home/sigma/slam/matterport0614/test/matterport014_000_0516']
     for idx_seq, item_seq in enumerate(matterport_seqs):
         print(f'  -> {idx_seq:2d} : {item_seq}')
 
@@ -196,6 +92,8 @@ def sequence_filter():
                 to_drop[idx_frame] = True
                 # print0(pcolor(f'    drop {str_name}', 'yellow'))
                 logging.info(f'    drop {str_name}')
+                if inited:
+                    num_valid[idx_frame] = num_valid[idx_frame - 1]
                 continue
 
             # pose threshold - prev 1
@@ -203,8 +101,10 @@ def sequence_filter():
                 idx_targ = find_idx_of_prev_n(to_drop, num_valid, idx_frame, 1)
                 _, pose_targ, _, _, _ = pose_data[idx_targ]
                 pose_6d = matrix_to_6d_pose(pose, pose_targ)
+
                 if not pose_in_threshold_1(pose_6d):
                     to_split[idx_frame] = True
+                    num_valid[idx_frame] = 1
                     continue
 
             # pose threshold - prev 5
@@ -216,7 +116,6 @@ def sequence_filter():
                 inited = True
             else:
                 num_valid[idx_frame] = num_valid[idx_frame - 1] + 1
-
         # // for idx_frame, item_data in enumerate(pose_data)
         print(f'  total frames: {len(pose_data)}')
         print(f'  valid frames: {len(pose_data) - sum(to_drop)}')
@@ -303,7 +202,7 @@ def seq_to_video(root_dir):
                     else:
                         print(f'  unknown line: {line}')
             if len(name_list) > 0:
-                generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list, 3.0)
+                generate_video(root_dir, sub_dirs, 480, 640, 2, 2, filename_ou, False, name_list, 3.0, True)
             else:
                 print0(pcolor(f'  - empty {filename_in}', 'yellow'))
                 logging.warning('f  - empty {filename_in}')

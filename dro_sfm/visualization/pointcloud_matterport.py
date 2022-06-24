@@ -183,7 +183,7 @@ def load_data(names, data_dir):
 
 
 def create_obj_cloud():
-    matterport_home = '/home/sigma/slam/matterport'
+    matterport_home = '/home/sigma/slam/matterport0516'
     data_cols = [
         {'dir': 'test/matterport005_000_0610', 'space': 42}, # 4199
         {'dir': 'test/matterport014_000', 'space': 36}, # 3620
