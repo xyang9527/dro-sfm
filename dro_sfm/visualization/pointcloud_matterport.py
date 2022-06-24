@@ -116,7 +116,7 @@ def load_data(names, data_dir):
         data_color = load_image(osp.join(dir_root, f'cam_left/{name}.jpg'))
         data_depth = load_matterport_depth(osp.join(dir_root, f'depth/{name}.png'))
         data_pose = np.genfromtxt(osp.join(dir_root, f'pose/{name}.txt'))
-        data_pose_world_coord = np.genfromtxt(osp.join(dir_root, f'pose_world_coord/{name}.txt'))
+        data_pose_world_coord = np.genfromtxt(osp.join(dir_root, f'pose_w/{name}.txt'))
 
         if sys.platform != 'win32':
             subprocess.call(['cp', osp.join(dir_root, f'cam_left/{name}.jpg'), osp.join(dir_cloud_jpg, f'{name}.jpg')])
@@ -183,14 +183,30 @@ def load_data(names, data_dir):
 
 
 def create_obj_cloud():
-    matterport_home = '/home/sigma/slam/matterport0516'
-    data_cols = [
-        {'dir': 'test/matterport005_000_0610', 'space': 42}, # 4199
-        {'dir': 'test/matterport014_000', 'space': 36}, # 3620
-        {'dir': 'train_val_test/matterport005_000', 'space': 41}, # 4098
-        {'dir': 'train_val_test/matterport005_001', 'space': 54}, # 5438
-        {'dir': 'train_val_test/matterport010_000', 'space': 41}, # 4146
-        {'dir': 'train_val_test/matterport010_001', 'space': 34}, # 3448
+    use_data_0516 = False
+
+    if use_data_0516:
+        # matterport dataset 0516
+        matterport_home = '/home/sigma/slam/matterport0516'
+        data_cols = [
+            {'dir': 'test/matterport005_000_0610', 'space': 42}, # 4199
+            {'dir': 'test/matterport014_000', 'space': 36}, # 3620
+            {'dir': 'train_val_test/matterport005_000', 'space': 41}, # 4098
+            {'dir': 'train_val_test/matterport005_001', 'space': 54}, # 5438
+            {'dir': 'train_val_test/matterport010_000', 'space': 41}, # 4146
+            {'dir': 'train_val_test/matterport010_001', 'space': 34}, # 3448
+            ]
+
+    else:
+        # matterport dataset 0614
+        matterport_home = '/home/sigma/slam/matterport0614'
+        data_cols = [
+            {'dir': 'test/matterport014_000_0516', 'space': 36}, # 3624
+            {'dir': 'test/matterport014_001_0516', 'space': 77}, # 7787
+            {'dir': 'train_val_test/matterport005_000_0516', 'space': 41}, # 4199
+            {'dir': 'train_val_test/matterport005_001_0516', 'space': 55}, # 5500
+            {'dir': 'train_val_test/matterport010_000_0516', 'space': 41}, # 4186
+            {'dir': 'train_val_test/matterport010_001_0516', 'space': 34}, # 3452
         ]
 
     for item_data in data_cols:

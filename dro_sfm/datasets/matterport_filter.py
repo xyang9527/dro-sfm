@@ -33,7 +33,7 @@ def sequence_filter():
 
     matterport_seqs = datasets['matterport']
     # matterport_seqs = ['/home/sigma/slam/matterport0621/test/matterport005_0621']
-    matterport_seqs = ['/home/sigma/slam/matterport0614/test/matterport014_000_0516']
+    # matterport_seqs = ['/home/sigma/slam/matterport0614/test/matterport014_000_0516']
     for idx_seq, item_seq in enumerate(matterport_seqs):
         print(f'  -> {idx_seq:2d} : {item_seq}')
 
