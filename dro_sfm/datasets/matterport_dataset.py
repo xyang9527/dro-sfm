@@ -132,12 +132,17 @@ class MatterportDataset(Dataset):
                 self.file_tree[scene].append(filename)
 
         logging.warning(f'========== before downsample file_tree: ==========')
+        total_frames = 0
         for k, v in self.file_tree.items():
             logging.info(f'    {k}: {len(v)}')
+            total_frames += len(v)
+        logging.info(f'    total frames: {total_frames:6d}')
 
         # downsample by 5
+        '''
         for k in self.file_tree:
-            self.file_tree[k] = self.file_tree[k][50::5]  # ignore first 50 frames
+            self.file_tree[k] = self.file_tree[k][::5]
+        '''
 
         # todo: cut sequences: percent of invalid depth / large camera movement between consecutive frames
 
@@ -146,10 +151,12 @@ class MatterportDataset(Dataset):
             files = [fname for fname in file_list if self._has_context(k, fname, file_list)]
             self.files.extend([[k, fname] for fname in files])
 
-        logging.warning(f'========== file_tree: ==========')
+        logging.warning(f'========== after downsample file_tree: ==========')
+        total_frames = 0
         for k, v in self.file_tree.items():
             logging.info(f'    {k}: {len(v)}')
-        logging.info(f'  files:          {len(files)}')
+            total_frames += len(v)
+        logging.info(f'    total frames: {total_frames:6d}')
 
         self.data_transform = data_transform
 

@@ -34,120 +34,142 @@ def sequence_filter():
     matterport_seqs = datasets['matterport']
     # matterport_seqs = ['/home/sigma/slam/matterport0621/test/matterport005_0621']
     # matterport_seqs = ['/home/sigma/slam/matterport0614/test/matterport014_000_0516']
-    for idx_seq, item_seq in enumerate(matterport_seqs):
-        print(f'  -> {idx_seq:2d} : {item_seq}')
+    split_train = osp.join('/home/sigma/slam/matterport0614', 'filtered_train_all_list.txt')
+    with open(split_train, 'w') as f_ou_split_train:
+        for idx_seq, item_seq in enumerate(matterport_seqs):
+            print(f'  -> {idx_seq:2d} : {item_seq}')
 
-        pose_dir = osp.join(item_seq, 'pose')
-        depth_dir = osp.join(item_seq, 'depth')
+            pose_dir = osp.join(item_seq, 'pose')
+            depth_dir = osp.join(item_seq, 'depth')
 
-        pose_data = []
-        # load pose
-        for item_file in sorted(os.listdir(pose_dir)):
-            str_name, str_ext = osp.splitext(item_file)
-            if str_ext != '.txt':
-                continue
+            pose_data = []
+            # load pose
+            for item_file in sorted(os.listdir(pose_dir)):
+                str_name, str_ext = osp.splitext(item_file)
+                if str_ext != '.txt':
+                    continue
 
-            # valid pose only
-            pose = np.genfromtxt(osp.join(pose_dir, item_file))
-            if is_invalid_pose(pose):
-                print(f'  invalid pose: {osp.join(pose_dir, item_file)}')
-                continue
+                # valid pose only
+                pose = np.genfromtxt(osp.join(pose_dir, item_file))
+                if is_invalid_pose(pose):
+                    print(f'  invalid pose: {osp.join(pose_dir, item_file)}')
+                    continue
 
-            # depth info
-            depth_name = osp.join(depth_dir, str_name + '.png')
-            if not osp.exists(depth_name):
-                continue
+                # depth info
+                depth_name = osp.join(depth_dir, str_name + '.png')
+                if not osp.exists(depth_name):
+                    continue
 
-            depth_png = np.array(Image.open(depth_name), dtype=int)
-            depth_png = clip_depth(depth_png)
-            unique_depth = np.unique(depth_png)
-            num_unique_depth = unique_depth.shape[0]
+                depth_png = np.array(Image.open(depth_name), dtype=int)
+                depth_png = clip_depth(depth_png)
+                unique_depth = np.unique(depth_png)
+                num_unique_depth = unique_depth.shape[0]
 
-            depth_mask = depth_png <= 0
-            num_pix_invalid = np.count_nonzero(depth_mask)
-            num_pix_total = depth_png.shape[0] * depth_png.shape[1]
+                depth_mask = depth_png <= 0
+                num_pix_invalid = np.count_nonzero(depth_mask)
+                num_pix_total = depth_png.shape[0] * depth_png.shape[1]
 
-            pose_data.append((str_name, pose, num_unique_depth, num_pix_invalid, num_pix_total))
+                pose_data.append((str_name, pose, num_unique_depth, num_pix_invalid, num_pix_total))
 
-        # archive (debug)
-        save_dir = osp.join(item_seq, 'filtered_split')
-        if not osp.exists(save_dir):
-            os.makedirs(save_dir)
+            # archive (debug)
+            save_dir = osp.join(item_seq, 'filtered_split')
+            if not osp.exists(save_dir):
+                os.makedirs(save_dir)
 
-        save_name = osp.join(save_dir, 'all.txt')
-        with open(save_name, 'w') as f_ou:
-            for idx, item in enumerate(pose_data):
-                v0, v1, v2, v3, v4 = item
-                f_ou.write(f'[{idx:4d}] {v0} {v2} {v3} {v4}\n')
+            save_name = osp.join(save_dir, 'all.txt')
+            with open(save_name, 'w') as f_ou:
+                for idx, item in enumerate(pose_data):
+                    v0, v1, v2, v3, v4 = item
+                    f_ou.write(f'[{idx:4d}] {v0} {v2} {v3} {v4}\n')
 
-        n_frames = len(pose_data)
-        to_drop = [False] * n_frames
-        to_split = [False] * n_frames
-        num_valid = [0] * n_frames
-        inited = False
-        for idx_frame, item_data in enumerate(pose_data):
-            str_name, pose, num_unique_depth, num_pix_invalid, num_pix_total = item_data
-            # depth threshold
-            if np.float(num_pix_invalid) / np.float(num_pix_total) > 0.4:
-                to_drop[idx_frame] = True
-                # print0(pcolor(f'    drop {str_name}', 'yellow'))
-                logging.info(f'    drop {str_name}')
-                if inited:
-                    num_valid[idx_frame] = num_valid[idx_frame - 1]
-                continue
+            n_frames = len(pose_data)
+            to_drop = [False] * n_frames
+            to_split = [False] * n_frames
+            num_valid = [0] * n_frames
+            inited = False
+            for idx_frame, item_data in enumerate(pose_data):
+                str_name, pose, num_unique_depth, num_pix_invalid, num_pix_total = item_data
+                # depth threshold
+                if np.float(num_pix_invalid) / np.float(num_pix_total) > 0.4:
+                    to_drop[idx_frame] = True
+                    # print0(pcolor(f'    drop {str_name}', 'yellow'))
+                    logging.info(f'    drop {str_name}')
+                    if inited:
+                        num_valid[idx_frame] = num_valid[idx_frame - 1]
+                    continue
 
-            # pose threshold - prev 1
-            if inited and num_valid[idx_frame - 1] >= 1:
-                idx_targ = find_idx_of_prev_n(to_drop, num_valid, idx_frame, 1)
-                _, pose_targ, _, _, _ = pose_data[idx_targ]
-                pose_6d = matrix_to_6d_pose(pose, pose_targ)
+                # pose threshold - prev 1
+                if inited and num_valid[idx_frame - 1] >= 1:
+                    idx_targ = find_idx_of_prev_n(to_drop, num_valid, idx_frame, 1)
+                    _, pose_targ, _, _, _ = pose_data[idx_targ]
+                    pose_6d = matrix_to_6d_pose(pose, pose_targ)
 
-                if not pose_in_threshold_1(pose_6d):
-                    to_split[idx_frame] = True
+                    if not pose_in_threshold_1(pose_6d):
+                        to_split[idx_frame] = True
+                        num_valid[idx_frame] = 1
+                        continue
+
+                # pose threshold - prev 5
+                if inited and num_valid[idx_frame - 1] >= 5:
+                    pass
+
+                if not inited:
                     num_valid[idx_frame] = 1
-                    continue
-
-            # pose threshold - prev 5
-            if inited and num_valid[idx_frame - 1] >= 5:
-                pass
-
-            if not inited:
-                num_valid[idx_frame] = 1
-                inited = True
-            else:
-                num_valid[idx_frame] = num_valid[idx_frame - 1] + 1
-        # // for idx_frame, item_data in enumerate(pose_data)
-        print(f'  total frames: {len(pose_data)}')
-        print(f'  valid frames: {len(pose_data) - sum(to_drop)}')
-        print(f'  split:        {sum(to_split)}')
-
-        name_drop = osp.join(save_dir, 'invalid.txt')
-        name_seq_all = osp.join(save_dir, 'seq_all.txt')
-        with open(name_drop, 'w') as f_ou_drop, open(name_seq_all, 'w') as f_ou_all:
-            words = item_seq.split('/')
-            sub_seq = 0
-            names_sub_seq = []
-            for i in range(n_frames):
-                str_name, _, _, _, _ = pose_data[i]
-                if to_drop[i]:
-                    f_ou_drop.write(f'{words[-2]}/{words[-1]}/cam_left {str_name}.jpg\n')
-                    # f_ou_all.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg -1\n')
-                    continue
-
-                if not to_split[i]:
-                    names_sub_seq.append(str_name)
+                    inited = True
                 else:
-                    name_seq = osp.join(save_dir, f'seq_{sub_seq:02d}.txt')
-                    with open(name_seq, 'w') as f_ou_seq:
-                        for idx_name in names_sub_seq:
-                            f_ou_seq.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg\n')
-                            f_ou_all.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg {sub_seq}\n')
-                    names_sub_seq.clear()
-                    names_sub_seq.append(str_name)
-                    sub_seq += 1
-        seq_to_video(item_seq)
-        # break
-    # // for idx_seq, item_seq in enumerate(matterport_seqs):
+                    num_valid[idx_frame] = num_valid[idx_frame - 1] + 1
+            # // for idx_frame, item_data in enumerate(pose_data)
+            print(f'  total frames: {len(pose_data)}')
+            print(f'  valid frames: {len(pose_data) - sum(to_drop)}')
+            print(f'  split:        {sum(to_split)}')
+
+            name_drop = osp.join(save_dir, 'invalid.txt')
+            name_seq_all = osp.join(save_dir, 'seq_all.txt')
+            with open(name_drop, 'w') as f_ou_drop, open(name_seq_all, 'w') as f_ou_all:
+                words = item_seq.split('/')
+                sub_seq = 0
+                names_sub_seq = []
+                for i in range(n_frames):
+                    str_name, _, _, _, _ = pose_data[i]
+                    if to_drop[i]:
+                        f_ou_drop.write(f'{words[-2]}/{words[-1]}/cam_left {str_name}.jpg\n')
+                        # f_ou_all.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg -1\n')
+                        continue
+
+                    if not to_split[i]:
+                        names_sub_seq.append(str_name)
+                    else:
+                        name_seq = osp.join(save_dir, f'seq_{sub_seq:02d}.txt')
+                        with open(name_seq, 'w') as f_ou_seq:
+                            for idx_name in names_sub_seq:
+                                f_ou_seq.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg\n')
+                                f_ou_all.write(f'{words[-2]}/{words[-1]}/cam_left {idx_name}.jpg {sub_seq}\n')
+
+                        # create sub sequences
+                        if len(names_sub_seq) > 20:
+                            dir_sub_home = osp.join(item_seq, 'sub_sequences')
+                            dir_sub_seq = osp.join(dir_sub_home, f'seq_{sub_seq:02d}')
+                            dir_cam_left = osp.join(dir_sub_seq, 'cam_left')
+                            dir_depth = osp.join(dir_sub_seq, 'depth')
+                            dir_pose = osp.join(dir_sub_seq, 'pose')
+                            dirs = [dir_sub_home, dir_sub_seq, dir_cam_left, dir_depth, dir_pose]
+                            for i in dirs:
+                                if not osp.exists(i):
+                                    os.mkdir(i)
+                            tags = dir_sub_seq.split('/')
+                            for idx_name in names_sub_seq:
+                                subprocess.call(['cp', osp.join(item_seq, 'cam_left', f'{idx_name}.jpg'), osp.join(dir_cam_left, f'{idx_name}.jpg')])
+                                subprocess.call(['cp', osp.join(item_seq, 'depth', f'{idx_name}.png'), osp.join(dir_depth, f'{idx_name}.png')])
+                                subprocess.call(['cp', osp.join(item_seq, 'pose', f'{idx_name}.txt'), osp.join(dir_pose, f'{idx_name}.txt')])
+                                f_ou_split_train.write(f'{tags[-4]}/{tags[-3]}/{tags[-2]}/{tags[-1]}/cam_left {idx_name}.jpg\n')
+
+                        names_sub_seq.clear()
+                        names_sub_seq.append(str_name)
+                        sub_seq += 1
+                # // for i in range(n_frames):
+            seq_to_video(item_seq)
+            # break
+        # // for idx_seq, item_seq in enumerate(matterport_seqs):
 
 
 def seq_to_video(root_dir):

@@ -37,7 +37,8 @@ datasets:
         batch_size: 12
         dataset: ['Matterport']
         path: ['/home/sigma/slam/matterport0614']
-        split: ['splits/train_all_list.txt']
+        # split: ['splits/train_all_list.txt']
+        split: ['splitted_train_all_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
         forward_context: 1
