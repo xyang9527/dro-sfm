@@ -201,12 +201,12 @@ def create_obj_cloud():
         # matterport dataset 0614
         matterport_home = '/home/sigma/slam/matterport0614'
         data_cols = [
-            {'dir': 'test/matterport014_000_0516', 'space': 36}, # 3624
-            {'dir': 'test/matterport014_001_0516', 'space': 77}, # 7787
             {'dir': 'train_val_test/matterport005_000_0516', 'space': 41}, # 4199
             {'dir': 'train_val_test/matterport005_001_0516', 'space': 55}, # 5500
-            {'dir': 'train_val_test/matterport010_000_0516', 'space': 41}, # 4186
-            {'dir': 'train_val_test/matterport010_001_0516', 'space': 34}, # 3452
+            {'dir': 'train_val_test/matterport014_000_0516', 'space': 36}, # 3624
+            {'dir': 'train_val_test/matterport014_001_0516', 'space': 77}, # 7787
+            {'dir': 'test/matterport010_000_0516', 'space': 41}, # 4186
+            {'dir': 'test/matterport010_001_0516', 'space': 34}, # 3452
         ]
 
     for item_data in data_cols:

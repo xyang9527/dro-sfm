@@ -1,18 +1,6 @@
-# matterport0516/test/matterport005_000_0610
-# matterport0516/test/matterport014_000
-# matterport0516/train_val_test/matterport005_000
-# matterport0516/train_val_test/matterport005_001
-# matterport0516/train_val_test/matterport010_000
-# matterport0516/train_val_test/matterport010_001
-matterport0614/test/matterport014_000_0516
-matterport0614/test/matterport014_001_0516
-# matterport0614/test/matterport014_0614
+matterport0614/test/matterport010_000_0516
+matterport0614/test/matterport010_001_0516
 matterport0614/train_val_test/matterport005_000_0516
 matterport0614/train_val_test/matterport005_001_0516
-# matterport0614/train_val_test/matterport005_0614
-matterport0614/train_val_test/matterport010_000_0516
-matterport0614/train_val_test/matterport010_001_0516
-# matterport0614/train_val_test/matterport010_0614
-# matterport0614/train_val_test/matterport047_0614
-# matterport0614/train_val_test/matterport063_0614
-# matterport0614/train_val_test/matterport071_0614
+matterport0614/train_val_test/matterport014_000_0516
+matterport0614/train_val_test/matterport014_001_0516

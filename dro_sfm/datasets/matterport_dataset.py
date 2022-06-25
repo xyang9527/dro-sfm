@@ -136,7 +136,9 @@ class MatterportDataset(Dataset):
         for k, v in self.file_tree.items():
             logging.info(f'    {k}: {len(v)}')
             total_frames += len(v)
-        logging.info(f'    total frames: {total_frames:6d}')
+        logging.info(f'    total frames:               {total_frames:6d}')
+        logging.info(f'    len(self.files):            {len(self.files):6d}')
+        logging.info(f'    len(self.file_tree.keys()): {len(self.file_tree.keys()):6d}')
 
         # downsample by 5
         '''
@@ -156,7 +158,9 @@ class MatterportDataset(Dataset):
         for k, v in self.file_tree.items():
             logging.info(f'    {k}: {len(v)}')
             total_frames += len(v)
-        logging.info(f'    total frames: {total_frames:6d}')
+        logging.info(f'    total frames:               {total_frames:6d}')
+        logging.info(f'    len(self.files):            {len(self.files):6d}')
+        logging.info(f'    len(self.file_tree.keys()): {len(self.file_tree.keys()):6d}')
 
         self.data_transform = data_transform
 

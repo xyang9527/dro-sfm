@@ -108,15 +108,15 @@ class MatterportTestDataset(Dataset):
         else:
             # =================== load from txt ====================
             self.file_tree = defaultdict(list)
-            with open(os.path.join(self.root_dir, "splits/test_all_list.txt"), "r") as f:
+            with open(os.path.join(self.root_dir, self.split), "r") as f:
                 split_data = f.readlines()
             for data in split_data:
                 scene, filename = data.split()
                 self.file_tree[scene].append(filename)
 
         # =================== load from txt ====================
-        with open(os.path.join(self.root_dir, self.split), "r") as f:
-            split_data = f.readlines()
+        # with open(os.path.join(self.root_dir, self.split), "r") as f:
+        #     split_data = f.readlines()
 
         split_data1 = split_data[::2]
         split_data2 = split_data[1:][::2]

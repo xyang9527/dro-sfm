@@ -2,53 +2,6 @@
 
 # generate split for matterport dataset
 
-"""
-    ├── ./matterport005_000
-    │   ├── ./matterport005_000/cam_left       4199
-    │   ├── ./matterport005_000/cam_right
-    │   └── ./matterport005_000/depth
-    ├── ./matterport005_001
-    │   ├── ./matterport005_001/cam_left       5500
-    │   ├── ./matterport005_001/cam_right
-    │   └── ./matterport005_001/depth
-    ├── ./matterport010_000
-    │   ├── ./matterport010_000/cam_left       4186
-    │   ├── ./matterport010_000/cam_right
-    │   └── ./matterport010_000/depth
-    ├── ./matterport010_001
-    │   ├── ./matterport010_001/cam_left       3452
-    │   ├── ./matterport010_001/cam_right
-    │   └── ./matterport010_001/depth
-    ├── ./matterport014_000
-    │   ├── ./matterport014_000/cam_left       3624
-    │   ├── ./matterport014_000/cam_right
-    │   └── ./matterport014_000/depth
-
-    train:
-      matterport005_000[:-600]
-      matterport005_001[:-600]
-      matterport010_000[:-600]
-      matterport010_001[:-600]
-    val:
-      matterport005_000[-600:-100]
-      matterport005_001[-600:-100]
-      matterport010_000[-600:-100]
-      matterport010_001[-600:-100]
-    test:
-      matterport005_000[-100:]
-      matterport005_001[-100:]
-      matterport010_000[-100:]
-      matterport010_001[-100:]
-      matterport014_000
-
-/opt/slam/matterport/split$ wc -l test.txt
-4024 test.txt
-/opt/slam/matterport/split$ wc -l val.txt
-2000 val.txt
-/opt/slam/matterport/split$ wc -l train.txt
-15671 train.txt
-"""
-
 import logging
 import numpy as np
 import os
@@ -139,6 +92,7 @@ def generate_depth_vis(dir_root, subdirs):
 
 def generate_split():
     use_data_0516 = False
+    gen_vis_data = False
 
     if use_data_0516:
         # matterport dataset 0516
@@ -176,25 +130,13 @@ def generate_split():
         subdirs_train_val_test = [
             "train_val_test/matterport005_000_0516", # 4199
             "train_val_test/matterport005_001_0516", # 5500
-            "train_val_test/matterport005_0614", # 4721
-            "train_val_test/matterport010_000_0516", # 4186
-            "train_val_test/matterport010_001_0516", # 3452
-            "train_val_test/matterport010_0614", # 7173
-            "train_val_test/matterport047_0614", # 3345
-            "train_val_test/matterport063_0614", # 3942
-            "train_val_test/matterport071_0614", # 5881
+            "train_val_test/matterport014_000_0516", # 3624
+            "train_val_test/matterport014_001_0516", # 7787
         ]
         subdirs_test = [
-            "test/matterport014_000_0516", # 3624
-            "test/matterport014_001_0516", # 7787
-            "test/matterport014_0614", # 13912
+            "test/matterport010_000_0516", # 4186
+            "test/matterport010_001_0516", # 3452
         ]
-
-    '''
-    dir_root = '/home/sigma/slam/matterport0621'
-    subdirs_train_val_test = []
-    subdirs_test = ['test/matterport005_0621']
-    '''
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
                     [ 1.,  0.,  0.,  0.],
@@ -214,8 +156,9 @@ def generate_split():
     for item in subdirs_test:
         subdirs_pose.append(item)
 
-    # depth visualization
-    generate_depth_vis(dir_root, subdirs_pose)
+    if gen_vis_data:
+        # depth visualization
+        generate_depth_vis(dir_root, subdirs_pose)
 
     for item in subdirs_pose:
         print0(pcolor(f'  pose: {item} ..', 'blue'))

@@ -31,12 +31,18 @@ def sequence_filter():
     logging.warning('sequence_filter()')
     datasets = get_datasets()
 
+    enable_gen_video = False
+
     matterport_seqs = datasets['matterport']
-    # matterport_seqs = ['/home/sigma/slam/matterport0621/test/matterport005_0621']
-    # matterport_seqs = ['/home/sigma/slam/matterport0614/test/matterport014_000_0516']
-    split_train = osp.join('/home/sigma/slam/matterport0614', 'filtered_train_all_list.txt')
-    with open(split_train, 'w') as f_ou_split_train:
+    dir_root = osp.dirname(osp.dirname(matterport_seqs[0]))
+    split_train = osp.join(dir_root, 'splits', 'filtered_train_all_list.txt')
+    split_test = osp.join(dir_root, 'splits', 'filtered_test_all_list.txt')
+    with open(split_train, 'w') as f_ou_split_train, open(split_test, 'w') as f_ou_split_test:
         for idx_seq, item_seq in enumerate(matterport_seqs):
+            if '/train_val_test/' in item_seq:
+                is_train = True
+            else:
+                is_train = False
             print(f'  -> {idx_seq:2d} : {item_seq}')
 
             pose_dir = osp.join(item_seq, 'pose')
@@ -161,13 +167,17 @@ def sequence_filter():
                                 subprocess.call(['cp', osp.join(item_seq, 'cam_left', f'{idx_name}.jpg'), osp.join(dir_cam_left, f'{idx_name}.jpg')])
                                 subprocess.call(['cp', osp.join(item_seq, 'depth', f'{idx_name}.png'), osp.join(dir_depth, f'{idx_name}.png')])
                                 subprocess.call(['cp', osp.join(item_seq, 'pose', f'{idx_name}.txt'), osp.join(dir_pose, f'{idx_name}.txt')])
-                                f_ou_split_train.write(f'{tags[-4]}/{tags[-3]}/{tags[-2]}/{tags[-1]}/cam_left {idx_name}.jpg\n')
+                                if is_train:
+                                    f_ou_split_train.write(f'{tags[-4]}/{tags[-3]}/{tags[-2]}/{tags[-1]}/cam_left {idx_name}.jpg\n')
+                                else:
+                                    f_ou_split_test.write(f'{tags[-4]}/{tags[-3]}/{tags[-2]}/{tags[-1]}/cam_left {idx_name}.jpg\n')
 
                         names_sub_seq.clear()
                         names_sub_seq.append(str_name)
                         sub_seq += 1
                 # // for i in range(n_frames):
-            seq_to_video(item_seq)
+            if enable_gen_video:
+                seq_to_video(item_seq)
             # break
         # // for idx_seq, item_seq in enumerate(matterport_seqs):
 
@@ -255,32 +265,6 @@ if __name__ == '__main__':
     time_beg_matterport_filter = time.time()
 
     sequence_filter()
-    # for idx, i in enumerate(range(10, 0, -1)):
-    #    print(f' [{idx:4d}] -> {i}')
-
-    '''
-    T05 = np.array([
-                [-1.,  0.,  0.,  0.],
-                [ 0.,  0.,  1.,  0.],
-                [ 0.,  1.,  0.,  0.],
-                [ 0.,  0.,  0.,  1.]], dtype=np.float)
-
-    xyz = matrix_to_euler_angles(torch.from_numpy(T05[:3, :3]), 'XYZ')
-    xyz_degree = xyz.detach() * 180.0 / np.math.pi
-    d_rx, d_ry, d_rz = xyz_degree[:]
-    print(f'  d_rx: {d_rx}')
-    print(f'  d_ry: {d_ry}')
-    print(f'  d_rz: {d_rz}')
-    '''
-
-    '''
-    seq = re.compile('seq_[\d]+\.txt')
-    path_dir = '/home/sigma/slam/matterport0614/test/matterport014_000_0516/filtered_split'
-    for item in os.listdir(path_dir):
-        m = seq.match(item)
-        if m is not None:
-            print(f'{item} {m} {m.group()}')
-    '''
 
     time_end_matterport_filter = time.time()
     print0(pcolor(f'matterport_filter.py elapsed {time_end_matterport_filter - time_beg_matterport_filter:.6f} seconds.', 'red'))

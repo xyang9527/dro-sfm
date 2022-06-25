@@ -47,6 +47,8 @@ class BaseTrainer:
             self.checkpoint.check_and_save(module, output)
 
     def train_progress_bar(self, dataloader, config, ncols=120):
+        logging.info(f'  unit_scale: {self.world_size}x{config.batch_size}={self.world_size * config.batch_size}')
+        logging.info(f'  total:      {len(dataloader)} ({len(dataloader) * self.world_size * config.batch_size})')
         return tqdm(enumerate(dataloader, 0),
                     unit=' images', unit_scale=self.world_size * config.batch_size,
                     total=len(dataloader), smoothing=0,
