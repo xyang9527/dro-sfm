@@ -618,6 +618,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
                     for idx_t in range(3):
                         pose21[idx_t, 3] = -pose21[idx_t, 3]
                         pose23[idx_t, 3] = -pose23[idx_t, 3]
+                        pass
 
         if use_depth_gt:
             # https://www.tutorialkart.com/opencv/python/opencv-python-resize-image/

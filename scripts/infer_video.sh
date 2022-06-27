@@ -5,7 +5,7 @@ time_sh_start=$(date +"%s.%N")
 : '
 /home/sigma/slam/dro-sfm-xyang9527/results/model
 '
-model_matterport=/home/sigma/slam/dro-sfm-xyang9527/results/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0614-val_all_list-groundtruth-abs_rel_pp_gt=0.150.ckpt
+model_matterport=/home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=77_matterport0614-filtered_test_all_list-groundtruth-abs_rel_pp_gt=0.218.ckpt
 
 : '
 /mnt/datasets_open/dro-sfm_data/models/
@@ -63,7 +63,7 @@ is_scannet=false
 use_scannet_model=false
 
 var_sample_rate=3
-var_max_frames=40
+var_max_frames=400
 # ===== </config > =====
 
 var_archive_video=/home/sigma/slam/demo

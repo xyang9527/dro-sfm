@@ -34,7 +34,13 @@ def setup_log(log_name):
         ' >>> %(message)s'
     )
 
-    get_log_file = osp.join(osp.dirname(__file__), f'../../logs/{log_name}')
+    dt_now = datetime.datetime.now()
+    minute_ex = (dt_now.minute // 10) * 10
+    dt_text = f'{dt_now.year:04d}{dt_now.month:02d}{dt_now.day:02d}_{dt_now.hour:02d}-{minute_ex:02d}'
+    name_tag = osp.splitext(log_name)
+    new_log_name = f'{name_tag[0]}_{dt_text}{name_tag[1]}'
+
+    get_log_file = osp.join(osp.dirname(__file__), f'../../logs/{new_log_name}')
     if not osp.exists(osp.dirname(get_log_file)):
         os.makedirs(osp.dirname(get_log_file))
 
@@ -44,15 +50,18 @@ def setup_log(log_name):
         level=logging.INFO,
         format=medium_format_new
     )
-    logging.info('@{} created at {}'.format(
-        get_log_file,
-        datetime.datetime.now())
-    )
+
+    logging.info('@{} created at {}'.format(get_log_file, dt_now))
+    print('@{} created at {}'.format(get_log_file, dt_now))
 
     repo, hexsha, is_dirty = git_info()
     logging.info(f'  {type(repo)}')
     logging.info(f'  repo.head.commit.hexsha: {hexsha}')
     logging.info(f'  is_dirty():              {is_dirty}')
+
+    print(f'  {type(repo)}')
+    print(f'  repo.head.commit.hexsha: {hexsha}')
+    print(f'  is_dirty():              {is_dirty}')
 
     if is_dirty:
         git_diff = subprocess.check_output(['git', 'diff'])
