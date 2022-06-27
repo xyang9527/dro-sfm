@@ -608,7 +608,7 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             #    pose23[idx_t, 3] = pose23[idx_t, 3]
 
         else:
-            is_matterport_model=True
+            is_matterport_model=False
             if is_matterport_model:
                 case_inv = False
                 if case_inv:
