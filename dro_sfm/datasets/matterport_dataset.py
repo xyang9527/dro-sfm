@@ -141,10 +141,10 @@ class MatterportDataset(Dataset):
         logging.info(f'    len(self.file_tree.keys()): {len(self.file_tree.keys()):6d}')
 
         # downsample by 5
-        '''
+        # '''
         for k in self.file_tree:
             self.file_tree[k] = self.file_tree[k][::5]
-        '''
+        # '''
 
         # todo: cut sequences: percent of invalid depth / large camera movement between consecutive frames
 
