@@ -4,12 +4,19 @@
 import re
 from collections import defaultdict
 import os
+import os.path as osp
+import sys
+lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
+sys.path.append(lib_dir)
 import logging
 
 from torch.utils.data import Dataset
 import numpy as np
 from dro_sfm.utils.image import load_image
 import IPython, cv2
+
+from dro_sfm.datasets.depth_filter import matrix_to_6d_pose, pose_in_threshold_5, pose_in_threshold_1
+
 ########################################################################################################################
 #### FUNCTIONS
 ########################################################################################################################
@@ -62,6 +69,62 @@ def read_png_depth(file):
 def collate_fn(batch):
     batch = list(filter(lambda x: x is not None, batch))
     return torch.utils.data.dataloader.default_collate(batch)
+
+def adaptive_downsample(root_dir, data_dir, image_names, step):
+    logging.warning(f'adaptive_downsample({root_dir}, {data_dir}, {len(image_names)}, {step})')
+    n_frames = len(image_names)
+    if n_frames <= step:
+        return image_names
+
+    # print(f'adaptive_downsample({root_dir}, {data_dir}, {len(image_names)}, {step})')
+
+    arr_pose = []
+    for item in image_names:
+        jpg_name = osp.join(root_dir, data_dir, item)
+        txt_name = jpg_name.replace('cam_left', 'pose').replace('jpg', 'txt')
+        if not osp.exists(jpg_name):
+            print(f'path not exist {jpg_name}')
+            raise ValueError
+        arr_pose.append(np.genfromtxt(txt_name))
+
+    if len(image_names) != len(arr_pose):
+        raise ValueError
+
+    selected_image_names = []
+    selected_idx = []
+    curr_idx = 0
+    while curr_idx < n_frames - step:
+        selected_image_names.append(image_names[curr_idx])
+        selected_idx.append(curr_idx)
+
+        pose_6d = matrix_to_6d_pose(arr_pose[curr_idx], arr_pose[curr_idx + 1])
+        if not pose_in_threshold_1(pose_6d):
+            raise ValueError
+
+        next_idx = curr_idx + 1
+        all_in_thr = True
+        for offset in range(step):
+            next_idx = curr_idx + 1 + offset
+            pose_6d = matrix_to_6d_pose(arr_pose[curr_idx], arr_pose[next_idx])
+            if not pose_in_threshold_5(pose_6d):
+                # print(f'break at: {curr_idx} {next_idx}')
+                curr_idx += offset
+                all_in_thr = False
+                break
+        if all_in_thr:
+            curr_idx += step
+
+    # print(f'image_names:          {len(image_names)}')
+    # print(f'selected_image_names: {len(selected_image_names)}')
+    # print(f'selected_idx:         {len(selected_idx)}')
+    # print(f'                      {selected_idx}')
+    if len(selected_image_names) != len(selected_idx):
+        raise ValueError
+    n_selected = len(selected_image_names)
+    for i in range(1, n_selected):
+        if selected_idx[i] - selected_idx[i-1] > step:
+            raise ValueError
+    return selected_image_names
 
 ########################################################################################################################
 #### DATASET
@@ -140,10 +203,17 @@ class MatterportDataset(Dataset):
         logging.info(f'    len(self.files):            {len(self.files):6d}')
         logging.info(f'    len(self.file_tree.keys()): {len(self.file_tree.keys()):6d}')
 
+        use_adaptive_downsample = True
+
         # downsample by 5
         # '''
         for k in self.file_tree:
-            self.file_tree[k] = self.file_tree[k][::5]
+            step = 5
+            if use_adaptive_downsample:
+                self.file_tree[k] = adaptive_downsample(self.root_dir, k, self.file_tree[k], step)
+            else:
+                self.file_tree[k] = self.file_tree[k][::5]
+            # exit(-1)
         # '''
 
         # todo: cut sequences: percent of invalid depth / large camera movement between consecutive frames
@@ -162,6 +232,7 @@ class MatterportDataset(Dataset):
         logging.info(f'    len(self.files):            {len(self.files):6d}')
         logging.info(f'    len(self.file_tree.keys()): {len(self.file_tree.keys()):6d}')
 
+        # exit(-1)
         self.data_transform = data_transform
 
     def __len__(self):

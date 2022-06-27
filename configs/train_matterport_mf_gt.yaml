@@ -36,8 +36,8 @@ datasets:
     train:
         batch_size: 12
         dataset: ['Matterport']
-        path: ['/home/sigma/slam/matterport0516_ex']
-        split: ['splits/train_all_list.txt']
+        path: ['/home/sigma/slam/matterport0614']
+        split: ['splits/filtered_train_all_list.txt']
         depth_type: ['groundtruth']
         repeat: [1]
         forward_context: 1
@@ -45,15 +45,15 @@ datasets:
         num_workers: 32
     validation:
         dataset: ['MatterportTest']
-        path: ['/home/sigma/slam/matterport0516_ex']
-        split: ['splits/val_all_list.txt']
+        path: ['/home/sigma/slam/matterport0614']
+        split: ['splits/filtered_test_all_list.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0
     test:
         dataset: ['MatterportTest']
-        path: ['/home/sigma/slam/matterport0516_ex']
-        split: ['splits/test_all_list.txt']
+        path: ['/home/sigma/slam/matterport0614']
+        split: ['splits/filtered_test_all_list.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0

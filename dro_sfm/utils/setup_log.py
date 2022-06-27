@@ -40,6 +40,8 @@ def setup_log(log_name):
     name_tag = osp.splitext(log_name)
     new_log_name = f'{name_tag[0]}_{dt_text}{name_tag[1]}'
 
+    new_log_name = log_name
+
     get_log_file = osp.join(osp.dirname(__file__), f'../../logs/{new_log_name}')
     if not osp.exists(osp.dirname(get_log_file)):
         os.makedirs(osp.dirname(get_log_file))

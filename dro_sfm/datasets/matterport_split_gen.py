@@ -130,12 +130,12 @@ def generate_split():
         subdirs_train_val_test = [
             "train_val_test/matterport005_000_0516", # 4199
             "train_val_test/matterport005_001_0516", # 5500
-            "train_val_test/matterport014_000_0516", # 3624
-            "train_val_test/matterport014_001_0516", # 7787
+            "train_val_test/matterport010_000_0516", # 4186
+            "train_val_test/matterport010_001_0516", # 3452
         ]
         subdirs_test = [
-            "test/matterport010_000_0516", # 4186
-            "test/matterport010_001_0516", # 3452
+            "test/matterport014_000_0516", # 3624
+            "test/matterport014_001_0516", # 7787
         ]
 
     T05 = np.array([[ 0.,  0., -1.,  0.],
@@ -169,6 +169,7 @@ def generate_split():
 
         if not osp.exists(cam_pose_file):
             logging.warning(f'file not exist: {cam_pose_file}')
+            print(f'file not exist: {cam_pose_file}')
             continue
 
         pose_dir = osp.join(dir_root, item, 'pose')
