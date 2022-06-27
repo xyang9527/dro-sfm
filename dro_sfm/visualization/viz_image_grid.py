@@ -1,6 +1,8 @@
 # -*- coding=utf-8 -*-
 
 import logging
+import os
+import os.path as osp
 
 import numpy as np
 import cv2
@@ -404,3 +406,101 @@ class VizImageGrid:
                         (pos_text_col_min + box_col, pos_text_row_min),
                         self.font_face_subcaption, self.font_scale_subcaption,
                         color_value, self.thickness_subcaption)
+
+class ScaleTrjectory:
+    def __init__(self, traj_gt, traj_pred):
+        self.traj_gt = traj_gt
+        self.traj_pred = traj_pred
+
+        self.pos_gt = self.load_trajectory(self.traj_gt)
+        self.pos_pred = self.load_trajectory(self.traj_pred)
+
+        print(f'{len(self.pos_gt)} points in {self.traj_gt}')
+        print(f'{len(self.pos_pred)} points in {self.traj_pred}')
+
+        if self.pos_gt.shape != self.pos_pred.shape:
+            raise ValueError
+
+        self.bbox_based_scale()
+        self.length_based_scale()
+
+    @staticmethod
+    def load_trajectory(filename):
+        coord = []
+        with open(filename, 'r') as f_in:
+            text = f_in.readlines()
+        for line in text:
+            line = line.strip()
+            if len(line) < 2:
+                continue
+            if line[0] == 'v':
+                _, x, y, z = line.split(' ')
+                coord.append([np.float(x), np.float(y), np.float(z)])
+        return np.array(coord)
+
+    def bbox_based_scale(self):
+        pos_max = np.zeros((3, 2), dtype=np.float)
+        pos_min = np.zeros((3, 2), dtype=np.float)
+        data = [self.pos_gt, self.pos_pred]
+        for i in range(3):
+            for j in range(2):
+                pos_max[i, j] = np.amax(data[j][:, i])
+                pos_min[i, j] = np.amin(data[j][:, i])
+        bbox = pos_max - pos_min
+        print(f'gt_bbox:   {bbox[:, 0]}')
+        print(f'pred_bbox: {bbox[:, 1]}')
+        scale_gt = np.linalg.norm(bbox[:, 0])
+        scale_pred = np.linalg.norm(bbox[:, 1])
+        print(f'scale_gt:   {scale_gt:.3f}')
+        print(f'scale_pred: {scale_pred:.3f}')
+
+        scale_rel = scale_gt / scale_pred
+        self.save_scaled_traj(scale_rel, 'bbox_based')
+
+    def save_scaled_traj(self, scale_factor, name_prefix):
+        save_dir = osp.join(osp.dirname(self.traj_pred), 'scaled-pose')
+        if not osp.exists(save_dir):
+            os.makedirs(save_dir)
+
+        scaled_pos_pred = self.pos_pred * scale_factor
+        basename = osp.basename(self.traj_pred)
+        save_name = osp.join(save_dir, f'{name_prefix}_{basename}')
+        with open(save_name, 'w') as f_ou:
+            n_vert = scaled_pos_pred.shape[0]
+            for i in range(n_vert):
+                v = scaled_pos_pred[i, :]
+                f_ou.write(f'v {v[0]} {v[1]} {v[2]}\n')
+            for i in range(1, n_vert-1, 2):
+                f_ou.write(f'f {i} {i+1} {i+2}\n')
+
+    def length_based_scale(self):
+        n_vert = self.pos_pred.shape[0]
+        total_len_gt = 0.0
+        total_len_pred = 0.0
+        for i in range(1, n_vert):
+            total_len_gt += np.linalg.norm(self.pos_gt[i, :] - self.pos_gt[i-1, :])
+            total_len_pred += np.linalg.norm(self.pos_pred[i, :] - self.pos_pred[i-1, :])
+        print(f'total_len_gt:   {total_len_gt}')
+        print(f'total_len_pred: {total_len_pred}')
+        scale_rel = total_len_gt / total_len_pred
+        self.save_scaled_traj(scale_rel, 'length_based')
+        pass
+
+class VisTrajectory:
+    '''
+    https://matplotlib.org/2.0.2/mpl_toolkits/mplot3d/tutorial.html
+    '''
+    def __init__(self):
+        pass
+
+
+if __name__ == '__main__':
+    np.set_printoptions(precision=6, suppress=True)
+
+    root_dir = '/home/sigma/slam/matterport0614/train_val_test/matterport010_001_0516/infer_video/indoor_scannet.ckpt_sample_rate-3_max_frames_450'
+    file_gt = 'depths_vis_depth-GT_pose-GT_pose.obj'
+    file_pred = 'depths_vis_depth-GT_pose-pred_pose.obj'
+    scale_traj = ScaleTrjectory(osp.join(root_dir, file_gt), osp.join(root_dir, file_pred))
+    pass
+
+# End of File
