@@ -7,6 +7,16 @@ import os.path as osp
 import numpy as np
 import cv2
 
+"""
+References
+----------
+class 'matplotlib.axes._subplots.Axes3DSubplot'
+"""
+
+from mpl_toolkits.mplot3d import Axes3D  # implicit used
+import matplotlib
+import matplotlib.pyplot as plt
+
 
 class Colors:
     def __init__(self):
@@ -484,15 +494,67 @@ class ScaleTrjectory:
         print(f'total_len_pred: {total_len_pred}')
         scale_rel = total_len_gt / total_len_pred
         self.save_scaled_traj(scale_rel, 'length_based')
+
+        viz = VisTrajectory3D('length_based')
+        viz.draw_lines(self.pos_gt[:, 0], self.pos_gt[:, 1], self.pos_gt[:, 2])
+        viz.show()
         pass
 
-class VisTrajectory:
+class VisTrajectory3D:
     '''
     https://matplotlib.org/2.0.2/mpl_toolkits/mplot3d/tutorial.html
     '''
-    def __init__(self):
-        pass
+    def __init__(self, win_name='VizAxes3D'):
+        self.main_fig = plt.figure(win_name, figsize=(16, 8))
+        plt.clf()
+        elev = -40
+        azim = -80
+        self.ax = self.main_fig.add_subplot(1, 2, 1, projection='3d',
+                                            elev=elev, azim=azim)
 
+    def draw_lines(self, x_arr, y_arr, z_arr):
+        '''
+        n_line = len(x_arr)
+        for idx in range(n_line):
+            idx_beg = idx * 2
+            idx_end = idx_beg + 2
+            self.ax.plot(x_arr[idx_beg:idx_end], y_arr[idx_beg:idx_end],
+                         z_arr[idx_beg:idx_end])
+        '''
+        self.ax.set_zticks(np.arange(-3.0, 3.0, step=1.0))
+        self.ax.set_zbound(-3.0, 3.0)
+
+        self.ax.plot(x_arr, y_arr, z_arr, color='yellow', label='GroundTruth')
+        print(f'self.ax: {type(self.ax)}')
+        print(f'{dir(self.ax)}')
+
+        self.ax.set_xlabel('$X$', fontsize=20, color='red')
+        self.ax.set_ylabel('$Y$', fontsize=20, color='green')
+        self.ax.set_zlabel('$Z$', fontsize=20, color='blue')
+        self.ax.set_zlim(-3.0, 3.0)
+
+        self.ax.legend()
+
+    def draw_verts(self, cloud):
+        self.ax.scatter(cloud[:, 0], cloud[:, 1], cloud[:, 2])
+
+    @staticmethod
+    def show():
+        def move_figure(f, x, y):
+            """Move figure's upper left corner to pixel (x, y)"""
+            backend = matplotlib.get_backend()
+            if backend == 'TkAgg':
+                f.canvas.manager.window.wm_geometry("+%d+%d" % (x, y))
+            elif backend == 'WXAgg':
+                f.canvas.manager.window.SetPosition((x, y))
+            else:
+                # This works for QT and GTK
+                # You can also use window.setGeometry
+                f.canvas.manager.window.move(x, y)
+
+        thismanager = plt.get_current_fig_manager()
+        move_figure(thismanager, 1920, 0)
+        plt.show()
 
 if __name__ == '__main__':
     np.set_printoptions(precision=6, suppress=True)
