@@ -6,6 +6,7 @@ import os.path as osp
 
 import numpy as np
 import cv2
+import subprocess
 
 """
 References
@@ -495,12 +496,14 @@ class ScaleTrjectory:
         scale_rel = total_len_gt / total_len_pred
         self.save_scaled_traj(scale_rel, 'length_based')
 
-        viz3d = VisTrajectory3D('length_based')
-        viz3d.draw_lines(self.pos_gt[:, 0], self.pos_gt[:, 1], self.pos_gt[:, 2], label='GroundTruth', color='yellow')
-        viz3d.draw_lines(self.pos_pred[:, 0] * scale_rel, self.pos_pred[:, 1] * scale_rel, self.pos_pred[:, 2] * scale_rel, label='pred', color='cyan')
-        viz3d.show()
+        use_viz_3d = False
+        if use_viz_3d:
+            viz3d = VisTrajectory3D('length based scale')
+            viz3d.draw_lines(self.pos_gt[:, 0], self.pos_gt[:, 1], self.pos_gt[:, 2], label='GroundTruth', color='yellow')
+            viz3d.draw_lines(self.pos_pred[:, 0] * scale_rel, self.pos_pred[:, 1] * scale_rel, self.pos_pred[:, 2] * scale_rel, label='pred', color='cyan')
+            viz3d.show()
 
-        viz2d = VizTrajectory2D('legend_based')
+        viz2d = VizTrajectory2D('length based scale')
         viz2d.draw_lines(self.pos_gt[:, 0], self.pos_gt[:, 1], self.pos_gt[:, 2], label='GroundTruth', color='red')
         viz2d.draw_lines(self.pos_pred[:, 0] * scale_rel, self.pos_pred[:, 1] * scale_rel, self.pos_pred[:, 2] * scale_rel, label='pred', color='cyan')
         viz2d.show()
@@ -519,6 +522,16 @@ class VisTrajectory3D:
                                             elev=elev, azim=azim)
         self.ax2 = self.main_fig.add_subplot(1, 2, 2, projection='3d',
                                             elev=elev, azim=azim)
+        self.query_api()
+
+    def query_api(self):
+        print(f'\ntype(self.ax): {type(self.ax)}')
+
+        print(f'\n\ndir(self.ax):')
+        api_dir = dir(self.ax)
+        for idx, item in enumerate(api_dir):
+            print(f'[{idx:4d}] {item}')
+        print(f'\n\n')
 
     def draw_lines(self, x_arr, y_arr, z_arr, label, color):
         self.ax.set_zticks(np.arange(-3.0, 3.0, step=1.0))
@@ -561,16 +574,71 @@ class VisTrajectory3D:
 
 class VizTrajectory2D:
     def __init__(self, win_name='VizTrajectory2D'):
-        plt.figure(win_name, figsize=(16, 8), dpi=80)
-        plt.clf()
+        self.bbox_min = [0] * 3
+        self.bbox_max = [0] * 3
+        self.dim = [0] * 3
+        self.dim_xyz = 0
+        self.bbox_scale = 1.5
+
+        # plt.figure(win_name, figsize=(16, 8), dpi=80)
+        # plt.clf()
+        # fig, (xoy, yoz, xoz) = plt.subplots(1, 3, figsize=(16, 8), dpi=80, constrained_layout=True)
+        fig, axs = plt.subplots(1, 3, figsize=(20, 12), dpi=80, constrained_layout=False)
+        self.main_fig = fig
+        self.subfig_xoy = axs[0]
+        self.subfig_yoz = axs[1]
+        self.subfig_xoz = axs[2]
+
+        self.main_fig.suptitle(win_name, fontsize=35, color='cyan')
+        # self.query_api(self.main_fig)
+
+    def query_api(self, obj):
+        print(f'\ntype(obj): {type(obj)}')
+
+        print(f'\n\ndir(obj):')
+        api_dir = dir(obj)
+        for idx, item in enumerate(api_dir):
+            print(f'[{idx:4d}] {item}')
+        print(f'\n\n')
+
+    def update_bbox(self, x, y, z):
+        xyz = [x, y, z]
+        for i in range(3):
+            v_min, v_max = min(xyz[i]), max(xyz[i])
+            if self.bbox_min[i] > v_min:
+                self.bbox_min[i] = v_min
+            if self.bbox_max[i] < v_max:
+                self.bbox_max[i] = v_max
+
+            if self.dim[i] < np.fabs(v_min):
+                self.dim[i] = np.fabs(v_min)
+            if self.dim[i] < np.fabs(v_max):
+                self.dim[i] = np.fabs(v_max)
+            if self.dim_xyz < self.dim[i]:
+                self.dim_xyz = self.dim[i]
+
+        print(f'x: {min(x)} {max(x)}')
+        print(f'y: {min(y)} {max(y)}')
+        print(f'z: {min(z)} {max(z)}')
+        print(f'bbox-X: {self.bbox_min[0]} {self.bbox_max[0]}')
+        print(f'bbox-Y: {self.bbox_min[1]} {self.bbox_max[1]}')
+        print(f'bbox-Z: {self.bbox_min[2]} {self.bbox_max[2]}')
 
     def draw_lines(self, x_arr, y_arr, z_arr, label, color):
+        self.update_bbox(x_arr, y_arr, z_arr)
+
+        '''
         # xoy
         plt.subplot(1, 3, 1)
         plt.plot(x_arr, y_arr, label=label, color=color)
-        plt.xlabel('x', fontsize=18, color='red')
+
+        plt.xlabel('X', fontsize=18, color='red')
+        plt.ylabel('Y', fontsize=18, color='green')
+
+        plt.xlim(self.bbox_min[0] * self.bbox_scale, self.bbox_max[0] * self.bbox_scale)
+        plt.ylim(self.bbox_min[1] * self.bbox_scale, self.bbox_max[1] * self.bbox_scale)
         plt.legend(loc='upper left')
-        # plt.ylim()
+        plt.title('XOY Projeciton', fontsize=25, color='red')
 
         # yoz
         plt.subplot(1, 3, 2)
@@ -583,9 +651,43 @@ class VizTrajectory2D:
         plt.plot(x_arr, z_arr, label=label, color=color)
         plt.legend(loc='upper left')
         # plt.ylim()
+        '''
+        # xoy
+        self.subfig_xoy.plot(x_arr, y_arr, label=label, color=color)
+
+        self.subfig_xoy.set_xlabel('X', fontsize=18, color='red')
+        self.subfig_xoy.set_ylabel('Y', fontsize=18, color='green')
+
+        self.subfig_xoy.set_xlim(-self.dim[0] * self.bbox_scale, self.dim[0] * self.bbox_scale)
+        self.subfig_xoy.set_ylim(-self.dim[1] * self.bbox_scale, self.dim[1] * self.bbox_scale)
+        self.subfig_xoy.legend(loc='upper left')
+        self.subfig_xoy.set_title('XOY Projeciton', fontsize=25, color='blue')
+
+        # yoz
+        self.subfig_yoz.plot(y_arr, z_arr, label=label, color=color)
+
+        self.subfig_yoz.set_xlabel('Y', fontsize=18, color='green')
+        self.subfig_yoz.set_ylabel('Z', fontsize=18, color='blue')
+
+        self.subfig_yoz.set_xlim(-self.dim[1] * self.bbox_scale, self.dim[1] * self.bbox_scale)
+        self.subfig_yoz.set_ylim(-self.dim[2] * self.bbox_scale, self.dim[2] * self.bbox_scale)
+        self.subfig_yoz.legend(loc='upper left')
+        self.subfig_yoz.set_title('YOZ Projeciton', fontsize=25, color='red')
+
+        # xoz
+        self.subfig_xoz.plot(x_arr, z_arr, label=label, color=color)
+
+        self.subfig_xoz.set_xlabel('X', fontsize=18, color='red')
+        self.subfig_xoz.set_ylabel('Z', fontsize=18, color='blue')
+
+        self.subfig_xoz.set_xlim(-self.dim[0] * self.bbox_scale, self.dim[0] * self.bbox_scale)
+        self.subfig_xoz.set_ylim(-self.dim[2] * self.bbox_scale, self.dim[2] * self.bbox_scale)
+        self.subfig_xoz.legend(loc='upper left')
+        self.subfig_xoz.set_title('XOZ Projeciton', fontsize=25, color='green')
 
     @staticmethod
     def show():
+        # plt.savefig(fig_path, dpi=100)
         plt.show()
 
 
