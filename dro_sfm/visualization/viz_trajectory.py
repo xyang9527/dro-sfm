@@ -186,13 +186,15 @@ class VizTraj2D:
         self.bbox_max = [0] * 3
         self.dim = [0] * 3
         self.dim_xyz = 0
-        self.bbox_scale = 1.5
 
-        fig, axs = plt.subplots(1, 3, figsize=(20, 12), dpi=80, constrained_layout=False)
+        fig, axs = plt.subplots(2, 3, figsize=(20, 12), dpi=80, constrained_layout=False)
         self.main_fig = fig
-        self.subfig_xoy = axs[0]
-        self.subfig_yoz = axs[1]
-        self.subfig_xoz = axs[2]
+        self.subfig_xoy = axs[0, 0]
+        self.subfig_yoz = axs[0, 1]
+        self.subfig_xoz = axs[0, 2]
+        self.subfig_xoy_bottom = axs[1, 0]
+        self.subfig_yoz_bottom = axs[1, 1]
+        self.subfig_xoz_bottom = axs[1, 2]
 
         self.main_fig.suptitle(win_name, fontsize=35, color='cyan')
 
@@ -375,15 +377,15 @@ if __name__ == '__main__':
     datasets = [
         # 'matterport0614/test/matterport014_000_0516',
         # 'matterport0614/test/matterport014_001_0516',
-        # 'matterport0614/train_val_test/matterport005_000_0516',
+        # 'matterport0614/train_val_test/matterport005_000_0516',  # only good for scannet
         # 'matterport0614/train_val_test/matterport005_001_0516',
-        # 'matterport0614/train_val_test/matterport010_000_0516',
-        'matterport0614/train_val_test/matterport010_001_0516',
+        'matterport0614/train_val_test/matterport010_000_0516',  # good for scannet and matterport (epoch=201)
+        # 'matterport0614/train_val_test/matterport010_001_0516',  # bad for matterport (epoch=201 -> sudden jump)
         ]
     scannet_pred = 'indoor_scannet.ckpt_sample_rate-3_max_frames_450'
     matterport_pred = [
-        # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.069.ckpt_sample_rate-3_max_frames_450',
-        # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=173_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt_sample_rate-3_max_frames_450',
+        # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.069.ckpt_sample_rate-3_max_frames_450',  # bad
+        # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=173_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt_sample_rate-3_max_frames_450',  # bad
         'SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450',
         ]
 
