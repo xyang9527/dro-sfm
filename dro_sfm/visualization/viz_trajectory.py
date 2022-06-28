@@ -182,16 +182,16 @@ class VizTraj3D:
 
 class VizTraj2D:
     def __init__(self, win_name='VizTraj2D'):
-        self.bbox_min = [0] * 3
-        self.bbox_max = [0] * 3
-        self.dim = [0] * 3
-        self.dim_xyz = 0
+        self.bbox_min = [0.] * 3
+        self.bbox_max = [0.] * 3
+        self.dim = [0.] * 3
+        self.dim_xyz = 0.
 
         fig, axs = plt.subplots(2, 3, figsize=(20, 12), dpi=80, constrained_layout=False)
         self.main_fig = fig
-        self.subfig_xoy = axs[0, 0]
-        self.subfig_yoz = axs[0, 1]
-        self.subfig_xoz = axs[0, 2]
+        self.subfig_xoy_top = axs[0, 0]
+        self.subfig_yoz_top = axs[0, 1]
+        self.subfig_xoz_top = axs[0, 2]
         self.subfig_xoy_bottom = axs[1, 0]
         self.subfig_yoz_bottom = axs[1, 1]
         self.subfig_xoz_bottom = axs[1, 2]
@@ -217,29 +217,37 @@ class VizTraj2D:
             if self.dim_xyz < self.dim[i]:
                 self.dim_xyz = self.dim[i]
 
-    def draw_lines(self, x_arr, y_arr, z_arr, label, color):
+    def draw_lines(self, is_top, x_arr, y_arr, z_arr, label, color, sub_win_name):
         self.update_bbox(x_arr, y_arr, z_arr)
+        if is_top:
+            xoy = self.subfig_xoy_top
+            yoz = self.subfig_yoz_top
+            xoz = self.subfig_xoz_top
+        else:
+            xoy = self.subfig_xoy_bottom
+            yoz = self.subfig_yoz_bottom
+            xoz = self.subfig_xoz_bottom
 
         # xoy
-        self.subfig_xoy.plot(x_arr, y_arr, label=label, color=color)
-        self.subfig_xoy.set_xlabel('X', fontsize=18, color='red')
-        self.subfig_xoy.set_ylabel('Y', fontsize=18, color='green')
-        self.subfig_xoy.set_title('XOY Projeciton', fontsize=25, color='blue')
+        xoy.plot(x_arr, y_arr, label=label, color=color)
+        xoy.set_xlabel('X', fontsize=18, color='red')
+        xoy.set_ylabel('Y', fontsize=18, color='green')
+        xoy.set_title(f'XOY Projeciton ({sub_win_name})', fontsize=25, color='blue')
 
         # yoz
-        self.subfig_yoz.plot(y_arr, z_arr, label=label, color=color)
-        self.subfig_yoz.set_xlabel('Y', fontsize=18, color='green')
-        self.subfig_yoz.set_ylabel('Z', fontsize=18, color='blue')
-        self.subfig_yoz.set_title('YOZ Projeciton', fontsize=25, color='red')
+        yoz.plot(y_arr, z_arr, label=label, color=color)
+        yoz.set_xlabel('Y', fontsize=18, color='green')
+        yoz.set_ylabel('Z', fontsize=18, color='blue')
+        yoz.set_title(f'YOZ Projeciton ({sub_win_name})', fontsize=25, color='red')
 
         # xoz
-        self.subfig_xoz.plot(x_arr, z_arr, label=label, color=color)
-        self.subfig_xoz.set_xlabel('X', fontsize=18, color='red')
-        self.subfig_xoz.set_ylabel('Z', fontsize=18, color='blue')
-        self.subfig_xoz.set_title('XOZ Projeciton', fontsize=25, color='green')
+        xoz.plot(x_arr, z_arr, label=label, color=color)
+        xoz.set_xlabel('X', fontsize=18, color='red')
+        xoz.set_ylabel('Z', fontsize=18, color='blue')
+        xoz.set_title(f'XOZ Projeciton ({sub_win_name})', fontsize=25, color='green')
 
     def decorate(self):
-        for win in [self.subfig_xoy, self.subfig_yoz, self.subfig_xoz]:
+        for win in [self.subfig_xoy_top, self.subfig_yoz_top, self.subfig_xoz_top]:
             win.set_xlim(-self.dim_xyz, self.dim_xyz)
             win.set_ylim(-self.dim_xyz, self.dim_xyz)
             win.legend(loc='upper left')
@@ -337,7 +345,15 @@ class VizTrajectory:
         length_scales = [1.]
         length_scales.extend(self.scale_length)
 
-        # for scale_type, scales in zip(['bbox_based', 'length_based'], [bbox_scales, length_scales]):
+        # save scaled obj
+        obj_name = datasets_traj[-1].path
+
+        obj_name_tags = osp.splitext(obj_name)
+        bbox_scaled_name = f'{obj_name_tags[0]}_bbox_based_scale{obj_name_tags[1]}'
+        length_scaled_name = f'{obj_name_tags[0]}_length_based_scale{obj_name_tags[1]}'
+        write_obj(bbox_scaled_name, datasets_traj[-1].scaled_coord(bbox_scales[-1]))
+        write_obj(length_scaled_name, datasets_traj[-1].scaled_coord(length_scales[-1]))
+
         viz_3d = VizTraj3D(f'VizTraj3D: {self.name}')
         for i in range(3):
             label = datasets_traj[i].name
@@ -348,14 +364,6 @@ class VizTrajectory:
             coord_length = datasets_traj[i].scaled_coord(length_scales[i])
             viz_3d.draw_lines(False, coord_length[:, 0], coord_length[:, 1], coord_length[:, 2], label, colors[i], 'length based scale')
 
-        obj_name = datasets_traj[-1].path
-        # save scaled obj
-        obj_name_tags = osp.splitext(obj_name)
-        bbox_scaled_name = f'{obj_name_tags[0]}_bbox_based_scale{obj_name_tags[1]}'
-        length_scaled_name = f'{obj_name_tags[0]}_length_based_scale{obj_name_tags[1]}'
-        write_obj(bbox_scaled_name, datasets_traj[-1].scaled_coord(bbox_scales[-1]))
-        write_obj(length_scaled_name, datasets_traj[-1].scaled_coord(length_scales[-1]))
-
         # save figure
         save_name = obj_name.replace('.obj', '_3D.png')
         viz_3d.show(save_name)
@@ -363,9 +371,13 @@ class VizTrajectory:
 
         viz_2d = VizTraj2D(f'VizTraj2D: {self.name}')
         for i in range(3):
-            coord_bbox = datasets_traj[i].scaled_coord(bbox_scales[i])
             label = datasets_traj[i].name
-            viz_2d.draw_lines(coord_bbox[:, 0], coord_bbox[:, 1], coord_bbox[:, 2], label, colors[i])
+            coord_bbox = datasets_traj[i].scaled_coord(bbox_scales[i])
+            viz_2d.draw_lines(True, coord_bbox[:, 0], coord_bbox[:, 1], coord_bbox[:, 2], label, colors[i], 'bbox')
+
+            coord_length = datasets_traj[i].scaled_coord(length_scales[i])
+            viz_2d.draw_lines(False, coord_length[:, 0], coord_length[:, 1], coord_length[:, 2], label, colors[i], 'length')
+
         save_name = obj_name.replace('.obj', '_2D.png')
         viz_2d.show(save_name)
         viz_2d.close()
