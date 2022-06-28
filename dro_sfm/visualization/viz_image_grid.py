@@ -1,22 +1,20 @@
 # -*- coding=utf-8 -*-
 
+from collections import OrderedDict
 import logging
 import os
 import os.path as osp
+import sys
+lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
+sys.path.append(lib_dir)
 
 import numpy as np
 import cv2
-import subprocess
-
-"""
-References
-----------
-class 'matplotlib.axes._subplots.Axes3DSubplot'
-"""
 
 from mpl_toolkits.mplot3d import Axes3D  # implicit used
 import matplotlib
 import matplotlib.pyplot as plt
+from dro_sfm.visualization.viz_trajectory import VizTrajectory
 
 
 class Colors:
@@ -366,57 +364,6 @@ class VizImageGrid:
                         square_color, self.thickness_subcaption)
         return img_palette
 
-    def add_lane_matching(self, img, matching, color_key, color_value):
-        logging.warning(f'add_lane_matching( .. )')
-
-        font_title = cv2.FONT_HERSHEY_SIMPLEX
-
-        title = 'Title'
-
-        # get text size
-        retval_title, _ = cv2.getTextSize(
-            title, font_title, self.font_scale_caption,
-            self.thickness_caption)
-        _, box_row_title = retval_title
-
-        retval_text, _ = cv2.getTextSize(
-            title, self.font_face_subcaption, self.font_scale_subcaption,
-            self.thickness_subcaption)
-        _, box_row_text = retval_text
-
-        # create image and draw title text
-        pos_row = self.text_offset + box_row_title
-
-        # plot legend
-        square_gap = 15
-        pos_text_col_beg = self.text_offset
-        pos_text_row_beg = pos_row + box_row_title + square_gap * 2
-        pos_space = box_row_text + square_gap
-
-        n_map = len(list(matching.keys()))
-        key_arr = list(matching.keys())
-        key_arr.sort()
-        for idx in range(n_map):
-            idx_row = idx
-
-            # text - key
-            pos_text_col_min = int(pos_text_col_beg)
-            pos_text_row_min = int(pos_text_row_beg + pos_space * idx_row)
-            cv2.putText(img, '{} -'.format(key_arr[idx]),
-                        (pos_text_col_min, pos_text_row_min),
-                        self.font_face_subcaption, self.font_scale_subcaption,
-                        color_key, self.thickness_subcaption)
-
-            # text - value
-            retval_, _ = cv2.getTextSize(
-                '{} -'.format(key_arr[idx]),
-                self.font_face_subcaption, self.font_scale_subcaption,
-                self.thickness_subcaption)
-            box_col, _ = retval_
-            cv2.putText(img, '-> {}'.format(matching[key_arr[idx]]),
-                        (pos_text_col_min + box_col, pos_text_row_min),
-                        self.font_face_subcaption, self.font_scale_subcaption,
-                        color_value, self.thickness_subcaption)
 
 class ScaleTrjectory:
     def __init__(self, traj_gt, traj_pred):
@@ -509,9 +456,14 @@ class ScaleTrjectory:
         viz2d.show()
         pass
 
+
 class VisTrajectory3D:
     '''
     https://matplotlib.org/2.0.2/mpl_toolkits/mplot3d/tutorial.html
+
+    References
+    ----------
+    class 'matplotlib.axes._subplots.Axes3DSubplot'
     '''
     def __init__(self, win_name='VizAxes3D'):
         self.main_fig = plt.figure(win_name, figsize=(16, 8))
@@ -572,6 +524,7 @@ class VisTrajectory3D:
         move_figure(thismanager, 1920, 0)
         plt.show()
 
+
 class VizTrajectory2D:
     def __init__(self, win_name='VizTrajectory2D'):
         self.bbox_min = [0] * 3
@@ -617,16 +570,15 @@ class VizTrajectory2D:
             if self.dim_xyz < self.dim[i]:
                 self.dim_xyz = self.dim[i]
 
-        print(f'x: {min(x)} {max(x)}')
-        print(f'y: {min(y)} {max(y)}')
-        print(f'z: {min(z)} {max(z)}')
-        print(f'bbox-X: {self.bbox_min[0]} {self.bbox_max[0]}')
-        print(f'bbox-Y: {self.bbox_min[1]} {self.bbox_max[1]}')
-        print(f'bbox-Z: {self.bbox_min[2]} {self.bbox_max[2]}')
+        # print(f'x: {min(x)} {max(x)}')
+        # print(f'y: {min(y)} {max(y)}')
+        # print(f'z: {min(z)} {max(z)}')
+        # print(f'bbox-X: {self.bbox_min[0]} {self.bbox_max[0]}')
+        # print(f'bbox-Y: {self.bbox_min[1]} {self.bbox_max[1]}')
+        # print(f'bbox-Z: {self.bbox_min[2]} {self.bbox_max[2]}')
 
     def draw_lines(self, x_arr, y_arr, z_arr, label, color):
         self.update_bbox(x_arr, y_arr, z_arr)
-
         '''
         # xoy
         plt.subplot(1, 3, 1)
@@ -639,25 +591,11 @@ class VizTrajectory2D:
         plt.ylim(self.bbox_min[1] * self.bbox_scale, self.bbox_max[1] * self.bbox_scale)
         plt.legend(loc='upper left')
         plt.title('XOY Projeciton', fontsize=25, color='red')
-
-        # yoz
-        plt.subplot(1, 3, 2)
-        plt.plot(y_arr, z_arr, label=label, color=color)
-        plt.legend(loc='upper left')
-        # plt.ylim()
-
-        # xoz
-        plt.subplot(1, 3, 3)
-        plt.plot(x_arr, z_arr, label=label, color=color)
-        plt.legend(loc='upper left')
-        # plt.ylim()
         '''
         # xoy
         self.subfig_xoy.plot(x_arr, y_arr, label=label, color=color)
-
         self.subfig_xoy.set_xlabel('X', fontsize=18, color='red')
         self.subfig_xoy.set_ylabel('Y', fontsize=18, color='green')
-
         self.subfig_xoy.set_xlim(-self.dim[0] * self.bbox_scale, self.dim[0] * self.bbox_scale)
         self.subfig_xoy.set_ylim(-self.dim[1] * self.bbox_scale, self.dim[1] * self.bbox_scale)
         self.subfig_xoy.legend(loc='upper left')
@@ -665,10 +603,8 @@ class VizTrajectory2D:
 
         # yoz
         self.subfig_yoz.plot(y_arr, z_arr, label=label, color=color)
-
         self.subfig_yoz.set_xlabel('Y', fontsize=18, color='green')
         self.subfig_yoz.set_ylabel('Z', fontsize=18, color='blue')
-
         self.subfig_yoz.set_xlim(-self.dim[1] * self.bbox_scale, self.dim[1] * self.bbox_scale)
         self.subfig_yoz.set_ylim(-self.dim[2] * self.bbox_scale, self.dim[2] * self.bbox_scale)
         self.subfig_yoz.legend(loc='upper left')
@@ -676,10 +612,8 @@ class VizTrajectory2D:
 
         # xoz
         self.subfig_xoz.plot(x_arr, z_arr, label=label, color=color)
-
         self.subfig_xoz.set_xlabel('X', fontsize=18, color='red')
         self.subfig_xoz.set_ylabel('Z', fontsize=18, color='blue')
-
         self.subfig_xoz.set_xlim(-self.dim[0] * self.bbox_scale, self.dim[0] * self.bbox_scale)
         self.subfig_xoz.set_ylim(-self.dim[2] * self.bbox_scale, self.dim[2] * self.bbox_scale)
         self.subfig_xoz.legend(loc='upper left')
@@ -694,11 +628,41 @@ class VizTrajectory2D:
 
 if __name__ == '__main__':
     np.set_printoptions(precision=6, suppress=True)
+    root_dir = '/home/sigma/slam'
+    datasets = [
+        'matterport0614/test/matterport014_000_0516',
+        'matterport0614/test/matterport014_001_0516',
+        'matterport0614/train_val_test/matterport005_000_0516',
+        'matterport0614/train_val_test/matterport005_001_0516',
+        'matterport0614/train_val_test/matterport010_000_0516',
+        'matterport0614/train_val_test/matterport010_001_0516',
+        ]
+    scannet_pred = 'indoor_scannet.ckpt_sample_rate-3_max_frames_450'
+    matterport_pred = [
+        'SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.069.ckpt_sample_rate-3_max_frames_450',
+        'SupModelMF_DepthPoseNet_it12-h-out_epoch=173_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt_sample_rate-3_max_frames_450',
+        'SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450',
+        ]
 
+    name_gt = 'depths_vis_depth-GT_pose-GT_pose.obj'
+    name_pred = 'depths_vis_depth-pred_pose-pred_pose.obj'
+    for item_ds in datasets:
+        obj_gt = osp.join(root_dir, item_ds, 'infer_video', scannet_pred, name_gt)
+        obj_scannet_pred = osp.join(root_dir, item_ds, 'infer_video', scannet_pred, name_pred)
+        for item_matterport in matterport_pred:
+            obj_matterport_pred = osp.join(root_dir, item_ds, 'infer_video', item_matterport, name_pred)
+            info = OrderedDict()
+            info['Scannet'] = obj_scannet_pred
+            info['Matterport'] = obj_matterport_pred
+            viz = VizTrajectory(item_ds, obj_gt, info)
+
+
+    '''
     root_dir = '/home/sigma/slam/matterport0614/train_val_test/matterport010_001_0516/infer_video/indoor_scannet.ckpt_sample_rate-3_max_frames_450'
     file_gt = 'depths_vis_depth-GT_pose-GT_pose.obj'
     file_pred = 'depths_vis_depth-GT_pose-pred_pose.obj'
     scale_traj = ScaleTrjectory(osp.join(root_dir, file_gt), osp.join(root_dir, file_pred))
+    '''
     pass
 
 # End of File

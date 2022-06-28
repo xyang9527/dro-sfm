@@ -1,0 +1,243 @@
+# -*- coding=utf-8 -*-
+
+from typing import Dict
+from collections import OrderedDict
+import logging
+import os
+import os.path as osp
+from unittest.loader import VALID_MODULE_NAME
+
+import numpy as np
+import cv2
+
+from mpl_toolkits.mplot3d import Axes3D  # implicit used
+import matplotlib
+import matplotlib.pyplot as plt
+
+
+def read_obj(filename):
+    if not osp.exists(filename):
+        print(f'path not exist: {filename}')
+        raise ValueError
+
+    coord = []
+    with open(filename, 'r') as f_in:
+        text = f_in.readlines()
+    for line in text:
+        line = line.strip()
+        if len(line) < 2:
+            continue
+        if line[0] == 'v':
+            _, x, y, z = line.split(' ')
+            coord.append([np.float(x), np.float(y), np.float(z)])
+    # if len(coord) <= 0:
+        # raise ValueError
+    return np.array(coord)
+
+
+class TrajectoryData:
+    def __init__(self, name, path):
+        self.name = name
+        self.path = path
+        self.coord = read_obj(path)
+
+    @property
+    def n_vert(self):
+        return self.coord.shape[0]
+
+    def coord(self):
+        return self.coord
+
+
+class VizTraj3D:
+    def __init__(self, win_name='VizTraj3D'):
+        self.main_fig = plt.figure(win_name, figsize=(16, 8))
+        plt.clf()
+        elev = -40
+        azim = -80
+        self.ax_left = self.main_fig.add_subplot(1, 2, 1, projection='3d',
+                                            elev=elev, azim=azim)
+        self.ax_right = self.main_fig.add_subplot(1, 2, 2, projection='3d',
+                                            elev=elev, azim=azim)
+
+    def draw_lines(self, x_arr, y_arr, z_arr, label, color):
+        self.ax_left.set_zticks(np.arange(-3.0, 3.0, step=1.0))
+        self.ax_left.set_zbound(-3.0, 3.0)
+
+        self.ax_left.plot(x_arr, y_arr, z_arr, color=color, label=label)
+        print(f'self.ax: {type(self.ax)}')
+        # print(f'{dir(self.ax)}')
+
+        self.ax_left.set_xlabel('$X$', fontsize=20, color='red')
+        self.ax_left.set_ylabel('$Y$', fontsize=20, color='green')
+        self.ax_left.set_zlabel('$Z$', fontsize=20, color='blue')
+        self.ax_left.set_zlim(-3.0, 3.0)
+
+        self.ax_left.legend()
+
+        self.ax_right.plot(x_arr, y_arr, z_arr, color=color, label=label)
+        self.ax_right.legend()
+
+    @staticmethod
+    def show():
+        def move_figure(f, x, y):
+            """Move figure's upper left corner to pixel (x, y)"""
+            backend = matplotlib.get_backend()
+            if backend == 'TkAgg':
+                f.canvas.manager.window.wm_geometry("+%d+%d" % (x, y))
+            elif backend == 'WXAgg':
+                f.canvas.manager.window.SetPosition((x, y))
+            else:
+                # This works for QT and GTK
+                # You can also use window.setGeometry
+                f.canvas.manager.window.move(x, y)
+
+        thismanager = plt.get_current_fig_manager()
+        move_figure(thismanager, 1920, 0)
+        plt.show()
+
+
+class VizTraj2D:
+    def __init__(self, win_name='VizTraj2D'):
+        self.bbox_min = [0] * 3
+        self.bbox_max = [0] * 3
+        self.dim = [0] * 3
+        self.dim_xyz = 0
+        self.bbox_scale = 1.5
+
+        fig, axs = plt.subplots(1, 3, figsize=(20, 12), dpi=80, constrained_layout=False)
+        self.main_fig = fig
+        self.subfig_xoy = axs[0]
+        self.subfig_yoz = axs[1]
+        self.subfig_xoz = axs[2]
+
+        self.main_fig.suptitle(win_name, fontsize=35, color='cyan')
+
+    def update_bbox(self, x, y, z):
+        xyz = [x, y, z]
+        for i in range(3):
+            v_min, v_max = min(xyz[i]), max(xyz[i])
+            if self.bbox_min[i] > v_min:
+                self.bbox_min[i] = v_min
+            if self.bbox_max[i] < v_max:
+                self.bbox_max[i] = v_max
+
+            if self.dim[i] < np.fabs(v_min):
+                self.dim[i] = np.fabs(v_min)
+            if self.dim[i] < np.fabs(v_max):
+                self.dim[i] = np.fabs(v_max)
+            if self.dim_xyz < self.dim[i]:
+                self.dim_xyz = self.dim[i]
+
+    def draw_lines(self, x_arr, y_arr, z_arr, label, color):
+        self.update_bbox(x_arr, y_arr, z_arr)
+
+        # xoy
+        self.subfig_xoy.plot(x_arr, y_arr, label=label, color=color)
+        self.subfig_xoy.set_xlabel('X', fontsize=18, color='red')
+        self.subfig_xoy.set_ylabel('Y', fontsize=18, color='green')
+        self.subfig_xoy.set_xlim(-self.dim[0] * self.bbox_scale, self.dim[0] * self.bbox_scale)
+        self.subfig_xoy.set_ylim(-self.dim[1] * self.bbox_scale, self.dim[1] * self.bbox_scale)
+        self.subfig_xoy.legend(loc='upper left')
+        self.subfig_xoy.set_title('XOY Projeciton', fontsize=25, color='blue')
+
+        # yoz
+        self.subfig_yoz.plot(y_arr, z_arr, label=label, color=color)
+        self.subfig_yoz.set_xlabel('Y', fontsize=18, color='green')
+        self.subfig_yoz.set_ylabel('Z', fontsize=18, color='blue')
+        self.subfig_yoz.set_xlim(-self.dim[1] * self.bbox_scale, self.dim[1] * self.bbox_scale)
+        self.subfig_yoz.set_ylim(-self.dim[2] * self.bbox_scale, self.dim[2] * self.bbox_scale)
+        self.subfig_yoz.legend(loc='upper left')
+        self.subfig_yoz.set_title('YOZ Projeciton', fontsize=25, color='red')
+
+        # xoz
+        self.subfig_xoz.plot(x_arr, z_arr, label=label, color=color)
+        self.subfig_xoz.set_xlabel('X', fontsize=18, color='red')
+        self.subfig_xoz.set_ylabel('Z', fontsize=18, color='blue')
+        self.subfig_xoz.set_xlim(-self.dim[0] * self.bbox_scale, self.dim[0] * self.bbox_scale)
+        self.subfig_xoz.set_ylim(-self.dim[2] * self.bbox_scale, self.dim[2] * self.bbox_scale)
+        self.subfig_xoz.legend(loc='upper left')
+        self.subfig_xoz.set_title('XOZ Projeciton', fontsize=25, color='green')
+
+    @staticmethod
+    def show():
+        # plt.savefig(fig_path, dpi=100)
+        plt.show()
+
+
+class VizTrajectory:
+    def __init__(self, name, obj_gt, obj_info):
+        self.name = name
+        self.data_gt = TrajectoryData('GroundTruth', obj_gt)
+        self.datas_pred = []
+        for k, v in obj_info.items():
+            self.datas_pred.append(TrajectoryData(k, v))
+
+        if len(self.datas_pred) <= 0:
+            raise ValueError
+
+        self.scale_bbox = None  # bbox based scale
+        self.scale_length = None  # length based scale
+
+        self.check_data()
+        self.calc_scale()
+        self.debug()
+
+    def debug(self):
+        print(f'{self.name}:')
+        print(f'  n_vert: {self.data_gt.n_vert}')
+        n_pred = len(self.datas_pred)
+
+        assert len(self.scale_bbox) == n_pred
+        assert len(self.scale_length) == n_pred
+
+        for i in range(n_pred):
+            print(f'  {self.datas_pred[i].name:15s} {self.scale_bbox[i]:.6f} {self.scale_length[i]:.6f}')
+
+
+    def check_data(self):
+        n_vert = self.data_gt.n_vert
+        for item in self.datas_pred:
+            if n_vert != item.n_vert:
+                raise ValueError
+
+    def calc_scale(self):
+        self.calc_bbox_based_scale()
+        self.calc_length_based_scale()
+
+    def calc_bbox_based_scale(self):
+        bbox_gt = np.zeros((3, 2), dtype=np.float)
+        coord = self.data_gt.coord
+        for i in range(3):
+            bbox_gt[i, 0] = np.amax(coord[:, i])
+            bbox_gt[i, 1] = np.amin(coord[:, i])
+        dim_gt = np.linalg.norm(coord[:, 0] - coord[:, 1])
+
+        n_pred = len(self.datas_pred)
+        self.scale_bbox = [0.] * n_pred
+        for idx in range(n_pred):
+            coord = self.datas_pred[idx].coord
+            bbox_pred = np.zeros((3, 2), dtype=np.float)
+            for i in range(3):
+                bbox_pred[i, 0] = np.amax(coord[:, i])
+                bbox_pred[i, 1] = np.amin(coord[:, i])
+            dim_pred = np.linalg.norm(coord[:, 0] - coord[:, 1])
+            self.scale_bbox[idx] = dim_gt / dim_pred
+
+    def calc_length_based_scale(self):
+        n_vert = self.data_gt.n_vert
+        n_pred = len(self.datas_pred)
+        length_gt = 0.
+        lengths_pred = [0.] * n_pred
+
+        coord_gt = self.data_gt.coord
+        print(f'  coord_gt: {coord_gt.shape}')
+        for i in range(1, n_vert):
+            length_gt += np.linalg.norm(coord_gt[i, :] - coord_gt[i-1, :])
+            for j in range(n_pred):
+                lengths_pred[j] += np.linalg.norm(self.datas_pred[j].coord[i, :] - self.datas_pred[j].coord[i-1, :])
+        self.scale_length = [0.] * n_pred
+        for j in range(n_pred):
+            self.scale_length[j] = length_gt / lengths_pred[j]
+
+
