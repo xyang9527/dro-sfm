@@ -1,12 +1,8 @@
 # -*- coding=utf-8 -*-
 
-from collections import OrderedDict
 import logging
 import os
 import os.path as osp
-import sys
-lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
-sys.path.append(lib_dir)
 
 import numpy as np
 import cv2
@@ -14,7 +10,6 @@ import cv2
 from mpl_toolkits.mplot3d import Axes3D  # implicit used
 import matplotlib
 import matplotlib.pyplot as plt
-from dro_sfm.visualization.viz_trajectory import VizTrajectory
 
 
 class Colors:
@@ -625,44 +620,9 @@ class VizTrajectory2D:
         plt.show()
 
 
-
 if __name__ == '__main__':
     np.set_printoptions(precision=6, suppress=True)
-    root_dir = '/home/sigma/slam'
-    datasets = [
-        'matterport0614/test/matterport014_000_0516',
-        'matterport0614/test/matterport014_001_0516',
-        'matterport0614/train_val_test/matterport005_000_0516',
-        'matterport0614/train_val_test/matterport005_001_0516',
-        'matterport0614/train_val_test/matterport010_000_0516',
-        'matterport0614/train_val_test/matterport010_001_0516',
-        ]
-    scannet_pred = 'indoor_scannet.ckpt_sample_rate-3_max_frames_450'
-    matterport_pred = [
-        'SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.069.ckpt_sample_rate-3_max_frames_450',
-        'SupModelMF_DepthPoseNet_it12-h-out_epoch=173_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt_sample_rate-3_max_frames_450',
-        'SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450',
-        ]
-
-    name_gt = 'depths_vis_depth-GT_pose-GT_pose.obj'
-    name_pred = 'depths_vis_depth-pred_pose-pred_pose.obj'
-    for item_ds in datasets:
-        obj_gt = osp.join(root_dir, item_ds, 'infer_video', scannet_pred, name_gt)
-        obj_scannet_pred = osp.join(root_dir, item_ds, 'infer_video', scannet_pred, name_pred)
-        for item_matterport in matterport_pred:
-            obj_matterport_pred = osp.join(root_dir, item_ds, 'infer_video', item_matterport, name_pred)
-            info = OrderedDict()
-            info['Scannet'] = obj_scannet_pred
-            info['Matterport'] = obj_matterport_pred
-            viz = VizTrajectory(item_ds, obj_gt, info)
-
-
-    '''
     root_dir = '/home/sigma/slam/matterport0614/train_val_test/matterport010_001_0516/infer_video/indoor_scannet.ckpt_sample_rate-3_max_frames_450'
     file_gt = 'depths_vis_depth-GT_pose-GT_pose.obj'
     file_pred = 'depths_vis_depth-GT_pose-pred_pose.obj'
     scale_traj = ScaleTrjectory(osp.join(root_dir, file_gt), osp.join(root_dir, file_pred))
-    '''
-    pass
-
-# End of File

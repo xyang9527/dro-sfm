@@ -45,8 +45,18 @@ class TrajectoryData:
     def n_vert(self):
         return self.coord.shape[0]
 
+    def get_name(self):
+        return self.name
+
+    def get_path(self):
+        return self.path
+
+
     def coord(self):
         return self.coord
+
+    def scaled_coord(self, scale):
+        return self.coord * scale
 
 
 class VizTraj3D:
@@ -60,14 +70,14 @@ class VizTraj3D:
         self.ax_right = self.main_fig.add_subplot(1, 2, 2, projection='3d',
                                             elev=elev, azim=azim)
 
-    def draw_lines(self, x_arr, y_arr, z_arr, label, color):
+    def close(self):
+        plt.close()
+
+    def left_draw_lines(self, x_arr, y_arr, z_arr, label, color):
         self.ax_left.set_zticks(np.arange(-3.0, 3.0, step=1.0))
         self.ax_left.set_zbound(-3.0, 3.0)
 
         self.ax_left.plot(x_arr, y_arr, z_arr, color=color, label=label)
-        print(f'self.ax: {type(self.ax)}')
-        # print(f'{dir(self.ax)}')
-
         self.ax_left.set_xlabel('$X$', fontsize=20, color='red')
         self.ax_left.set_ylabel('$Y$', fontsize=20, color='green')
         self.ax_left.set_zlabel('$Z$', fontsize=20, color='blue')
@@ -75,7 +85,16 @@ class VizTraj3D:
 
         self.ax_left.legend()
 
+    def right_draw_lines(self, x_arr, y_arr, z_arr, label, color):
+        self.ax_right.set_zticks(np.arange(-3.0, 3.0, step=1.0))
+        self.ax_right.set_zbound(-3.0, 3.0)
+
         self.ax_right.plot(x_arr, y_arr, z_arr, color=color, label=label)
+        self.ax_right.set_xlabel('$X$', fontsize=20, color='red')
+        self.ax_right.set_ylabel('$Y$', fontsize=20, color='green')
+        self.ax_right.set_zlabel('$Z$', fontsize=20, color='blue')
+        self.ax_right.set_zlim(-3.0, 3.0)
+
         self.ax_right.legend()
 
     @staticmethod
@@ -112,6 +131,9 @@ class VizTraj2D:
         self.subfig_xoz = axs[2]
 
         self.main_fig.suptitle(win_name, fontsize=35, color='cyan')
+
+    def close(self):
+        plt.close()
 
     def update_bbox(self, x, y, z):
         xyz = [x, y, z]
@@ -240,4 +262,62 @@ class VizTrajectory:
         for j in range(n_pred):
             self.scale_length[j] = length_gt / lengths_pred[j]
 
+    def show(self):
+        datasets_traj = []
+        datasets_traj.append(self.data_gt)
+        datasets_traj.extend(self.datas_pred)
+        colors = ['red', 'green', 'blue']
 
+        assert len(datasets_traj) == 3
+        bbox_scales = [1.]
+        bbox_scales.extend(self.scale_bbox)
+        length_scales = [1.]
+        length_scales.extend(self.scale_length)
+        for scale_type, scales in zip(['bbox_based', 'length_based'], [bbox_scales, length_scales]):
+            viz_3d = VizTraj3D(f'VizTraj3D: ({scale_type}) {self.name}')
+            for i in range(3):
+                coord = datasets_traj[i].scaled_coord(scales[i])
+                label = datasets_traj[i].name
+                viz_3d.left_draw_lines(coord[:, 0], coord[:, 1], coord[:, 2], label, colors[i])
+            viz_3d.show()
+            viz_3d.close()
+
+            viz_2d = VizTraj2D(f'VizTraj2D: ({scale_type}) {self.name}')
+            for i in range(3):
+                coord = datasets_traj[i].scaled_coord(scales[i])
+                label = datasets_traj[i].name
+                viz_2d.draw_lines(coord[:, 0], coord[:, 1], coord[:, 2], label, colors[i])
+            viz_2d.show()
+            viz_2d.close()
+
+
+if __name__ == '__main__':
+    np.set_printoptions(precision=6, suppress=True)
+    root_dir = '/home/sigma/slam'
+    datasets = [
+        # 'matterport0614/test/matterport014_000_0516',
+        # 'matterport0614/test/matterport014_001_0516',
+        # 'matterport0614/train_val_test/matterport005_000_0516',
+        # 'matterport0614/train_val_test/matterport005_001_0516',
+        # 'matterport0614/train_val_test/matterport010_000_0516',
+        'matterport0614/train_val_test/matterport010_001_0516',
+        ]
+    scannet_pred = 'indoor_scannet.ckpt_sample_rate-3_max_frames_450'
+    matterport_pred = [
+        # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.069.ckpt_sample_rate-3_max_frames_450',
+        # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=173_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt_sample_rate-3_max_frames_450',
+        'SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450',
+        ]
+
+    name_gt = 'depths_vis_depth-GT_pose-GT_pose.obj'
+    name_pred = 'depths_vis_depth-pred_pose-pred_pose.obj'
+    for item_ds in datasets:
+        obj_gt = osp.join(root_dir, item_ds, 'infer_video', scannet_pred, name_gt)
+        obj_scannet_pred = osp.join(root_dir, item_ds, 'infer_video', scannet_pred, name_pred)
+        for item_matterport in matterport_pred:
+            obj_matterport_pred = osp.join(root_dir, item_ds, 'infer_video', item_matterport, name_pred)
+            info = OrderedDict()
+            info['Scannet'] = obj_scannet_pred
+            info['Matterport'] = obj_matterport_pred
+            viz = VizTrajectory(item_ds, obj_gt, info)
+            viz.show()
