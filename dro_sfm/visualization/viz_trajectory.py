@@ -30,9 +30,19 @@ def read_obj(filename):
         if line[0] == 'v':
             _, x, y, z = line.split(' ')
             coord.append([np.float(x), np.float(y), np.float(z)])
-    # if len(coord) <= 0:
-        # raise ValueError
+    if len(coord) <= 0:
+        raise ValueError
     return np.array(coord)
+
+
+def write_obj(filename, coord):
+    with open(filename, 'w') as f_ou:
+        n_vert = coord.shape[0]
+        for i in range(n_vert):
+            x, y, z = coord[i, :]
+            f_ou.write(f'v {x} {y} {z}\n')
+        for i in range(1, n_vert-1, 2):
+            f_ou.write(f'f {i} {i+1} {i+2}\n')
 
 
 class TrajectoryData:
@@ -148,7 +158,7 @@ class VizTraj3D:
             win.set_zlim(0, dim)
             win.legend(loc='upper left')
 
-    def show(self):
+    def show(self, save_name):
         def move_figure(f, x, y):
             """Move figure's upper left corner to pixel (x, y)"""
             backend = matplotlib.get_backend()
@@ -165,6 +175,8 @@ class VizTraj3D:
 
         thismanager = plt.get_current_fig_manager()
         move_figure(thismanager, 1920, 0)
+        print(f'saving: {save_name}')
+        plt.savefig(save_name)
         plt.show()
 
 
@@ -210,32 +222,29 @@ class VizTraj2D:
         self.subfig_xoy.plot(x_arr, y_arr, label=label, color=color)
         self.subfig_xoy.set_xlabel('X', fontsize=18, color='red')
         self.subfig_xoy.set_ylabel('Y', fontsize=18, color='green')
-        self.subfig_xoy.set_xlim(-self.dim[0] * self.bbox_scale, self.dim[0] * self.bbox_scale)
-        self.subfig_xoy.set_ylim(-self.dim[1] * self.bbox_scale, self.dim[1] * self.bbox_scale)
-        self.subfig_xoy.legend(loc='upper left')
         self.subfig_xoy.set_title('XOY Projeciton', fontsize=25, color='blue')
 
         # yoz
         self.subfig_yoz.plot(y_arr, z_arr, label=label, color=color)
         self.subfig_yoz.set_xlabel('Y', fontsize=18, color='green')
         self.subfig_yoz.set_ylabel('Z', fontsize=18, color='blue')
-        self.subfig_yoz.set_xlim(-self.dim[1] * self.bbox_scale, self.dim[1] * self.bbox_scale)
-        self.subfig_yoz.set_ylim(-self.dim[2] * self.bbox_scale, self.dim[2] * self.bbox_scale)
-        self.subfig_yoz.legend(loc='upper left')
         self.subfig_yoz.set_title('YOZ Projeciton', fontsize=25, color='red')
 
         # xoz
         self.subfig_xoz.plot(x_arr, z_arr, label=label, color=color)
         self.subfig_xoz.set_xlabel('X', fontsize=18, color='red')
         self.subfig_xoz.set_ylabel('Z', fontsize=18, color='blue')
-        self.subfig_xoz.set_xlim(-self.dim[0] * self.bbox_scale, self.dim[0] * self.bbox_scale)
-        self.subfig_xoz.set_ylim(-self.dim[2] * self.bbox_scale, self.dim[2] * self.bbox_scale)
-        self.subfig_xoz.legend(loc='upper left')
         self.subfig_xoz.set_title('XOZ Projeciton', fontsize=25, color='green')
 
-    @staticmethod
-    def show():
-        # plt.savefig(fig_path, dpi=100)
+    def decorate(self):
+        for win in [self.subfig_xoy, self.subfig_yoz, self.subfig_xoz]:
+            win.set_xlim(-self.dim_xyz, self.dim_xyz)
+            win.set_ylim(-self.dim_xyz, self.dim_xyz)
+            win.legend(loc='upper left')
+
+    def show(self, save_name):
+        self.decorate()
+        plt.savefig(save_name, dpi=100)
         plt.show()
 
 
@@ -337,7 +346,17 @@ class VizTrajectory:
             coord_length = datasets_traj[i].scaled_coord(length_scales[i])
             viz_3d.draw_lines(False, coord_length[:, 0], coord_length[:, 1], coord_length[:, 2], label, colors[i], 'length based scale')
 
-        viz_3d.show()
+        obj_name = datasets_traj[-1].path
+        # save scaled obj
+        obj_name_tags = osp.splitext(obj_name)
+        bbox_scaled_name = f'{obj_name_tags[0]}_bbox_based_scale{obj_name_tags[1]}'
+        length_scaled_name = f'{obj_name_tags[0]}_length_based_scale{obj_name_tags[1]}'
+        write_obj(bbox_scaled_name, datasets_traj[-1].scaled_coord(bbox_scales[-1]))
+        write_obj(length_scaled_name, datasets_traj[-1].scaled_coord(length_scales[-1]))
+
+        # save figure
+        save_name = obj_name.replace('.obj', '_3D.png')
+        viz_3d.show(save_name)
         viz_3d.close()
 
         viz_2d = VizTraj2D(f'VizTraj2D: {self.name}')
@@ -345,7 +364,8 @@ class VizTrajectory:
             coord_bbox = datasets_traj[i].scaled_coord(bbox_scales[i])
             label = datasets_traj[i].name
             viz_2d.draw_lines(coord_bbox[:, 0], coord_bbox[:, 1], coord_bbox[:, 2], label, colors[i])
-        viz_2d.show()
+        save_name = obj_name.replace('.obj', '_2D.png')
+        viz_2d.show(save_name)
         viz_2d.close()
 
 
