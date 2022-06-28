@@ -354,7 +354,7 @@ class VizTrajectory:
         for i in range(3):
             bbox_gt[i, 0] = np.amax(coord[:, i])
             bbox_gt[i, 1] = np.amin(coord[:, i])
-        dim_gt = np.linalg.norm(coord[:, 0] - coord[:, 1])
+        dim_gt = np.linalg.norm(bbox_gt[:, 0] - bbox_gt[:, 1])
 
         n_pred = len(self.datas_pred)
         self.scale_bbox = [0.] * n_pred
@@ -364,7 +364,7 @@ class VizTrajectory:
             for i in range(3):
                 bbox_pred[i, 0] = np.amax(coord[:, i])
                 bbox_pred[i, 1] = np.amin(coord[:, i])
-            dim_pred = np.linalg.norm(coord[:, 0] - coord[:, 1])
+            dim_pred = np.linalg.norm(bbox_pred[:, 0] - bbox_pred[:, 1])
             self.scale_bbox[idx] = dim_gt / dim_pred
 
     def calc_length_based_scale(self):
