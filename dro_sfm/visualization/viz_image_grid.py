@@ -495,9 +495,15 @@ class ScaleTrjectory:
         scale_rel = total_len_gt / total_len_pred
         self.save_scaled_traj(scale_rel, 'length_based')
 
-        viz = VisTrajectory3D('length_based')
-        viz.draw_lines(self.pos_gt[:, 0], self.pos_gt[:, 1], self.pos_gt[:, 2])
-        viz.show()
+        viz3d = VisTrajectory3D('length_based')
+        viz3d.draw_lines(self.pos_gt[:, 0], self.pos_gt[:, 1], self.pos_gt[:, 2], label='GroundTruth', color='yellow')
+        viz3d.draw_lines(self.pos_pred[:, 0] * scale_rel, self.pos_pred[:, 1] * scale_rel, self.pos_pred[:, 2] * scale_rel, label='pred', color='cyan')
+        viz3d.show()
+
+        viz2d = VizTrajectory2D('legend_based')
+        viz2d.draw_lines(self.pos_gt[:, 0], self.pos_gt[:, 1], self.pos_gt[:, 2], label='GroundTruth', color='red')
+        viz2d.draw_lines(self.pos_pred[:, 0] * scale_rel, self.pos_pred[:, 1] * scale_rel, self.pos_pred[:, 2] * scale_rel, label='pred', color='cyan')
+        viz2d.show()
         pass
 
 class VisTrajectory3D:
@@ -511,22 +517,16 @@ class VisTrajectory3D:
         azim = -80
         self.ax = self.main_fig.add_subplot(1, 2, 1, projection='3d',
                                             elev=elev, azim=azim)
+        self.ax2 = self.main_fig.add_subplot(1, 2, 2, projection='3d',
+                                            elev=elev, azim=azim)
 
-    def draw_lines(self, x_arr, y_arr, z_arr):
-        '''
-        n_line = len(x_arr)
-        for idx in range(n_line):
-            idx_beg = idx * 2
-            idx_end = idx_beg + 2
-            self.ax.plot(x_arr[idx_beg:idx_end], y_arr[idx_beg:idx_end],
-                         z_arr[idx_beg:idx_end])
-        '''
+    def draw_lines(self, x_arr, y_arr, z_arr, label, color):
         self.ax.set_zticks(np.arange(-3.0, 3.0, step=1.0))
         self.ax.set_zbound(-3.0, 3.0)
 
-        self.ax.plot(x_arr, y_arr, z_arr, color='yellow', label='GroundTruth')
+        self.ax.plot(x_arr, y_arr, z_arr, color=color, label=label)
         print(f'self.ax: {type(self.ax)}')
-        print(f'{dir(self.ax)}')
+        # print(f'{dir(self.ax)}')
 
         self.ax.set_xlabel('$X$', fontsize=20, color='red')
         self.ax.set_ylabel('$Y$', fontsize=20, color='green')
@@ -534,6 +534,9 @@ class VisTrajectory3D:
         self.ax.set_zlim(-3.0, 3.0)
 
         self.ax.legend()
+
+        self.ax2.plot(x_arr, y_arr, z_arr, color=color, label=label)
+        self.ax2.legend()
 
     def draw_verts(self, cloud):
         self.ax.scatter(cloud[:, 0], cloud[:, 1], cloud[:, 2])
@@ -555,6 +558,37 @@ class VisTrajectory3D:
         thismanager = plt.get_current_fig_manager()
         move_figure(thismanager, 1920, 0)
         plt.show()
+
+class VizTrajectory2D:
+    def __init__(self, win_name='VizTrajectory2D'):
+        plt.figure(win_name, figsize=(16, 8), dpi=80)
+        plt.clf()
+
+    def draw_lines(self, x_arr, y_arr, z_arr, label, color):
+        # xoy
+        plt.subplot(1, 3, 1)
+        plt.plot(x_arr, y_arr, label=label, color=color)
+        plt.xlabel('x', fontsize=18, color='red')
+        plt.legend(loc='upper left')
+        # plt.ylim()
+
+        # yoz
+        plt.subplot(1, 3, 2)
+        plt.plot(y_arr, z_arr, label=label, color=color)
+        plt.legend(loc='upper left')
+        # plt.ylim()
+
+        # xoz
+        plt.subplot(1, 3, 3)
+        plt.plot(x_arr, z_arr, label=label, color=color)
+        plt.legend(loc='upper left')
+        # plt.ylim()
+
+    @staticmethod
+    def show():
+        plt.show()
+
+
 
 if __name__ == '__main__':
     np.set_printoptions(precision=6, suppress=True)
