@@ -105,7 +105,6 @@ class VizTraj3D:
             dim_xyz = self.dim_xyz_right
 
         xyz = [x, y, z]
-
         for i in range(3):
             v_min, v_max = min(xyz[i]), max(xyz[i])
             if bbox_min[i] > v_min:
@@ -158,7 +157,7 @@ class VizTraj3D:
             win.set_zlim(0, dim)
             win.legend(loc='upper left')
 
-    def show(self, save_name):
+    def show(self, save_name, quiet):
         def move_figure(f, x, y):
             """Move figure's upper left corner to pixel (x, y)"""
             backend = matplotlib.get_backend()
@@ -177,15 +176,21 @@ class VizTraj3D:
         move_figure(thismanager, 1920, 0)
         print(f'saving: {save_name}')
         plt.savefig(save_name)
-        plt.show()
+        if not quiet:
+            plt.show()
 
 
 class VizTraj2D:
     def __init__(self, win_name='VizTraj2D'):
-        self.bbox_min = [0.] * 3
-        self.bbox_max = [0.] * 3
-        self.dim = [0.] * 3
-        self.dim_xyz = 0.
+        self.bbox_min_top = [0.] * 3
+        self.bbox_max_top = [0.] * 3
+        self.dim_top = [0.] * 3
+        self.dim_xyz_top = 0.
+
+        self.bbox_min_bottom = [0.] * 3
+        self.bbox_max_bottom = [0.] * 3
+        self.dim_bottom = [0.] * 3
+        self.dim_xyz_bottom = 0.
 
         fig, axs = plt.subplots(2, 3, figsize=(20, 12), dpi=80, constrained_layout=False)
         self.main_fig = fig
@@ -201,24 +206,46 @@ class VizTraj2D:
     def close(self):
         plt.close()
 
-    def update_bbox(self, x, y, z):
+    def update_bbox(self, is_top, x, y, z):
+        if is_top:
+            bbox_min = self.bbox_min_top
+            bbox_max = self.bbox_max_top
+            dim = self.dim_top
+            dim_xyz = self.dim_xyz_top
+        else:
+            bbox_min = self.bbox_min_bottom
+            bbox_max = self.bbox_max_bottom
+            dim = self.dim_bottom
+            dim_xyz = self.dim_xyz_bottom
+
         xyz = [x, y, z]
         for i in range(3):
             v_min, v_max = min(xyz[i]), max(xyz[i])
-            if self.bbox_min[i] > v_min:
-                self.bbox_min[i] = v_min
-            if self.bbox_max[i] < v_max:
-                self.bbox_max[i] = v_max
+            if bbox_min[i] > v_min:
+                bbox_min[i] = v_min
+            if bbox_max[i] < v_max:
+                bbox_max[i] = v_max
 
-            if self.dim[i] < np.fabs(v_min):
-                self.dim[i] = np.fabs(v_min)
-            if self.dim[i] < np.fabs(v_max):
-                self.dim[i] = np.fabs(v_max)
-            if self.dim_xyz < self.dim[i]:
-                self.dim_xyz = self.dim[i]
+            if dim[i] < np.fabs(v_min):
+                dim[i] = np.fabs(v_min)
+            if dim[i] < np.fabs(v_max):
+                dim[i] = np.fabs(v_max)
+            if dim_xyz < dim[i]:
+                dim_xyz = dim[i]
+
+        if is_top:
+            self.bbox_min_top = bbox_min
+            self.bbox_max_top = bbox_max
+            self.dim_top = dim
+            self.dim_xyz_top = dim_xyz
+        else:
+            self.bbox_min_bottom = bbox_min
+            self.bbox_max_bottom = bbox_max
+            self.dim_bottom = dim
+            self.dim_xyz_bottom = dim_xyz
 
     def draw_lines(self, is_top, x_arr, y_arr, z_arr, label, color, sub_win_name):
-        self.update_bbox(x_arr, y_arr, z_arr)
+        self.update_bbox(is_top, x_arr, y_arr, z_arr)
         if is_top:
             xoy = self.subfig_xoy_top
             yoz = self.subfig_yoz_top
@@ -248,18 +275,25 @@ class VizTraj2D:
 
     def decorate(self):
         for win in [self.subfig_xoy_top, self.subfig_yoz_top, self.subfig_xoz_top]:
-            win.set_xlim(-self.dim_xyz, self.dim_xyz)
-            win.set_ylim(-self.dim_xyz, self.dim_xyz)
+            win.set_xlim(-self.dim_xyz_top, self.dim_xyz_top)
+            win.set_ylim(-self.dim_xyz_top, self.dim_xyz_top)
             win.legend(loc='upper left')
 
-    def show(self, save_name):
+        for win in [self.subfig_xoy_bottom, self.subfig_yoz_bottom, self.subfig_xoz_bottom]:
+            win.set_xlim(-self.dim_xyz_bottom, self.dim_xyz_bottom)
+            win.set_ylim(-self.dim_xyz_bottom, self.dim_xyz_bottom)
+            win.legend(loc='upper left')
+
+    def show(self, save_name, quiet):
         self.decorate()
         plt.savefig(save_name, dpi=100)
-        plt.show()
+        if not quiet:
+            plt.show()
 
 
 class VizTrajectory:
-    def __init__(self, name, obj_gt, obj_info):
+    def __init__(self, name, obj_gt, obj_info, quiet=False):
+        self.quiet = quiet
         self.name = name
         self.data_gt = TrajectoryData('GroundTruth', obj_gt)
         self.datas_pred = []
@@ -274,6 +308,7 @@ class VizTrajectory:
 
         self.check_data()
         self.calc_scale()
+        self.save_scaled_trajectory()
         self.debug()
 
     def debug(self):
@@ -293,6 +328,21 @@ class VizTrajectory:
         for item in self.datas_pred:
             if n_vert != item.n_vert:
                 raise ValueError
+
+    def save_scaled_trajectory(self):
+        assert len(self.datas_pred) == 2
+        traj_scannet = self.datas_pred[0]
+        traj_matterport = self.datas_pred[1]
+        if traj_scannet.name != 'Scannet' or traj_matterport.name != 'Matterport':
+            raise ValueError
+
+        obj_path = traj_matterport.path
+        str_name, str_ext = osp.splitext(obj_path)
+        for scale_desc, scale_params in zip(['bbox_based_scale', 'length_based_scale'], [self.scale_bbox, self.scale_length]):
+            name_scannet = f'{str_name}_{scale_desc}_scannet{str_ext}'
+            name_matterport = f'{str_name}_{scale_desc}_matterport{str_ext}'
+            write_obj(name_scannet, traj_scannet.scaled_coord(scale_params[0]))
+            write_obj(name_matterport, traj_matterport.scaled_coord(scale_params[1]))
 
     def calc_scale(self):
         self.calc_bbox_based_scale()
@@ -345,15 +395,7 @@ class VizTrajectory:
         length_scales = [1.]
         length_scales.extend(self.scale_length)
 
-        # save scaled obj
-        obj_name = datasets_traj[-1].path
-
-        obj_name_tags = osp.splitext(obj_name)
-        bbox_scaled_name = f'{obj_name_tags[0]}_bbox_based_scale{obj_name_tags[1]}'
-        length_scaled_name = f'{obj_name_tags[0]}_length_based_scale{obj_name_tags[1]}'
-        write_obj(bbox_scaled_name, datasets_traj[-1].scaled_coord(bbox_scales[-1]))
-        write_obj(length_scaled_name, datasets_traj[-1].scaled_coord(length_scales[-1]))
-
+        # 3D plot
         viz_3d = VizTraj3D(f'VizTraj3D: {self.name}')
         for i in range(3):
             label = datasets_traj[i].name
@@ -365,10 +407,12 @@ class VizTrajectory:
             viz_3d.draw_lines(False, coord_length[:, 0], coord_length[:, 1], coord_length[:, 2], label, colors[i], 'length based scale')
 
         # save figure
+        obj_name = datasets_traj[-1].path
         save_name = obj_name.replace('.obj', '_3D.png')
-        viz_3d.show(save_name)
+        viz_3d.show(save_name, self.quiet)
         viz_3d.close()
 
+        # 2D plot
         viz_2d = VizTraj2D(f'VizTraj2D: {self.name}')
         for i in range(3):
             label = datasets_traj[i].name
@@ -379,7 +423,7 @@ class VizTrajectory:
             viz_2d.draw_lines(False, coord_length[:, 0], coord_length[:, 1], coord_length[:, 2], label, colors[i], 'length')
 
         save_name = obj_name.replace('.obj', '_2D.png')
-        viz_2d.show(save_name)
+        viz_2d.show(save_name, self.quiet)
         viz_2d.close()
 
 
@@ -387,11 +431,11 @@ if __name__ == '__main__':
     np.set_printoptions(precision=6, suppress=True)
     root_dir = '/home/sigma/slam'
     datasets = [
+        'matterport0614/train_val_test/matterport010_000_0516',  # good for scannet and matterport (epoch=201)
         # 'matterport0614/test/matterport014_000_0516',
         # 'matterport0614/test/matterport014_001_0516',
         # 'matterport0614/train_val_test/matterport005_000_0516',  # only good for scannet
         # 'matterport0614/train_val_test/matterport005_001_0516',
-        'matterport0614/train_val_test/matterport010_000_0516',  # good for scannet and matterport (epoch=201)
         # 'matterport0614/train_val_test/matterport010_001_0516',  # bad for matterport (epoch=201 -> sudden jump)
         ]
     scannet_pred = 'indoor_scannet.ckpt_sample_rate-3_max_frames_450'
@@ -411,5 +455,5 @@ if __name__ == '__main__':
             info = OrderedDict()
             info['Scannet'] = obj_scannet_pred
             info['Matterport'] = obj_matterport_pred
-            viz = VizTrajectory(item_ds + ' : ' + item_matterport, obj_gt, info)
+            viz = VizTrajectory(item_ds + ' : ' + item_matterport, obj_gt, info, quiet=False)
             viz.show()
