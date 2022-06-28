@@ -63,42 +63,92 @@ class VizTraj3D:
     def __init__(self, win_name='VizTraj3D'):
         self.main_fig = plt.figure(win_name, figsize=(16, 8))
         plt.clf()
-        elev = -40
-        azim = -80
+        elev = 0  # -40
+        azim = 0  # -80
         self.ax_left = self.main_fig.add_subplot(1, 2, 1, projection='3d',
                                             elev=elev, azim=azim)
         self.ax_right = self.main_fig.add_subplot(1, 2, 2, projection='3d',
                                             elev=elev, azim=azim)
+        self.bbox_min_left = [0.] * 3
+        self.bbox_max_left = [0.] * 3
+        self.dim_left = [0.] * 3
+        self.dim_xyz_left = 0.
+
+        self.bbox_min_right = [0.] * 3
+        self.bbox_max_right = [0.] * 3
+        self.dim_right = [0.] * 3
+        self.dim_xyz_right = 0.
 
     def close(self):
         plt.close()
 
-    def left_draw_lines(self, x_arr, y_arr, z_arr, label, color):
-        self.ax_left.set_zticks(np.arange(-3.0, 3.0, step=1.0))
-        self.ax_left.set_zbound(-3.0, 3.0)
+    def update_bbox(self, is_left, x, y, z):
+        if is_left:
+            bbox_min = self.bbox_min_left
+            bbox_max = self.bbox_max_left
+            dim = self.dim_left
+            dim_xyz = self.dim_xyz_left
+        else:
+            bbox_min = self.bbox_min_right
+            bbox_max = self.bbox_max_right
+            dim = self.dim_right
+            dim_xyz = self.dim_xyz_right
 
-        self.ax_left.plot(x_arr, y_arr, z_arr, color=color, label=label)
-        self.ax_left.set_xlabel('$X$', fontsize=20, color='red')
-        self.ax_left.set_ylabel('$Y$', fontsize=20, color='green')
-        self.ax_left.set_zlabel('$Z$', fontsize=20, color='blue')
-        self.ax_left.set_zlim(-3.0, 3.0)
+        xyz = [x, y, z]
 
-        self.ax_left.legend()
+        for i in range(3):
+            v_min, v_max = min(xyz[i]), max(xyz[i])
+            if bbox_min[i] > v_min:
+                bbox_min[i] = v_min
+            if bbox_max[i] < v_max:
+                bbox_max[i] = v_max
 
-    def right_draw_lines(self, x_arr, y_arr, z_arr, label, color):
-        self.ax_right.set_zticks(np.arange(-3.0, 3.0, step=1.0))
-        self.ax_right.set_zbound(-3.0, 3.0)
+            if dim[i] < np.fabs(v_min):
+                dim[i] = np.fabs(v_min)
+            if dim[i] < np.fabs(v_max):
+                dim[i] = np.fabs(v_max)
+            if dim_xyz < dim[i]:
+                dim_xyz = dim[i]
 
-        self.ax_right.plot(x_arr, y_arr, z_arr, color=color, label=label)
-        self.ax_right.set_xlabel('$X$', fontsize=20, color='red')
-        self.ax_right.set_ylabel('$Y$', fontsize=20, color='green')
-        self.ax_right.set_zlabel('$Z$', fontsize=20, color='blue')
-        self.ax_right.set_zlim(-3.0, 3.0)
+        if is_left:
+            self.bbox_min_left = bbox_min
+            self.bbox_max_left = bbox_max
+            self.dim_left = dim
+            self.dim_xyz_left = dim_xyz
+        else:
+            self.bbox_min_right = bbox_min
+            self.bbox_max_right = bbox_max
+            self.dim_right = dim
+            self.dim_xyz_right = dim_xyz
 
-        self.ax_right.legend()
 
-    @staticmethod
-    def show():
+    def draw_lines(self, is_left, x_arr, y_arr, z_arr, line_label, line_color, sub_win_name):
+        self.update_bbox(is_left, x_arr, y_arr, z_arr)
+        if is_left:
+            win = self.ax_left
+        else:
+            win = self.ax_right
+        # win.set_zticks(np.arange(-3.0, 3.0, step=1.0))
+        # win.set_zbound(-3.0, 3.0)
+
+        win.plot(x_arr, y_arr, z_arr, color=line_color, label=line_label)
+
+        # win.set_zlim(-3.0, 3.0)
+        win.set_title(sub_win_name, fontsize=30, color='cyan')
+
+
+    def decorate(self):
+        for dim, win in zip([self.dim_xyz_left, self.dim_xyz_right],
+                            [self.ax_left, self.ax_right]):
+            win.set_xlabel('$X$', fontsize=20, color='red')
+            win.set_ylabel('$Y$', fontsize=20, color='green')
+            win.set_zlabel('$Z$', fontsize=20, color='blue')
+            win.set_xlim(-dim, dim)
+            win.set_ylim(-dim, dim)
+            win.set_zlim(0, dim)
+            win.legend(loc='upper left')
+
+    def show(self):
         def move_figure(f, x, y):
             """Move figure's upper left corner to pixel (x, y)"""
             backend = matplotlib.get_backend()
@@ -110,6 +160,8 @@ class VizTraj3D:
                 # This works for QT and GTK
                 # You can also use window.setGeometry
                 f.canvas.manager.window.move(x, y)
+
+        self.decorate()
 
         thismanager = plt.get_current_fig_manager()
         move_figure(thismanager, 1920, 0)
@@ -273,22 +325,28 @@ class VizTrajectory:
         bbox_scales.extend(self.scale_bbox)
         length_scales = [1.]
         length_scales.extend(self.scale_length)
-        for scale_type, scales in zip(['bbox_based', 'length_based'], [bbox_scales, length_scales]):
-            viz_3d = VizTraj3D(f'VizTraj3D: ({scale_type}) {self.name}')
-            for i in range(3):
-                coord = datasets_traj[i].scaled_coord(scales[i])
-                label = datasets_traj[i].name
-                viz_3d.left_draw_lines(coord[:, 0], coord[:, 1], coord[:, 2], label, colors[i])
-            viz_3d.show()
-            viz_3d.close()
 
-            viz_2d = VizTraj2D(f'VizTraj2D: ({scale_type}) {self.name}')
-            for i in range(3):
-                coord = datasets_traj[i].scaled_coord(scales[i])
-                label = datasets_traj[i].name
-                viz_2d.draw_lines(coord[:, 0], coord[:, 1], coord[:, 2], label, colors[i])
-            viz_2d.show()
-            viz_2d.close()
+        # for scale_type, scales in zip(['bbox_based', 'length_based'], [bbox_scales, length_scales]):
+        viz_3d = VizTraj3D(f'VizTraj3D: {self.name}')
+        for i in range(3):
+            label = datasets_traj[i].name
+
+            coord_bbox = datasets_traj[i].scaled_coord(bbox_scales[i])
+            viz_3d.draw_lines(True, coord_bbox[:, 0], coord_bbox[:, 1], coord_bbox[:, 2], label, colors[i], 'bbox based scale')
+
+            coord_length = datasets_traj[i].scaled_coord(length_scales[i])
+            viz_3d.draw_lines(False, coord_length[:, 0], coord_length[:, 1], coord_length[:, 2], label, colors[i], 'length based scale')
+
+        viz_3d.show()
+        viz_3d.close()
+
+        viz_2d = VizTraj2D(f'VizTraj2D: {self.name}')
+        for i in range(3):
+            coord_bbox = datasets_traj[i].scaled_coord(bbox_scales[i])
+            label = datasets_traj[i].name
+            viz_2d.draw_lines(coord_bbox[:, 0], coord_bbox[:, 1], coord_bbox[:, 2], label, colors[i])
+        viz_2d.show()
+        viz_2d.close()
 
 
 if __name__ == '__main__':
@@ -319,5 +377,5 @@ if __name__ == '__main__':
             info = OrderedDict()
             info['Scannet'] = obj_scannet_pred
             info['Matterport'] = obj_matterport_pred
-            viz = VizTrajectory(item_ds, obj_gt, info)
+            viz = VizTrajectory(item_ds + ' : ' + item_matterport, obj_gt, info)
             viz.show()
