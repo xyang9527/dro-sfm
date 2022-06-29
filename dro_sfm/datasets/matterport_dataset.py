@@ -104,35 +104,31 @@ def adaptive_downsample(root_dir, data_dir, image_names, step):
         if not pose_in_threshold_1(pose_6d):
             raise ValueError
 
-        next_idx = curr_idx + 1
         all_in_thr = True
         for offset in range(step):
             next_idx = curr_idx + 1 + offset
             pose_6d = matrix_to_6d_pose(arr_pose[curr_idx], arr_pose[next_idx])
             if not pose_in_threshold_5(pose_6d):
-                # print(f'break at: {curr_idx} {next_idx}')
                 curr_idx += offset
                 all_in_thr = False
                 break
         if all_in_thr:
             curr_idx += step
 
-    # print(f'image_names:          {len(image_names)}')
-    # print(f'selected_image_names: {len(selected_image_names)}')
-    # print(f'selected_idx:         {len(selected_idx)}')
-    # print(f'                      {selected_idx}')
     if len(selected_image_names) != len(selected_idx):
         raise ValueError
+
     n_selected = len(selected_image_names)
     for i in range(1, n_selected):
         if selected_idx[i] - selected_idx[i-1] > step:
             raise ValueError
+
     return selected_image_names
+
 
 ########################################################################################################################
 #### DATASET
 ########################################################################################################################
-
 class MatterportDataset(Dataset):
     def __init__(self, root_dir, split, data_transform=None,
                  forward_context=0, back_context=0, strides=(1,),
