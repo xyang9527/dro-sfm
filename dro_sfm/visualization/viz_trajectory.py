@@ -20,9 +20,10 @@ def read_obj(filename):
         print(f'path not exist: {filename}')
         raise ValueError
 
-    coord = []
     with open(filename, 'r') as f_in:
         text = f_in.readlines()
+
+    coord = []
     for line in text:
         line = line.strip()
         if len(line) < 2:
@@ -30,8 +31,10 @@ def read_obj(filename):
         if line[0] == 'v':
             _, x, y, z = line.split(' ')
             coord.append([np.float(x), np.float(y), np.float(z)])
+
     if len(coord) <= 0:
         raise ValueError
+
     return np.array(coord)
 
 
@@ -40,15 +43,15 @@ def write_obj(filename, coord):
         n_vert = coord.shape[0]
         for i in range(n_vert):
             x, y, z = coord[i, :]
-            f_ou.write(f'v {x} {y} {z}\n')
+            f_ou.write(f'v {x} {y} {z}\n')  # vertice
         for i in range(1, n_vert-1, 2):
-            f_ou.write(f'f {i} {i+1} {i+2}\n')
+            f_ou.write(f'f {i} {i+1} {i+2}\n')  # triangle
 
 
-class TrajectoryData:
-    def __init__(self, name, path):
-        self.name = name
-        self.path = path
+class TrajData:
+    def __init__(self, name: str, path: str):
+        self.name = name  # GroundTruth / Scannet / Matterport
+        self.path = path  # full path of obj file
         self.coord = read_obj(path)
 
     @property
@@ -61,7 +64,6 @@ class TrajectoryData:
     def get_path(self):
         return self.path
 
-
     def coord(self):
         return self.coord
 
@@ -71,14 +73,26 @@ class TrajectoryData:
 
 class VizTraj3D:
     def __init__(self, win_name='VizTraj3D'):
+        # type(self.main_fig): matplotlib.figure.Figure
         self.main_fig = plt.figure(win_name, figsize=(16, 8))
+
         plt.clf()
-        elev = 0  # -40
-        azim = 0  # -80
-        self.ax_left = self.main_fig.add_subplot(1, 2, 1, projection='3d',
-                                            elev=elev, azim=azim)
-        self.ax_right = self.main_fig.add_subplot(1, 2, 2, projection='3d',
-                                            elev=elev, azim=azim)
+        # Differences Between cla(), clf() and close() Methods in Matplotlib:
+        #   matplotlib.pyplot.cla() method clears the current axes
+        #   matplotlib.pyplot.clf() method clears the current figure
+        #   matplotlib.pyplot.close() method closes the entire window
+
+        # https://www.celestis.com/resources/faq/what-are-the-azimuth-and-elevation-of-a-satellite/
+        #   Azimuthal viewing angle vs Elevation viewing angle
+        elev = 0   # Elevation viewing angle
+        azim = 90  # Azimuthal viewing angle
+
+        # type(self.ax_left): matplotlib.axes._subplots.Axes3DSubplot
+        #   https://matplotlib.org/stable/api/_as_gen/mpl_toolkits.mplot3d.axes3d.Axes3D.html
+        self.ax_left = self.main_fig.add_subplot(1, 2, 1, projection='3d', elev=elev, azim=azim)
+        self.ax_right = self.main_fig.add_subplot(1, 2, 2, projection='3d', elev=elev, azim=azim)
+
+        # bbox used for scale factor
         self.bbox_min_left = [0.] * 3
         self.bbox_max_left = [0.] * 3
         self.dim_left = [0.] * 3
@@ -130,21 +144,15 @@ class VizTraj3D:
             self.dim_right = dim
             self.dim_xyz_right = dim_xyz
 
-
-    def draw_lines(self, is_left, x_arr, y_arr, z_arr, line_label, line_color, sub_win_name):
+    def draw_lines(self, is_left, x_arr, y_arr, z_arr, line_label, line_color, win_title):
         self.update_bbox(is_left, x_arr, y_arr, z_arr)
         if is_left:
             win = self.ax_left
         else:
             win = self.ax_right
-        # win.set_zticks(np.arange(-3.0, 3.0, step=1.0))
-        # win.set_zbound(-3.0, 3.0)
 
         win.plot(x_arr, y_arr, z_arr, color=line_color, label=line_label)
-
-        # win.set_zlim(-3.0, 3.0)
-        win.set_title(sub_win_name, fontsize=30, color='cyan')
-
+        win.set_title(win_title, fontsize=30, color='cyan')
 
     def decorate(self):
         for dim, win in zip([self.dim_xyz_left, self.dim_xyz_right],
@@ -152,9 +160,11 @@ class VizTraj3D:
             win.set_xlabel('$X$', fontsize=20, color='red')
             win.set_ylabel('$Y$', fontsize=20, color='green')
             win.set_zlabel('$Z$', fontsize=20, color='blue')
+
             win.set_xlim(-dim, dim)
             win.set_ylim(-dim, dim)
-            win.set_zlim(0, dim)
+            win.set_zlim(-dim, dim)
+
             win.legend(loc='upper left')
 
     def show(self, save_name, quiet):
@@ -174,7 +184,8 @@ class VizTraj3D:
 
         thismanager = plt.get_current_fig_manager()
         move_figure(thismanager, 1920, 0)
-        print(f'saving: {save_name}')
+
+        print(f'  saving: {save_name}')
         plt.savefig(save_name)
         if not quiet:
             plt.show()
@@ -193,6 +204,8 @@ class VizTraj2D:
         self.dim_xyz_bottom = 0.
 
         fig, axs = plt.subplots(2, 3, figsize=(20, 12), dpi=80, constrained_layout=False)
+        # type(fig):       matplotlib.figure.Figure
+        # type(axs[0, 0]): matplotlib.axes._subplots.AxesSubplot
         self.main_fig = fig
         self.subfig_xoy_top = axs[0, 0]
         self.subfig_yoz_top = axs[0, 1]
@@ -244,7 +257,7 @@ class VizTraj2D:
             self.dim_bottom = dim
             self.dim_xyz_bottom = dim_xyz
 
-    def draw_lines(self, is_top, x_arr, y_arr, z_arr, label, color, sub_win_name):
+    def draw_lines(self, is_top, x_arr, y_arr, z_arr, label, color, win_title):
         self.update_bbox(is_top, x_arr, y_arr, z_arr)
         if is_top:
             xoy = self.subfig_xoy_top
@@ -259,19 +272,19 @@ class VizTraj2D:
         xoy.plot(x_arr, y_arr, label=label, color=color)
         xoy.set_xlabel('X', fontsize=18, color='red')
         xoy.set_ylabel('Y', fontsize=18, color='green')
-        xoy.set_title(f'XOY Projeciton ({sub_win_name})', fontsize=25, color='blue')
+        xoy.set_title(f'XOY Projeciton ({win_title})', fontsize=25, color='blue')
 
         # yoz
         yoz.plot(y_arr, z_arr, label=label, color=color)
         yoz.set_xlabel('Y', fontsize=18, color='green')
         yoz.set_ylabel('Z', fontsize=18, color='blue')
-        yoz.set_title(f'YOZ Projeciton ({sub_win_name})', fontsize=25, color='red')
+        yoz.set_title(f'YOZ Projeciton ({win_title})', fontsize=25, color='red')
 
         # xoz
         xoz.plot(x_arr, z_arr, label=label, color=color)
         xoz.set_xlabel('X', fontsize=18, color='red')
         xoz.set_ylabel('Z', fontsize=18, color='blue')
-        xoz.set_title(f'XOZ Projeciton ({sub_win_name})', fontsize=25, color='green')
+        xoz.set_title(f'XOZ Projeciton ({win_title})', fontsize=25, color='green')
 
     def decorate(self):
         for win in [self.subfig_xoy_top, self.subfig_yoz_top, self.subfig_xoz_top]:
@@ -286,6 +299,8 @@ class VizTraj2D:
 
     def show(self, save_name, quiet):
         self.decorate()
+
+        print(f'  saving: {save_name}')
         plt.savefig(save_name, dpi=100)
         if not quiet:
             plt.show()
@@ -295,10 +310,10 @@ class VizTrajectory:
     def __init__(self, name, obj_gt, obj_info, quiet=False):
         self.quiet = quiet
         self.name = name
-        self.data_gt = TrajectoryData('GroundTruth', obj_gt)
+        self.data_gt = TrajData('GroundTruth', obj_gt)
         self.datas_pred = []
         for k, v in obj_info.items():
-            self.datas_pred.append(TrajectoryData(k, v))
+            self.datas_pred.append(TrajData(k, v))
 
         if len(self.datas_pred) <= 0:
             raise ValueError
@@ -320,8 +335,7 @@ class VizTrajectory:
         assert len(self.scale_length) == n_pred
 
         for i in range(n_pred):
-            print(f'  {self.datas_pred[i].name:15s} {self.scale_bbox[i]:.6f} {self.scale_length[i]:.6f}')
-
+            print(f'  {self.datas_pred[i].name:15s} bbox_scale: {self.scale_bbox[i]:.6f}   length_scale: {self.scale_length[i]:.6f}')
 
     def check_data(self):
         n_vert = self.data_gt.n_vert
@@ -338,7 +352,8 @@ class VizTrajectory:
 
         obj_path = traj_matterport.path
         str_name, str_ext = osp.splitext(obj_path)
-        for scale_desc, scale_params in zip(['bbox_based_scale', 'length_based_scale'], [self.scale_bbox, self.scale_length]):
+        for scale_desc, scale_params in zip(['bbox_based_scale', 'length_based_scale'],
+                                            [self.scale_bbox, self.scale_length]):
             name_scannet = f'{str_name}_{scale_desc}_scannet{str_ext}'
             name_matterport = f'{str_name}_{scale_desc}_matterport{str_ext}'
             write_obj(name_scannet, traj_scannet.scaled_coord(scale_params[0]))
