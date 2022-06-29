@@ -16,8 +16,6 @@ lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
 
 from dro_sfm.utils.setup_log import setup_log
-from dro_sfm.visualization.gazebo_config import GazeboParam
-
 from dro_sfm.utils.depth import viz_inv_depth
 from dro_sfm.utils.image import write_image
 from dro_sfm.utils.horovod import print0

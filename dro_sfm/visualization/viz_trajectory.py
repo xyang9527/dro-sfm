@@ -470,7 +470,9 @@ if __name__ == '__main__':
     matterport_pred = [
         # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.069.ckpt_sample_rate-3_max_frames_450',  # bad
         # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=173_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt_sample_rate-3_max_frames_450',  # bad
-        'SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450',
+        # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450',
+        'SupModelMF_DepthPoseNet_it12-h-out_epoch=484_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt', # fox@26
+        'SupModelMF_DepthPoseNet_it12-h-out_epoch=403_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt', # trex@24
         ]
 
     _, hexsha, _ = git_info()

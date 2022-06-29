@@ -54,7 +54,7 @@ https://gazebosim.org/api/gazebo/6.0/spherical_coordinates.html
            /               Y                         |     \
           /                                          |      \
          /                                           |       \
-        /                                            |        \ Z
+        /                                            |        \ Z (forward [into the screen])
        /                                             | Y
        X
 
@@ -68,12 +68,45 @@ cam_to_gazebo_world (T05)
         1  0  0  0
         0 -1  0  0
         0  0  0  1
+
+
+========================================================================================================================
+https://classic.gazebosim.org/tutorials?tut=import_mesh
+  This tutorial describes how to import 3D meshes into Gazebo.
+  Gazebo uses a right-hand coordinate system where +Z is up (vertical), +X is forward (into the screen), and +Y is to the left.
+
+                 gazebo world                       camera
+
+    [into the screen]
+            X                                          ___________ X
+              \      | Z                               |\
+               \     |                                 | \
+                \    |                                 |  \
+                 \   |                                 |   \
+                  \  |                                 |    \
+                   \ |                                 |     \
+    Y ______________\|                                 |      \  Z (forward [into the screen])
+                                                       | Y
+
+            X ----------------------------------------  Z
+            Y ---------------------------------------- -X
+            Z ---------------------------------------- -Y
+
+cam_to_gazebo_world
+
+        0  0  1  0
+       -1  0  0  0
+        0 -1  0  0
+        0  0  0  1
+
 '''
 
 
 class GazeboPose:
     def __init__(self, qx, qy, qz, qw, px, py, pz):
-        r, i, j, k = qx, qy, qz, qw
+        i, j, k, r = qx, qy, qz, qw
+        # r, i, j, k = qx, qy, qz, qw
+        print(f'\n{r} {i} {j} {k}')
         two_s = 2.0 / np.dot(np.array([r, i, j, k]), np.array([r, i, j, k]).transpose())
         logging.warning(f'  two_s: {two_s:.6f}')
 
@@ -133,9 +166,7 @@ class GazeboParam:
         return self.cam2gazebo
 
 
-if __name__ == '__main__':
-    np.set_printoptions(precision=6, suppress=True)
-
+def check_matrix_v1():
     # weita   x: -0.5, y: -0.5, z: 0.5, w: 0.5
     # bodong: -0.5 0.5 -0.5 0.5
     T_weita = GazeboPose(-0.5, -0.5, 0.5, 0.5, 0, 0, 0)
@@ -169,3 +200,49 @@ if __name__ == '__main__':
     print(f'\n=== T_new: ===\n{T_new}')
 
     print(f'\n=== T_new.inv: ===\n{np.linalg.inv(T_new)}')
+
+
+def check_matrix_v2():
+    T_05 = np.array([
+        [ 0.,  0., -1., 0.],
+        [ 1.,  0.,  0., 0.],
+        [ 0., -1.,  0., 0.],
+        [ 0.,  0.,  0., 1.]], dtype=np.float)
+
+    T_new = np.array([
+        [ 0.,  0.,  1., 0.],
+        [-1.,  0.,  0., 0.],
+        [ 0., -1.,  0., 0.],
+        [ 0.,  0.,  0., 1.]], dtype=np.float)
+
+    px = 1.
+    py = 100.
+    pz = 10000.
+    qx = 0.5
+    qy = 0.3
+    qz = -0.9
+    qw = -0.7
+
+    T_t = np.array([
+        [ 1.,  0.,  0.,  px],
+        [ 0.,  1.,  0.,  py],
+        [ 0.,  0.,  1.,  pz],
+        [ 0.,  0.,  0.,  1.]], dtype=np.float)
+
+    T_r = GazeboPose(qx, qy, qz, qw, 0., 0., 0.).get_T()
+
+    inv_T_t = np.linalg.inv(T_t)
+
+    # ======================================================================== #
+    print(f'\n=== T_r: ===\n{T_r}')
+    print(f'\n=== T_t: ===\n{T_t}')
+    print(f'\n=== inv_T_t: ===\n{inv_T_t}')
+
+    pass
+
+
+if __name__ == '__main__':
+    np.set_printoptions(precision=6, suppress=True)
+
+    # check_matrix_v1()
+    check_matrix_v2()
