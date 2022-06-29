@@ -1,18 +1,22 @@
 # -*- coding=utf-8 -*-
 
-from typing import Dict
 from collections import OrderedDict
+import datetime
 import logging
 import os
 import os.path as osp
-from unittest.loader import VALID_MODULE_NAME
+import sys
+lib_dir = osp.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(lib_dir)
 
 import numpy as np
-import cv2
 
 from mpl_toolkits.mplot3d import Axes3D  # implicit used
 import matplotlib
 import matplotlib.pyplot as plt
+from dro_sfm.utils.setup_log import git_info
+from dro_sfm.utils.horovod import print0
+from dro_sfm.utils.logging import pcolor
 
 
 def read_obj(filename):
@@ -74,7 +78,7 @@ class TrajData:
 class VizTraj3D:
     def __init__(self, win_name='VizTraj3D'):
         # type(self.main_fig): matplotlib.figure.Figure
-        self.main_fig = plt.figure(win_name, figsize=(16, 8))
+        self.main_fig = plt.figure(win_name.split(' : ')[0], figsize=(20, 12))
 
         plt.clf()
         # Differences Between cla(), clf() and close() Methods in Matplotlib:
@@ -82,10 +86,13 @@ class VizTraj3D:
         #   matplotlib.pyplot.clf() method clears the current figure
         #   matplotlib.pyplot.close() method closes the entire window
 
+        name_words = win_name.split(' : ')
+        self.main_fig.suptitle(f'{name_words[0]}\n{name_words[1]}', fontsize=15, color='blue')
+
         # https://www.celestis.com/resources/faq/what-are-the-azimuth-and-elevation-of-a-satellite/
         #   Azimuthal viewing angle vs Elevation viewing angle
-        elev = 0   # Elevation viewing angle
-        azim = 90  # Azimuthal viewing angle
+        elev = 15  # Elevation viewing angle
+        azim = 60  # Azimuthal viewing angle
 
         # type(self.ax_left): matplotlib.axes._subplots.Axes3DSubplot
         #   https://matplotlib.org/stable/api/_as_gen/mpl_toolkits.mplot3d.axes3d.Axes3D.html
@@ -185,7 +192,7 @@ class VizTraj3D:
         thismanager = plt.get_current_fig_manager()
         move_figure(thismanager, 1920, 0)
 
-        print(f'  saving: {save_name}')
+        print0(pcolor(f'  saving: {save_name}', 'yellow'))
         plt.savefig(save_name)
         if not quiet:
             plt.show()
@@ -214,7 +221,8 @@ class VizTraj2D:
         self.subfig_yoz_bottom = axs[1, 1]
         self.subfig_xoz_bottom = axs[1, 2]
 
-        self.main_fig.suptitle(win_name, fontsize=35, color='cyan')
+        name_words = win_name.split(' : ')
+        self.main_fig.suptitle(f'{name_words[0]}\n{name_words[1]}', fontsize=15, color='blue')
 
     def close(self):
         plt.close()
@@ -300,7 +308,7 @@ class VizTraj2D:
     def show(self, save_name, quiet):
         self.decorate()
 
-        print(f'  saving: {save_name}')
+        print0(pcolor(f'  saving: {save_name}', 'yellow'))
         plt.savefig(save_name, dpi=100)
         if not quiet:
             plt.show()
@@ -327,8 +335,8 @@ class VizTrajectory:
         self.debug()
 
     def debug(self):
-        print(f'{self.name}:')
-        print(f'  n_vert: {self.data_gt.n_vert}')
+        print(f'\n  self.name: {self.name}')
+        print(f'  n_vert:    {self.data_gt.n_vert}')
         n_pred = len(self.datas_pred)
 
         assert len(self.scale_bbox) == n_pred
@@ -389,7 +397,7 @@ class VizTrajectory:
         lengths_pred = [0.] * n_pred
 
         coord_gt = self.data_gt.coord
-        print(f'  coord_gt: {coord_gt.shape}')
+        logging.info(f'  coord_gt: {coord_gt.shape}')
         for i in range(1, n_vert):
             length_gt += np.linalg.norm(coord_gt[i, :] - coord_gt[i-1, :])
             for j in range(n_pred):
@@ -460,6 +468,11 @@ if __name__ == '__main__':
         'SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450',
         ]
 
+    _, hexsha, _ = git_info()
+    dt_now = datetime.datetime.now()
+    minute_ex = (dt_now.minute // 10) * 10
+    datetime_ex = f'{dt_now.year:04d}-{dt_now.month:02d}-{dt_now.day:02d}_{dt_now.hour:02d}:{minute_ex:02d}'
+
     name_gt = 'depths_vis_depth-GT_pose-GT_pose.obj'
     name_pred = 'depths_vis_depth-pred_pose-pred_pose.obj'
     for item_ds in datasets:
@@ -470,5 +483,5 @@ if __name__ == '__main__':
             info = OrderedDict()
             info['Scannet'] = obj_scannet_pred
             info['Matterport'] = obj_matterport_pred
-            viz = VizTrajectory(item_ds + ' : ' + item_matterport, obj_gt, info, quiet=False)
+            viz = VizTrajectory(f'{item_ds} ({datetime_ex}_{hexsha[:8]}) : {item_matterport}', obj_gt, info, quiet=False)
             viz.show()
