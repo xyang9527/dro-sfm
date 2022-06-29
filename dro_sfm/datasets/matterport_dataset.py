@@ -17,10 +17,10 @@ import IPython, cv2
 
 from dro_sfm.datasets.depth_filter import matrix_to_6d_pose, pose_in_threshold_5, pose_in_threshold_1
 
+
 ########################################################################################################################
 #### FUNCTIONS
 ########################################################################################################################
-
 def dummy_calibration(image):
     w, h = [float(d) for d in image.size]
     return np.array([[1000. , 0.    , w / 2. - 0.5],
@@ -70,20 +70,23 @@ def collate_fn(batch):
     batch = list(filter(lambda x: x is not None, batch))
     return torch.utils.data.dataloader.default_collate(batch)
 
+
 def adaptive_downsample(root_dir, data_dir, image_names, step):
     logging.warning(f'adaptive_downsample({root_dir}, {data_dir}, {len(image_names)}, {step})')
+
     n_frames = len(image_names)
     if n_frames <= step:
         return image_names
-
-    # print(f'adaptive_downsample({root_dir}, {data_dir}, {len(image_names)}, {step})')
 
     arr_pose = []
     for item in image_names:
         jpg_name = osp.join(root_dir, data_dir, item)
         txt_name = jpg_name.replace('cam_left', 'pose').replace('jpg', 'txt')
         if not osp.exists(jpg_name):
-            print(f'path not exist {jpg_name}')
+            print(f'path not exist: {jpg_name}')
+            raise ValueError
+        if not osp.exists(txt_name):
+            print(f'path not exist: {txt_name}')
             raise ValueError
         arr_pose.append(np.genfromtxt(txt_name))
 
@@ -204,19 +207,14 @@ class MatterportDataset(Dataset):
         logging.info(f'    len(self.file_tree.keys()): {len(self.file_tree.keys()):6d}')
 
         use_adaptive_downsample = True
-
-        # downsample by 5
-        # '''
+        # downsample
         for k in self.file_tree:
             step = 5
             if use_adaptive_downsample:
+                # cut sequences: percent of invalid depth / large camera movement between consecutive frames
                 self.file_tree[k] = adaptive_downsample(self.root_dir, k, self.file_tree[k], step)
             else:
-                self.file_tree[k] = self.file_tree[k][::5]
-            # exit(-1)
-        # '''
-
-        # todo: cut sequences: percent of invalid depth / large camera movement between consecutive frames
+                self.file_tree[k] = self.file_tree[k][::step]
 
         for k, v in self.file_tree.items():
             file_list = v
@@ -232,7 +230,6 @@ class MatterportDataset(Dataset):
         logging.info(f'    len(self.files):            {len(self.files):6d}')
         logging.info(f'    len(self.file_tree.keys()): {len(self.file_tree.keys()):6d}')
 
-        # exit(-1)
         self.data_transform = data_transform
 
     def __len__(self):
