@@ -58,8 +58,8 @@ lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
 
 from dro_sfm.utils.setup_log import setup_log
-from dro_sfm.visualization.gazebo_config import GazeboParam
-
+from dro_sfm.utils.horovod import print0
+from dro_sfm.utils.logging import pcolor
 
 def generate_split():
     use_data_0516 = False
@@ -329,10 +329,11 @@ def generate_split():
 
 
 if __name__ == '__main__':
-    setup_log('kneron_train_split_gen.log')
-    time_beg_matterport_split_gen = time.time()
+    setup_log('kneron_matterport_split_gen_old.log')
+    time_beg_matterport_split_gen_old = time.time()
 
     generate_split()
 
-    time_end_matterport_split_gen = time.time()
-    print(f'matterport_split_gen.py elapsed {time_end_matterport_split_gen - time_beg_matterport_split_gen:.6f} seconds.')
+    time_end_matterport_split_gen_old = time.time()
+    logging.warning(f'matterport_split_gen_old.py elapsed {time_end_matterport_split_gen_old - time_beg_matterport_split_gen_old:.6f} seconds.')
+    print0(pcolor(f'matterport_split_gen_old.py elapsed {time_end_matterport_split_gen_old - time_beg_matterport_split_gen_old:.6f} seconds.', 'yellow'))

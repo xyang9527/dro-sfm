@@ -944,4 +944,4 @@ if __name__ == '__main__':
 
     time_end_infer_video = time.time()
     logging.warning(f'elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')
-    print0(pcolor(f'\nelapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.\n', 'red'))
+    print0(pcolor(f'\nelapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.\n', 'yellow'))

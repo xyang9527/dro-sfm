@@ -371,7 +371,7 @@ def generate_split():
 
 
 if __name__ == '__main__':
-    setup_log('kneron_train_split_gen.log')
+    setup_log('kneron_matterport_split_gen.log')
     time_beg_matterport_split_gen = time.time()
 
     generate_split()

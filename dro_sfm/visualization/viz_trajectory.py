@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 import datetime
+import time
 import logging
 import os
 import os.path as osp
@@ -14,7 +15,8 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # implicit used
 import matplotlib
 import matplotlib.pyplot as plt
-from dro_sfm.utils.setup_log import git_info
+
+from dro_sfm.utils.setup_log import setup_log, git_info
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
 
@@ -451,6 +453,9 @@ class VizTrajectory:
 
 
 if __name__ == '__main__':
+    setup_log('kneron_viz_trajectory.log')
+    time_beg_viz_trajectory = time.time()
+
     np.set_printoptions(precision=6, suppress=True)
     root_dir = '/home/sigma/slam'
     datasets = [
@@ -485,3 +490,8 @@ if __name__ == '__main__':
             info['Matterport'] = obj_matterport_pred
             viz = VizTrajectory(f'{item_ds} ({datetime_ex}_{hexsha[:8]}) : {item_matterport}', obj_gt, info, quiet=False)
             viz.show()
+
+    time_end_viz_trajectory = time.time()
+    logging.warning(f'viz_trajectory.py elapsed {time_end_viz_trajectory - time_beg_viz_trajectory:.6f} seconds.')
+    print0(pcolor(f'viz_trajectory.py elapsed {time_end_viz_trajectory - time_beg_viz_trajectory:.6f} seconds.', 'yellow'))
+

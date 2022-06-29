@@ -1,6 +1,5 @@
 # -*- coding=utf-8 -*-
 
-import enum
 import os
 import os.path as osp
 import sys
@@ -9,11 +8,11 @@ sys.path.append(lib_dir)
 import time
 import logging
 import numpy as np
-import subprocess
-import cv2
 import math
 
 from dro_sfm.utils.setup_log import setup_log
+from dro_sfm.utils.horovod import print0
+from dro_sfm.utils.logging import pcolor
 
 
 def main():
@@ -126,11 +125,11 @@ def main():
 
 if __name__ == '__main__':
     setup_log('kneron_pose_statistics.log')
-    time_beg_pointcloud = time.time()
+    time_beg_pose_statistics = time.time()
 
     np.set_printoptions(precision=6, suppress=True)
     main()
 
-    time_end_pointcloud = time.time()
-    print(f'pose_statistics.py elapsed {time_end_pointcloud - time_beg_pointcloud:.6f} seconds.')
-    logging.info(f'pose_statistics.py elapsed {time_end_pointcloud - time_beg_pointcloud:.6f} seconds.')
+    time_end_pose_statistics = time.time()
+    logging.warning(f'pose_statistics.py elapsed {time_end_pose_statistics - time_beg_pose_statistics:.6f} seconds.')
+    print0(pcolor(f'pose_statistics.py elapsed {time_end_pose_statistics - time_beg_pose_statistics:.6f} seconds.', 'yellow'))

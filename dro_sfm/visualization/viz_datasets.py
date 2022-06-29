@@ -44,9 +44,6 @@ class CameraMove:
             self.init = True
             return
 
-        # if tz > 300:
-        #    raise ValueError
-
         if np.abs(self.d_tx) < np.abs(tx):
             self.d_tx = tx
         if np.abs(self.d_ty) < np.abs(ty):
@@ -341,9 +338,9 @@ if __name__ == '__main__':
     np.set_printoptions(precision=6, suppress=True)
 
     datasets = get_datasets()
-
+    print0(pcolor(f'===== datasets info =====', 'yellow'))
     for v, k in datasets.items():
-        print(f'{v:<12s} {len(k):3d}')
+        print0(pcolor(f'  {v:<12s} {len(k):3d}', 'blue'))
 
     save_dir = '/home/sigma/slam/demo'
     if not osp.exists(save_dir):
@@ -354,4 +351,5 @@ if __name__ == '__main__':
     # generate_matterport_videos(save_dir, ['/home/sigma/slam/matterport0621/test/matterport005_0621'])
 
     time_end_viz_datasets = time.time()
-    print0(pcolor(f'viz_datasets.py elapsed {time_end_viz_datasets - time_beg_viz_datasets:.6f} seconds.', 'red'))
+    logging.warning(f'viz_datasets.py elapsed {time_end_viz_datasets - time_beg_viz_datasets:.6f} seconds.')
+    print0(pcolor(f'viz_datasets.py elapsed {time_end_viz_datasets - time_beg_viz_datasets:.6f} seconds.', 'yellow'))
