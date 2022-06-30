@@ -49,16 +49,28 @@ class KneronPose:
         return T_homogeneous
 
 
-class KneronDataset:
-    def __init__(self, root_dir, dataset_names, sub_dirs, file_gt_pose):
+class KneronFrame:
+    def __init__(self, root_dir, name_color, name_depth, pose):
         self.root_dir = root_dir
-        self.dataset_names = dataset_names
+        self.name_color = name_color
+        self.name_depth = name_depth
+        self.pose = pose
+
+
+class KneronDataset:
+    def __init__(self, root_dir, dataset_name, sub_dirs, file_gt_pose):
+        self.root_dir = root_dir
+        self.dataset_name = dataset_name
         self.sub_dirs = sub_dirs
         self.file_gt_pose = file_gt_pose
+        self.frames = None
+        assert len(sub_dirs) == 2
 
     def pipeline(self):
         self.check_data()
-        pass
+        self.load_data()
+        self.synthetic_video()
+        self.align_pointcloud()
 
     @staticmethod
     def get_basenames(data_dir, file_ext):
@@ -88,48 +100,171 @@ class KneronDataset:
                     print0(pcolor(f'unexpected format: {line}', 'blue'))
                 params = [float(v) for v in words[1:]]
                 px, py, pz, qx, qy, qz, qw = params
-                pose_ts_set.add(words[0])
-                pose_data_dict[words[0]] = KneronPose(words[0], px, py, pz, qx, qy, qz, qw)
+                time_stamp = words[0].zfill(15)
+                pose_ts_set.add(time_stamp)
+                pose_data_dict[time_stamp] = KneronPose(time_stamp, px, py, pz, qx, qy, qz, qw)
+        assert len(pose_ts_set) == len(pose_data_dict)
         return pose_ts_set, pose_data_dict
 
-
     def check_data(self):
-        for item_dataset in self.dataset_names:
-            dataset_dir = osp.join(self.root_dir, item_dataset)
+        dataset_dir = osp.join(self.root_dir, self.dataset_name)
+        print0(pcolor(f'===== {osp.basename(self.root_dir)}/{self.dataset_name} =====', 'yellow'))
 
-            # check figures
-            basenames = OrderedDict()
-            for item_subdir, item_ext in self.sub_dirs:
-                subdir = osp.join(dataset_dir, item_subdir)
-                basenames[item_subdir] = self.get_basenames(subdir, item_ext)
-            keys = list(basenames.keys())
-            v_0 = basenames[keys[0]]
-            for i in range(1, len(keys)-1):
-                if basenames[keys[i]] != v_0:
-                    raise ValueError
+        # check figures
+        basenames = OrderedDict()
+        for item_subdir, item_ext in self.sub_dirs:
+            subdir = osp.join(dataset_dir, item_subdir)
+            basenames[item_subdir] = self.get_basenames(subdir, item_ext)
+        keys = list(basenames.keys())
+        v_0 = basenames[keys[0]]
+        for i in range(1, len(keys)):
+            if basenames[keys[i]] != v_0:
+                print0(pcolor(f'  {len(v_0):4d} in {keys[0]} vs {len(basenames[keys[i]]):4d} in {keys[i]}', 'blue'))
+                continue
 
-            # check pose
-            pose_ts_set, pose_data_dict = self.get_poses(osp.join(dataset_dir, self.file_gt_pose))
-            # pose_ts_set, pose_data_dict = self.get_poses('/home/sigma/slam/gazebo0629/groundtruth.txt')
-            n_missed_pose = 0
-            for ts in v_0:
-                if ts not in pose_ts_set:
-                    print0(pcolor(f'    missing pose of {ts}', 'cyan'))
-                    n_missed_pose += 1
-                    continue
+        v_1 = basenames[keys[1]]
+        if v_0 == v_1:
+            names = v_0
+        else:
+            s_0 = set(v_0)
+            s_1 = set(v_1)
+            names = list(s_0 & s_1)
 
-            print0(pcolor(f'{len(v_0):4d} frames in total', 'magenta'))
-            print0(pcolor(f'{n_missed_pose:4d} frames without pose', 'magenta'))
+        # check pose
+        pose_ts_set, _ = self.get_poses(osp.join(dataset_dir, self.file_gt_pose))
+        n_missed_pose = 0
+        '''
+        for ts in names:
+            if ts not in pose_ts_set:
+                # print0(pcolor(f'    missing pose of {ts}', 'cyan'))
+                n_missed_pose += 1
+                continue
+        '''
+        n_missed_pose = len(names) - len(set(names) & pose_ts_set)
 
+        print0(pcolor(f'{len(v_0):4d} frames in total', 'magenta'))
+        print0(pcolor(f'{n_missed_pose:4d} frames without pose', 'magenta'))
+        print0(pcolor(f'{len(v_0) - n_missed_pose:4d} valid frames', 'magenta'))
+
+    def load_data(self):
+        if self.frames is not None:
+            return
+
+        dataset_dir = osp.join(self.root_dir, self.dataset_name)
+
+        # load figure / depth names
+        basenames = OrderedDict()
+        for item_subdir, item_ext in self.sub_dirs:
+            subdir = osp.join(dataset_dir, item_subdir)
+            basenames[item_subdir] = self.get_basenames(subdir, item_ext)
+
+    def synthetic_video(self):
         pass
 
-def main():
+
+    def align_pointcloud(self):
+        pass
+
+
+class KneronDatabase:
+    def __init__(self, root_dir, dataset_names, sub_dirs, file_gt_pose):
+        self.root_dir = root_dir
+        self.dataset_names = dataset_names
+        self.sub_dirs = sub_dirs
+        self.file_gt_pose = file_gt_pose
+        self.datasets = None
+
+    def run(self):
+        for item in self.dataset_names:
+            dataset = KneronDataset(self.root_dir, item, self.sub_dirs, self.file_gt_pose)
+            dataset.pipeline()
+
+
+def matterport0516():
+    logging.warning(f'matterport0516()')
+    root_dir = '/home/sigma/slam/matterport0516'
+    dataset_names = [
+        'test/matterport005_000_0610',
+        'test/matterport014_000',
+        'train_val_test/matterport005_000',
+        'train_val_test/matterport005_001',
+        'train_val_test/matterport010_000',
+        'train_val_test/matterport010_001',
+        ]
+    sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
+    file_gt_pose = 'cam_pose.txt'
+    db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
+    db.run()
+
+
+def matterport0516_ex():
+    logging.warning(f'matterport0516_ex()')
+    root_dir = '/home/sigma/slam/matterport0516_ex'
+    dataset_names = [
+        'test/matterport014_000_0516',
+        'test/matterport014_001_0516',
+        'train_val_test/matterport005_000_0516',
+        'train_val_test/matterport005_001_0516',
+        'train_val_test/matterport010_000_0516',
+        'train_val_test/matterport010_001_0516',
+        ]
+    sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
+    file_gt_pose = 'cam_pose.txt'
+    db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
+    db.run()
+
+
+def matterport0614():
+    logging.warning(f'matterport0614()')
+    root_dir = '/home/sigma/slam/matterport0614'
+    dataset_names = [
+        'tar.gz/matterport005_000_0516',
+        'tar.gz/matterport005_001_0516',
+        'tar.gz/matterport010_000_0516',
+        'tar.gz/matterport010_001_0516',
+        'tar.gz/matterport014_000_0516',
+        'tar.gz/matterport014_001_0516',
+        ]
+    sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
+    file_gt_pose = 'cam_pose.txt'
+    db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
+    db.run()
+
+
+def matterport0621():
+    logging.warning(f'matterport0621()')
+    root_dir = '/home/sigma/slam/matterport0621'
+    dataset_names = [
+        'tar.gz/matterport005_0621',
+        'tar.gz/matterport005_0622',
+        'tar.gz/matterport010_0621',
+        'tar.gz/matterport010_0622',
+        'tar.gz/matterport014_0622',
+        'tar.gz/matterport047_0622',
+        ]
+    sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
+    file_gt_pose = 'cam_pose.txt'
+    db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
+    db.run()
+
+
+def gazebo0629():
+    logging.warning(f'gazebo0629()')
     root_dir = '/home/sigma/slam/gazebo0629'
     dataset_names = ['0628_2022_line_sim']
     sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
     file_gt_pose = 'groundtruth.txt'
-    ds = KneronDataset(root_dir, dataset_names, sub_dirs, file_gt_pose)
-    ds.pipeline()
+    db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
+    db.run()
+
+
+def main():
+    logging.warning(f'main()')
+    matterport0516()
+    matterport0516_ex()
+    matterport0614()
+    matterport0621()
+    gazebo0629()
 
 
 if __name__ == '__main__':
