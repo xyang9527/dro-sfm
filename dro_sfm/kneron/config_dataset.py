@@ -10,6 +10,7 @@ import datetime
 import logging
 import numpy as np
 from PIL import Image
+import subprocess
 import time
 import cv2
 
@@ -107,7 +108,15 @@ class KneronDataset:
         logging.warning(f'KneronDataset::__init__({root_dir}, {dataset_name}, {sub_dirs}, {file_gt_pose})')
         self.root_dir = root_dir
         self.dataset_name = dataset_name
+
         self.video_name = osp.join(root_dir, dataset_name, f'{osp.basename(dataset_name)}.avi')
+        name_version = self.video_name.split('/')[-4]
+        print(f'lib_dir: {lib_dir}')
+        # self.demo_path = osp.join('/home/sigma/slam/demo/datasets', name_version)
+        self.demo_path = osp.join(lib_dir, '../demo/datasets', name_version)
+        if not osp.exists(self.demo_path):
+            os.makedirs(self.demo_path)
+
         self.sub_dirs = sub_dirs
         self.file_gt_pose = file_gt_pose
 
@@ -261,6 +270,8 @@ class KneronDataset:
             video_writer.write(grid.canvas)
         video_writer.release()
 
+        subprocess.call(['cp', self.video_name, self.demo_path])
+
     def align_pointcloud(self):
         logging.warning(f'align_pointcloud()')
         pass
@@ -370,6 +381,7 @@ def main_tiny():
     db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
     db.run()
 
+
 def main():
     logging.warning(f'main()')
     matterport0516()
@@ -379,13 +391,53 @@ def main():
     gazebo0629()
 
 
+def main_ex():
+    logging.warning(f'main_ex()')
+    root_dir = '/datasets/gazebo'
+    dataset_names = []
+
+    for item in sorted(os.listdir(root_dir)):
+        path = osp.join(root_dir, item)
+        if osp.isfile(path):
+            print(f'ignore {path}')
+            continue
+
+        '''
+        for nested_item in os.listdir(path):
+            nested_path = osp.join(path, nested_item)
+            if osp.isfile(nested_path):
+                print(f'ignore {nested_path}')
+                continue
+        '''
+        extract_path = osp.join(path, 'extract')
+        if not osp.exists(extract_path):
+            continue
+
+        if osp.isfile(extract_path):
+            continue
+
+        for nested_item in sorted(os.listdir(extract_path)):
+            dataset_names.append(osp.join(item, 'extract', nested_item))
+
+    print(f'{len(dataset_names)} datasets:')
+    for idx, item in enumerate(dataset_names):
+        print(f'  [{idx:2d}] {item}')
+
+    sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
+    file_gt_pose = 'cam_pose.txt'
+    db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
+    db.run()
+
+
 if __name__ == '__main__':
     setup_log('kneron_config_dataset.log')
     time_beg_config_dataset = time.time()
     np.set_printoptions(precision=6, suppress=True)
 
-    main()
     # main_tiny()
+    # main()
+    main_ex()
+
 
     time_end_config_dataset = time.time()
     logging.warning(f'config_dataset.py elapsed {time_end_config_dataset - time_beg_config_dataset:.6f} seconds.')
