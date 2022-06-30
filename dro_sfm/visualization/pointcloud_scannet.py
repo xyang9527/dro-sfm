@@ -13,7 +13,6 @@ import cv2
 
 from dro_sfm.utils.setup_log import setup_log
 from dro_sfm.utils.image import load_image
-from scripts.infer import generate_pointcloud
 from dro_sfm.visualization.pointcloud_downsample import generate_pointcloud_NxN
 
 """

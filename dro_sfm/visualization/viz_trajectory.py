@@ -471,8 +471,8 @@ if __name__ == '__main__':
         # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.069.ckpt_sample_rate-3_max_frames_450',  # bad
         # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=173_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt_sample_rate-3_max_frames_450',  # bad
         # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450',
-        'SupModelMF_DepthPoseNet_it12-h-out_epoch=484_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt', # fox@26
-        'SupModelMF_DepthPoseNet_it12-h-out_epoch=403_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt', # trex@24
+        'SupModelMF_DepthPoseNet_it12-h-out_epoch=484_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt_sample_rate-3_max_frames_450', # fox@26
+        # 'SupModelMF_DepthPoseNet_it12-h-out_epoch=403_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt_sample_rate-3_max_frames_450', # trex@24
         ]
 
     _, hexsha, _ = git_info()
@@ -496,4 +496,3 @@ if __name__ == '__main__':
     time_end_viz_trajectory = time.time()
     logging.warning(f'viz_trajectory.py elapsed {time_end_viz_trajectory - time_beg_viz_trajectory:.6f} seconds.')
     print0(pcolor(f'viz_trajectory.py elapsed {time_end_viz_trajectory - time_beg_viz_trajectory:.6f} seconds.', 'yellow'))
-
