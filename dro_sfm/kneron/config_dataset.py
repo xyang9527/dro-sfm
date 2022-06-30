@@ -3,18 +3,30 @@
 import os
 import os.path as osp
 import sys
-lib_dir = osp.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(lib_dir)
 
 from collections import OrderedDict
+import copy
 import datetime
 import logging
 import numpy as np
+from PIL import Image
 import time
+import cv2
 
-from dro_sfm.utils.setup_log import setup_log
+lib_dir = osp.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(lib_dir)
+
+from dro_sfm.datasets.depth_filter import clip_depth
+from dro_sfm.utils.depth import viz_inv_depth
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
+from dro_sfm.utils.setup_log import setup_log
+from dro_sfm.visualization.viz_image_grid import VizImageGrid, Colors
+
+
+def not_none(data):
+    return not isinstance(data, type(None))
+
 
 class KneronPose:
     def __init__(self, ts, px, py, pz, qx, qy, qz, qw):
@@ -52,23 +64,73 @@ class KneronPose:
 class KneronFrame:
     def __init__(self, root_dir, name_color, name_depth, pose):
         self.root_dir = root_dir
-        self.name_color = name_color
-        self.name_depth = name_depth
+        self.name_color = osp.join(self.root_dir, name_color)
+        self.name_depth = osp.join(self.root_dir, name_depth)
         self.pose = pose
+
+        self.data_depth = None
+        self.param_px_valid = 0
+
+    def load_depth(self):
+        if not_none(self.data_depth):
+            return
+        self.data_depth = np.array(Image.open(self.name_depth), dtype=int)
+        self.data_depth = None
+
+    def apply_filter(self):
+        self.load_depth()
+
+    def synthetic_canvas(self, grid):
+        color_png = cv2.imread(self.name_color)
+        grid.subplot(0, 0, color_png, f'cam_left')
+
+        depth_png = np.array(Image.open(self.name_depth), dtype=int)
+        depth_vis = viz_inv_depth(depth_png.astype(np.float) / 1000.) * 255
+        grid.subplot(1, 0, depth_vis[:, :, ::-1], f'depth')
+
+        depth_png = clip_depth(depth_png)
+        mask = depth_png <= 0
+        depth_vis_clip = viz_inv_depth(depth_png.astype(np.float) / 1000.) * 255
+        depth_vis_clip[mask, :] = 0
+        grid.subplot(1, 1, depth_vis_clip[:, :, ::-1], f'depth clip')
+
+        color_clip = copy.deepcopy(color_png)
+        color_clip[mask, :] = 0
+        color_clip = cv2.addWeighted(color_png, 0.25, color_clip, 0.75, 0)
+        grid.subplot(0, 1, color_clip, f'cam_left clip')
+
+        return grid
 
 
 class KneronDataset:
     def __init__(self, root_dir, dataset_name, sub_dirs, file_gt_pose):
+        logging.warning(f'KneronDataset::__init__({root_dir}, {dataset_name}, {sub_dirs}, {file_gt_pose})')
         self.root_dir = root_dir
         self.dataset_name = dataset_name
+        self.video_name = osp.join(root_dir, dataset_name, f'{osp.basename(dataset_name)}.avi')
         self.sub_dirs = sub_dirs
         self.file_gt_pose = file_gt_pose
+
         self.frames = None
+
         assert len(sub_dirs) == 2
+        self.color_dir = None
+        self.color_ext = None
+        self.depth_dir = None
+        self.depth_ext = None
+        for str_dir, str_ext in sub_dirs:
+            if str_dir == 'cam_left':
+                self.color_dir, self.color_ext = str_dir, str_ext
+            elif str_dir == 'depth':
+                self.depth_dir, self.depth_ext = str_dir, str_ext
+
+        assert not_none(self.color_dir) and not_none(self.color_ext) and \
+            not_none(self.depth_dir) and not_none(self.depth_ext)
 
     def pipeline(self):
         self.check_data()
         self.load_data()
+        self.filter_data()
         self.synthetic_video()
         self.align_pointcloud()
 
@@ -107,6 +169,7 @@ class KneronDataset:
         return pose_ts_set, pose_data_dict
 
     def check_data(self):
+        logging.warning(f'check_data()')
         dataset_dir = osp.join(self.root_dir, self.dataset_name)
         print0(pcolor(f'===== {osp.basename(self.root_dir)}/{self.dataset_name} =====', 'yellow'))
 
@@ -119,7 +182,7 @@ class KneronDataset:
         v_0 = basenames[keys[0]]
         for i in range(1, len(keys)):
             if basenames[keys[i]] != v_0:
-                print0(pcolor(f'  {len(v_0):4d} in {keys[0]} vs {len(basenames[keys[i]]):4d} in {keys[i]}', 'blue'))
+                print0(pcolor(f'{len(v_0):4d} in {keys[0]} vs {len(basenames[keys[i]]):4d} in {keys[i]}', 'blue'))
                 continue
 
         v_1 = basenames[keys[1]]
@@ -132,21 +195,14 @@ class KneronDataset:
 
         # check pose
         pose_ts_set, _ = self.get_poses(osp.join(dataset_dir, self.file_gt_pose))
-        n_missed_pose = 0
-        '''
-        for ts in names:
-            if ts not in pose_ts_set:
-                # print0(pcolor(f'    missing pose of {ts}', 'cyan'))
-                n_missed_pose += 1
-                continue
-        '''
         n_missed_pose = len(names) - len(set(names) & pose_ts_set)
 
-        print0(pcolor(f'{len(v_0):4d} frames in total', 'magenta'))
+        print0(pcolor(f'{len(names):4d} frames in total', 'magenta'))
         print0(pcolor(f'{n_missed_pose:4d} frames without pose', 'magenta'))
-        print0(pcolor(f'{len(v_0) - n_missed_pose:4d} valid frames', 'magenta'))
+        print0(pcolor(f'{len(names) - n_missed_pose:4d} valid frames', 'magenta'))
 
     def load_data(self):
+        logging.warning(f'load_data()')
         if self.frames is not None:
             return
 
@@ -158,16 +214,61 @@ class KneronDataset:
             subdir = osp.join(dataset_dir, item_subdir)
             basenames[item_subdir] = self.get_basenames(subdir, item_ext)
 
-    def synthetic_video(self):
+        sub_dirs = list(basenames.keys())
+        assert len(sub_dirs) >= 2
+        basenames_common = set(basenames[sub_dirs[0]]) & set(basenames[sub_dirs[1]])
+        for i in range(2, len(sub_dirs)):
+            basenames_common = basenames_common & set(basenames[sub_dirs[i]])
+
+        # load pose
+        pose_ts_set, pose_data_dict = self.get_poses(osp.join(dataset_dir, self.file_gt_pose))
+        basenames_common = basenames_common & pose_ts_set
+        print0(pcolor(f'{len(basenames_common):4d} paired frames', 'green'))
+        print0(pcolor(f'{len(pose_ts_set):4d} poses', 'blue'))
+
+        ordered_basenames = sorted(list(basenames_common))
+        self.frames = []
+        for item in ordered_basenames:
+            self.frames.append(
+                KneronFrame(
+                    dataset_dir,
+                    osp.join(self.color_dir, f'{item}{self.color_ext}'),
+                    osp.join(self.depth_dir, f'{item}{self.depth_ext}'),
+                    pose_data_dict[item]))
+
+    def filter_data(self):
+        logging.warning(f'filter_data()')
+        for item in self.frames:
+            # item.apply_filter()
+            pass
         pass
 
+    def synthetic_video(self):
+        logging.warning(f'systhetic_video()')
+
+        im_h, im_w = 480, 640
+        n_row, n_col = 2, 2
+        grid = VizImageGrid(im_h, im_w, n_row, n_col)
+        canvas_row = grid.canvas_row
+        canvas_col = grid.canvas_col
+
+        fps = 25.0
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        video_writer = cv2.VideoWriter(self.video_name, fourcc, fps, (canvas_col, canvas_row))
+        print0(pcolor(f'  writing {self.video_name}', 'cyan'))
+        for item in self.frames:
+            grid = item.synthetic_canvas(grid)
+            video_writer.write(grid.canvas)
+        video_writer.release()
 
     def align_pointcloud(self):
+        logging.warning(f'align_pointcloud()')
         pass
 
 
 class KneronDatabase:
     def __init__(self, root_dir, dataset_names, sub_dirs, file_gt_pose):
+        logging.warning(f'KneronDatabase::__init__(..)')
         self.root_dir = root_dir
         self.dataset_names = dataset_names
         self.sub_dirs = sub_dirs
@@ -258,6 +359,17 @@ def gazebo0629():
     db.run()
 
 
+def main_tiny():
+    logging.warning(f'main_tiny()')
+    root_dir = '/home/sigma/slam/matterport0614'
+    dataset_names = [
+        'tar.gz/matterport005_000_0516',
+        ]
+    sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
+    file_gt_pose = 'cam_pose.txt'
+    db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
+    db.run()
+
 def main():
     logging.warning(f'main()')
     matterport0516()
@@ -273,6 +385,7 @@ if __name__ == '__main__':
     np.set_printoptions(precision=6, suppress=True)
 
     main()
+    # main_tiny()
 
     time_end_config_dataset = time.time()
     logging.warning(f'config_dataset.py elapsed {time_end_config_dataset - time_beg_config_dataset:.6f} seconds.')
