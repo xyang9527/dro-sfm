@@ -211,6 +211,22 @@ def check_matrix_v1():
 
     print(f'\n=== T_new.inv: ===\n{np.linalg.inv(T_new)}')
 
+def get_r_mat(qx, qy, qz, qw):
+    return  GazeboPose(qx, qy, qz, qw, 0., 0., 0.).get_T()
+
+def get_r_mat_ex(q):
+    return  GazeboPose(q[0], q[1], q[2], q[3], 0., 0., 0.).get_T()
+
+def get_t_mat(px, py, pz):
+    mat_t = np.array([
+        [ 1.,  0.,  0.,  px],
+        [ 0.,  1.,  0.,  py],
+        [ 0.,  0.,  1.,  pz],
+        [ 0.,  0.,  0.,  1.]], dtype=np.float)
+    return mat_t
+
+def get_t_mat_ex(p):
+    return get_t_mat(p[0], p[1], p[2])
 
 def check_matrix_v2():
     T_05 = np.array([
@@ -248,12 +264,14 @@ def check_matrix_v2():
         [ 0.,  0.,  1.,  pz],
         [ 0.,  0.,  0.,  1.]], dtype=np.float)
 
-    T_r = GazeboPose(qx, qy, qz, qw, 0., 0., 0.).get_T()
+    # T_r = GazeboPose(qx, qy, qz, qw, 0., 0., 0.).get_T()
+    T_r = get_r_mat(qx, qy, qz, qw)
 
     inv_T_t = np.linalg.inv(T_t)
 
     # ======================================================================== #
-    T_bodong = GazeboPose(-0.5, 0.5, -0.5, 0.5, 0, 0, 0).get_T()
+    # T_bodong = GazeboPose(-0.5, 0.5, -0.5, 0.5, 0, 0, 0).get_T()
+    T_bodong = get_r_mat(-0.5, 0.5, -0.5, 0.5)
     kneron_print(f'\n=== T_bodong: ===\n{T_bodong}')
 
     kneron_print(f'\n=== T_05: ===\n{T_05}')
@@ -277,11 +295,50 @@ def check_matrix_v2():
     kneron_print(f'\n=== T_new_op: ===\n{T_new_op}')
 
     # todo: set frame prev and frame curr
-    T_r_prev = GazeboPose(0.1, 0.2, 0.3, 0.4, 0., 0., 0.).get_T()
-    T_r_curr = GazeboPose(0.3, 0.7, 0.5, 0.2, 0., 0., 0.).get_T()
-    kneron_print(f'\nsys.platform: {sys.platform}')
+    # T_r_prev = GazeboPose(0.1, 0.2, 0.3, 0.4, 0., 0., 0.).get_T()
+    # T_r_curr = GazeboPose(0.3, 0.7, 0.5, 0.2, 0., 0., 0.).get_T()
+    q_i = [0.1, 0.2, 0.3, 0.4]
+    q_j = [0.3, 0.7, 0.5, 0.2]
 
-    pass
+    T_r_i = get_r_mat_ex(q_i)
+    T_r_j = get_r_mat_ex(q_j)
+
+    p_i = [0.8, 2.3, 0.0]
+    p_j = [6.3, 1.1, 0.0]
+
+    T_t_i = get_t_mat_ex(p_i)
+    T_t_j = get_t_mat_ex(p_j)
+
+    T_i_rt_no_neg = T_t_i @ T_r_i
+    T_i_rt_neg = np.linalg.inv(T_t_i) @ T_r_i
+
+    T_j_rt_no_neg = T_t_j @ T_r_j
+    T_j_rt_neg = np.linalg.inv(T_t_j) @ T_r_j
+
+    kneron_print(f'\n### T_i_rt_no_neg: ###\n{T_i_rt_no_neg}')
+    kneron_print(f'\n### T_i_rg_neg: ###\n{T_i_rt_neg}')
+    kneron_print(f'\n### T_j_rt_no_neg: ###\n{T_j_rt_no_neg}')
+    kneron_print(f'\n### T_j_rt_neg: ###\n{T_j_rt_neg}')
+
+    T_i_no_neg = T_new @ T_t_i @ T_r_i
+    T_i_neg = T_05 @ np.linalg.inv(T_t_i) @ T_r_i
+
+    T_j_no_neg = T_new @ T_t_j @ T_r_j
+    T_j_neg = T_05 @ np.linalg.inv(T_t_j) @ T_r_j
+
+    kneron_print(f'\n=== T_i_no_neg: ===\n{T_i_no_neg}')
+    kneron_print(f'\n=== T_i_neg: ===\n{T_i_neg}')
+    kneron_print(f'\n=== T_j_no_neg: ===\n{T_j_no_neg}')
+    kneron_print(f'\n=== T_j_neg: ===\n{T_j_neg}')
+
+    # rel_pose = np.matmul(np.linalg.inv(pose_init), data_pose)
+    rel_pose_no_neg = np.linalg.inv(T_i_no_neg) @ T_j_no_neg
+    rel_pose_neg = np.linalg.inv(T_i_neg) @ T_j_neg
+
+    kneron_print(f'\n=== rel_pose_no_neg: ===\n{rel_pose_no_neg}')
+    kneron_print(f'\n=== rel_pose_neg: ===\n{rel_pose_neg}')
+
+    kneron_print(f'\nsys.platform: {sys.platform}')
 
 
 if __name__ == '__main__':
