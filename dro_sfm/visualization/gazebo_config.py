@@ -6,6 +6,11 @@ lib_dir = osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))
 sys.path.append(lib_dir)
 import logging
 import numpy as np
+import time
+
+from dro_sfm.utils.horovod import print0
+from dro_sfm.utils.logging import pcolor
+from dro_sfm.utils.setup_log import setup_log
 
 
 '''
@@ -166,6 +171,11 @@ class GazeboParam:
         return self.cam2gazebo
 
 
+def kneron_print(text):
+    logging.info(text)
+    print(text)
+
+
 def check_matrix_v1():
     # weita   x: -0.5, y: -0.5, z: 0.5, w: 0.5
     # bodong: -0.5 0.5 -0.5 0.5
@@ -215,6 +225,15 @@ def check_matrix_v2():
         [ 0., -1.,  0., 0.],
         [ 0.,  0.,  0., 1.]], dtype=np.float)
 
+    T_mirror = np.array([
+        [-1.0,  0.0,  0.0,  0.0],
+        [ 0.0, -1.0,  0.0,  0.0],
+        [ 0.0,  0.0,  1.0,  0.0],
+        [ 0.0,  0.0,  0.0,  1.0]], dtype=float)
+    T_new = np.matmul(T_mirror, T_05)
+
+    # pz --> 0.0
+
     px = 1.
     py = 100.
     pz = 10000.
@@ -234,15 +253,45 @@ def check_matrix_v2():
     inv_T_t = np.linalg.inv(T_t)
 
     # ======================================================================== #
-    print(f'\n=== T_r: ===\n{T_r}')
-    print(f'\n=== T_t: ===\n{T_t}')
-    print(f'\n=== inv_T_t: ===\n{inv_T_t}')
+    T_bodong = GazeboPose(-0.5, 0.5, -0.5, 0.5, 0, 0, 0).get_T()
+    kneron_print(f'\n=== T_bodong: ===\n{T_bodong}')
+
+    kneron_print(f'\n=== T_05: ===\n{T_05}')
+    kneron_print(f'\n=== T_mirror: ===\n{T_mirror}')
+    kneron_print(f'\n=== T_new: ===\n{T_new}')
+
+    kneron_print(f'\n=== T_r: ===\n{T_r}')
+    kneron_print(f'\n=== T_t: ===\n{T_t}')
+    kneron_print(f'\n=== inv_T_t: ===\n{inv_T_t}')
+
+    kneron_print(f'\n\n\n')
+    T_rt = T_t @ T_r
+    kneron_print(f'\n=== T_rt: ===\n{T_rt}')
+    T_rt_neg = np.linalg.inv(T_t) @ T_r
+    kneron_print(f'\n=== T_rt_neg: ===\n{T_rt_neg}')
+
+    # old op
+    T_old_op = T_05 @ T_rt_neg
+    T_new_op = T_new @ T_rt
+    kneron_print(f'\n=== T_old_op: ===\n{T_old_op}')
+    kneron_print(f'\n=== T_new_op: ===\n{T_new_op}')
+
+    # todo: set frame prev and frame curr
+    T_r_prev = GazeboPose(0.1, 0.2, 0.3, 0.4, 0., 0., 0.).get_T()
+    T_r_curr = GazeboPose(0.3, 0.7, 0.5, 0.2, 0., 0., 0.).get_T()
+    kneron_print(f'\nsys.platform: {sys.platform}')
 
     pass
 
 
 if __name__ == '__main__':
+    setup_log('kneron_gazebo_config.log')
+    time_beg_gazebo_config = time.time()
     np.set_printoptions(precision=6, suppress=True)
 
     # check_matrix_v1()
     check_matrix_v2()
+
+    time_end_gazebo_config = time.time()
+    logging.warning(f'gazebo_config.py elapsed {time_end_gazebo_config - time_beg_gazebo_config:.6f} seconds.')
+    print0(pcolor(f'gazebo_config.py elapsed {time_end_gazebo_config - time_beg_gazebo_config:.6f} seconds.', 'yellow'))

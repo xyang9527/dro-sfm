@@ -83,6 +83,11 @@ class KneronFrame:
 
     def synthetic_canvas(self, grid):
         color_png = cv2.imread(self.name_color)
+        if sys.platform == 'win32':
+            im_h, im_w, _ = color_png.shape
+            if im_h != grid.cell_row or im_w != grid.cell_col:
+                color_png = cv2.resize(color_png, (grid.cell_col, grid.cell_row))
+
         grid.subplot(0, 0, color_png, f'cam_left')
 
         depth_png = np.array(Image.open(self.name_depth), dtype=int)
@@ -109,11 +114,15 @@ class KneronDataset:
         self.root_dir = root_dir
         self.dataset_name = dataset_name
 
-        self.video_name = osp.join(root_dir, dataset_name, f'{osp.basename(dataset_name)}.avi')
-        name_version = self.video_name.split('/')[-4]
-        print(f'lib_dir: {lib_dir}')
-        # self.demo_path = osp.join('/home/sigma/slam/demo/datasets', name_version)
-        self.demo_path = osp.join(lib_dir, '../demo/datasets', name_version)
+        self.video_name = osp.abspath(osp.join(root_dir, dataset_name, f'{osp.basename(dataset_name)}.avi'))
+        print(f'self.video_name: {self.video_name}')
+        if sys.platform == 'win32':
+            self.demo_path = osp.join(lib_dir, '../demo/datasets')
+        else:
+            name_version = self.video_name.split('/')[-4]
+            print(f'lib_dir: {lib_dir}')
+            # self.demo_path = osp.join('/home/sigma/slam/demo/datasets', name_version)
+            self.demo_path = osp.join(lib_dir, '../demo/datasets', name_version)
         if not osp.exists(self.demo_path):
             os.makedirs(self.demo_path)
 
@@ -262,6 +271,9 @@ class KneronDataset:
         canvas_col = grid.canvas_col
 
         fps = 25.0
+        if sys.platform == 'win32':
+            fps = 1.0
+
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video_writer = cv2.VideoWriter(self.video_name, fourcc, fps, (canvas_col, canvas_row))
         print0(pcolor(f'  writing {self.video_name}', 'cyan'))
@@ -270,7 +282,12 @@ class KneronDataset:
             video_writer.write(grid.canvas)
         video_writer.release()
 
-        subprocess.call(['cp', self.video_name, self.demo_path])
+        if sys.platform != 'win32':
+            subprocess.call(['cp', self.video_name, self.demo_path])
+        else:
+            cmd = f'xcopy /s /f /y /d /c /g {self.video_name} {osp.abspath(self.demo_path)}'
+            print(cmd)
+            os.system(cmd)
 
     def align_pointcloud(self):
         logging.warning(f'align_pointcloud()')
@@ -378,6 +395,12 @@ def main_tiny():
         ]
     sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
     file_gt_pose = 'cam_pose.txt'
+
+    if sys.platform == 'win32':
+        root_dir = 'D:/ssh.yangxl-2014-fe/gazebo_data'
+        dataset_names = ['0701_2022_sim']
+        file_gt_pose = 'groundtruth.txt'
+
     db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
     db.run()
 
@@ -434,11 +457,11 @@ if __name__ == '__main__':
     time_beg_config_dataset = time.time()
     np.set_printoptions(precision=6, suppress=True)
 
-    # main_tiny()
+    main_tiny()
     # main()
-    main_ex()
+    # main_ex()
 
 
     time_end_config_dataset = time.time()
     logging.warning(f'config_dataset.py elapsed {time_end_config_dataset - time_beg_config_dataset:.6f} seconds.')
-    print0(pcolor(f'config_dataset elapsed {time_end_config_dataset - time_beg_config_dataset:.6f} seconds.', 'yellow'))
+    print0(pcolor(f'config_dataset.py elapsed {time_end_config_dataset - time_beg_config_dataset:.6f} seconds.', 'yellow'))
