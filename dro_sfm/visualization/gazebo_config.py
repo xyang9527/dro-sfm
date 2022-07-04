@@ -113,7 +113,7 @@ class GazeboPose:
     def __init__(self, qx, qy, qz, qw, px, py, pz):
         i, j, k, r = qx, qy, qz, qw
         # r, i, j, k = qx, qy, qz, qw
-        print(f'\n{r} {i} {j} {k}')
+        # print(f'\n{r} {i} {j} {k}')
         two_s = 2.0 / np.dot(np.array([r, i, j, k]), np.array([r, i, j, k]).transpose())
         logging.warning(f'  two_s: {two_s:.6f}')
 
