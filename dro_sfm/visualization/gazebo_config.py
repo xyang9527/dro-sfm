@@ -7,10 +7,12 @@ sys.path.append(lib_dir)
 import logging
 import numpy as np
 import time
+import torch
 
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
 from dro_sfm.utils.setup_log import setup_log
+from dro_sfm.geometry.pose_trans import matrix_to_euler_angles
 
 
 '''
@@ -289,8 +291,10 @@ def check_matrix_v2():
     kneron_print(f'\n=== T_rt_neg: ===\n{T_rt_neg}')
 
     # old op
-    T_old_op = T_05 @ T_rt_neg
-    T_new_op = T_new @ T_rt
+    # T_old_op = T_05 @ T_rt_neg
+    # T_new_op = T_new @ T_rt
+    T_old_op = T_rt_neg @ T_05
+    T_new_op = T_rt @ T_new
     kneron_print(f'\n=== T_old_op: ===\n{T_old_op}')
     kneron_print(f'\n=== T_new_op: ===\n{T_new_op}')
 
@@ -316,15 +320,15 @@ def check_matrix_v2():
     T_j_rt_neg = np.linalg.inv(T_t_j) @ T_r_j
 
     kneron_print(f'\n### T_i_rt_no_neg: ###\n{T_i_rt_no_neg}')
-    kneron_print(f'\n### T_i_rg_neg: ###\n{T_i_rt_neg}')
+    kneron_print(f'\n### T_i_rt_neg: ###\n{T_i_rt_neg}')
     kneron_print(f'\n### T_j_rt_no_neg: ###\n{T_j_rt_no_neg}')
     kneron_print(f'\n### T_j_rt_neg: ###\n{T_j_rt_neg}')
 
-    T_i_no_neg = T_new @ T_t_i @ T_r_i
-    T_i_neg = T_05 @ np.linalg.inv(T_t_i) @ T_r_i
+    T_i_no_neg = T_t_i @ T_r_i @ T_new
+    T_i_neg = np.linalg.inv(T_t_i) @ T_r_i @ T_05
 
-    T_j_no_neg = T_new @ T_t_j @ T_r_j
-    T_j_neg = T_05 @ np.linalg.inv(T_t_j) @ T_r_j
+    T_j_no_neg = T_t_j @ T_r_j @ T_new
+    T_j_neg = np.linalg.inv(T_t_j) @ T_r_j @ T_05
 
     kneron_print(f'\n=== T_i_no_neg: ===\n{T_i_no_neg}')
     kneron_print(f'\n=== T_i_neg: ===\n{T_i_neg}')
@@ -337,6 +341,17 @@ def check_matrix_v2():
 
     kneron_print(f'\n=== rel_pose_no_neg: ===\n{rel_pose_no_neg}')
     kneron_print(f'\n=== rel_pose_neg: ===\n{rel_pose_neg}')
+
+    xyz_rel_pose_no_neg = matrix_to_euler_angles(torch.from_numpy(rel_pose_no_neg[:3, :3]), 'XYZ').detach() * 180.0 / np.math.pi
+    xyz_rel_pose_neg = matrix_to_euler_angles(torch.from_numpy(rel_pose_neg[:3, :3]), 'XYZ').detach() * 180.0 / np.math.pi
+    kneron_print(f'\n=== xyz_rel_pose_no_neg: ===\n{xyz_rel_pose_no_neg}')
+    kneron_print(f'\n=== xyz_rel_pose_neg: ===\n{xyz_rel_pose_neg}')
+
+    inv_rel_pose_no_neg = np.linalg.inv(rel_pose_no_neg)
+    inv_rel_pose_neg = np.linalg.inv(rel_pose_neg)
+
+    kneron_print(f'\n=== inv_rel_pose_no_neg: ===\n{inv_rel_pose_no_neg}')
+    kneron_print(f'\n=== inv_rel_pose_neg: ===\n{inv_rel_pose_neg}')
 
     kneron_print(f'\nsys.platform: {sys.platform}')
 
