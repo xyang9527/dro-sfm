@@ -103,7 +103,7 @@ def compare_depth(path_1, path_2):
                 # raise ValueError
             
 
-def infer_depth(ckpt, input_dir, output_dir):
+def infer_depth(ckpt, input_dir, output_dir, cloud_dir='', model_name=''):
     '''
     python scripts/infer_video.py \
         --checkpoint /home/sigma/slam/models/lynx@27/SupModelMF_DepthPoseNet_it12-h-out_epoch=116_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.265.ckpt \
@@ -150,6 +150,7 @@ def infer_depth(ckpt, input_dir, output_dir):
 
         depth_upsample = cv2.resize(depth, image_raw_wh, interpolation=cv2.INTER_NEAREST)
         np.save(os.path.join(output_dir, f"{base_name}.npy"), depth_upsample)
+
         enable_debug = False
         if enable_debug:
             print(f'  depth:          {depth.shape} {depth.dtype}')
@@ -161,6 +162,14 @@ def infer_depth(ckpt, input_dir, output_dir):
                 os.makedirs(debug_path)
             np.save(osp.join(debug_path, f'{base_name}.npy'), image_cpu)
             print(f'  intrinsics:\n{intrinsics}')
+
+        enable_cloud = True
+        if enable_cloud:
+            depth_map = DepthMap(depth_upsample, cv2.imread(fn2), base_name, sample=3)
+            save_name = osp.join(cloud_dir, model_name + '_' + base_name + '.obj')
+            cloud = depth_map.get_cloud(True)
+            depth_map.save_obj(cloud, save_name)
+            pass
 
     time_end_run_model = time.time()
     time_diff = time_end_run_model - time_beg_run_model
@@ -277,7 +286,7 @@ def main_ex():
     datasets = ['0628_2022_line_sim', '0628_2022_sim', '0629_2022_sim', '0701_2022_sim']
     model_names = list(ckpt.keys())
 
-    enable_infer_depth = False
+    enable_infer_depth = True
     if enable_infer_depth:
         for item_model in model_names:
             ckpt_file = ckpt[item_model]
@@ -290,14 +299,18 @@ def main_ex():
                     continue
                 if not osp.exists(output_dir):
                     os.makedirs(output_dir)
-                infer_depth(ckpt_file, input_dir, output_dir)
+
+                cloud_dir = osp.join(path_dataset, 'point_cloud', item_model)
+                if not osp.exists(cloud_dir):
+                    os.makedirs(cloud_dir)
+
+                infer_depth(ckpt_file, input_dir, output_dir, cloud_dir, item_model)
 
     enable_viz_depth = True
     if enable_viz_depth:
         for item_dataset in datasets:
             path_dataset = osp.join(root_dir, item_dataset)
             depth_to_video(path_dataset, model_names)
-
 
 
 class DepthMap:
