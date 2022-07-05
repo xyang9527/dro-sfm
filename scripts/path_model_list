@@ -10,11 +10,17 @@
 # /home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=77_matterport0614-filtered_test_all_list-groundtruth-abs_rel_pp_gt=0.218.ckpt
 # /home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=52_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.069.ckpt
 # /home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=201_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt
-/home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=484_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt
+# /home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=484_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt
 
 # ===== trex@24 =====
 # /home/sigma/slam/models/trex@24/SupModelMF_DepthPoseNet_it12-h-out_epoch=41_matterport0614-filtered_test_all_list-groundtruth-abs_rel_pp_gt=0.219.ckpt
 # /home/sigma/slam/models/trex@24/SupModelMF_DepthPoseNet_it12-h-out_epoch=173_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt
-/home/sigma/slam/models/trex@24/SupModelMF_DepthPoseNet_it12-h-out_epoch=403_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt
+# /home/sigma/slam/models/trex@24/SupModelMF_DepthPoseNet_it12-h-out_epoch=403_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt
+
+# ===== lynx@27 =====
+/home/sigma/slam/models/lynx@27/SupModelMF_DepthPoseNet_it12-h-out_epoch=116_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.265.ckpt
+
+# ===== x@28 =====
+/home/sigma/slam/models/x@28/SupModelMF_DepthPoseNet_it12-h-out_epoch=97_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.273.ckpt
 
 # <-- End of File -->
