@@ -273,16 +273,35 @@ def main():
     input_image_ref = '/home/sigma/slam/gazebo0629/0701_2022_sim/infer_video/tmp/input_image'
     compare_depth(input_image_dir, input_image_ref)
 
+'''
+trex@24
+scp xuelian@10.200.210.24:/home/xuelian/slam/dro-sfm/results/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=653_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt ~/slam/models/trex@24/
+
+fox@26
+scp xuelian@10.200.210.26:/home/xuelian/slam/dro-sfm/results/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=1375_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt ~/slam/models/fox@26/
+
+lynx@27
+scp xuelian@10.200.210.27:/home/xuelian/slam/dro-sfm/results/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=198_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.268.ckpt ~/slam/models/lynx@27/
+
+x@28
+scp xuelian@10.200.210.28:/home/xuelian/slam/dro-sfm/results/model/matterport_gt/SupModelMF_DepthPoseNet_it12-h-out_epoch=146_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.271.ckpt ~/slam/models/x@28/
+'''
 
 def main_ex():
     ckpt = OrderedDict()
-    ckpt['scannet'] = '/mnt/datasets_open/dro-sfm_data/models/indoor_scannet.ckpt'
-    ckpt['trex@24'] = '/home/sigma/slam/models/trex@24/SupModelMF_DepthPoseNet_it12-h-out_epoch=403_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt'
-    ckpt['fox@26'] = '/home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=484_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt'
-    ckpt['lynx@27'] = '/home/sigma/slam/models/lynx@27/SupModelMF_DepthPoseNet_it12-h-out_epoch=116_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.265.ckpt'
-    ckpt['x@28'] = '/home/sigma/slam/models/x@28/SupModelMF_DepthPoseNet_it12-h-out_epoch=97_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.273.ckpt'
 
-    root_dir = '/home/sigma/slam/gazebo0629'
+    ckpt['scannet'] = '/mnt/datasets_open/dro-sfm_data/models/indoor_scannet.ckpt'
+    # ckpt['trex@24'] = '/home/sigma/slam/models/trex@24/SupModelMF_DepthPoseNet_it12-h-out_epoch=403_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt'
+    # ckpt['fox@26'] = '/home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=484_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt'
+    # ckpt['lynx@27'] = '/home/sigma/slam/models/lynx@27/SupModelMF_DepthPoseNet_it12-h-out_epoch=116_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.265.ckpt'
+    # ckpt['x@28'] = '/home/sigma/slam/models/x@28/SupModelMF_DepthPoseNet_it12-h-out_epoch=97_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.273.ckpt'
+
+    ckpt['lynx@27'] = '/home/sigma/slam/models/lynx@27/SupModelMF_DepthPoseNet_it12-h-out_epoch=198_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.268.ckpt'
+    ckpt['x@28'] = '/home/sigma/slam/models/x@28/SupModelMF_DepthPoseNet_it12-h-out_epoch=146_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.271.ckpt'
+    ckpt['trex@24'] = '/home/sigma/slam/models/trex@24/SupModelMF_DepthPoseNet_it12-h-out_epoch=653_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt'
+    ckpt['fox@26'] = '/home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=1375_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt'
+
+    root_dir = '/home/sigma/slam/gazebo0629_v0'
     datasets = ['0628_2022_line_sim', '0628_2022_sim', '0629_2022_sim', '0701_2022_sim']
     model_names = list(ckpt.keys())
 
