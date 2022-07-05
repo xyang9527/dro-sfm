@@ -18,6 +18,7 @@ from PIL import Image
 import subprocess
 import git
 import copy
+from collections import OrderedDict
 
 from dro_sfm.models.model_wrapper import ModelWrapper
 from dro_sfm.utils.horovod import hvd_disable
@@ -33,6 +34,8 @@ import cv2
 from dro_sfm.utils.setup_log import setup_log, git_info
 from dro_sfm.utils.horovod import print0
 from dro_sfm.utils.logging import pcolor
+from dro_sfm.visualization.viz_image_grid import VizImageGrid, Colors
+
 
 def init_model(ckpt):
     logging.warning(f'init_model()')
@@ -114,6 +117,8 @@ def infer_depth(ckpt, input_dir, output_dir):
     if not osp.exists(output_dir):
         os.makedirs(output_dir)
 
+    print0(pcolor(f'infer_depth(\n\t{ckpt},\n\t{input_dir},\n\t{output_dir})', 'yellow'))
+
     model_wrapper, image_shape = init_model(ckpt)
     print0(pcolor(f'  input image shape:{image_shape}', 'yellow'))
     files = []
@@ -145,21 +150,104 @@ def infer_depth(ckpt, input_dir, output_dir):
 
         depth_upsample = cv2.resize(depth, image_raw_wh, interpolation=cv2.INTER_NEAREST)
         np.save(os.path.join(output_dir, f"{base_name}.npy"), depth_upsample)
-        print(f'  depth:          {depth.shape} {depth.dtype}')
-        print(f'  depth_upsample: {depth_upsample.shape} {depth_upsample.dtype}')
-        image_cpu = image.detach().cpu().numpy()
-        print(f'  image_cpu:      {image_cpu.shape} {image_cpu.dtype}')
-        debug_path = osp.abspath(osp.join(output_dir, '../input_image'))
-        if not osp.exists(debug_path):
-            os.makedirs(debug_path)
-        np.save(osp.join(debug_path, f'{base_name}.npy'), image_cpu)
-        print(f'  intrinsics:\n{intrinsics}')
+        enable_debug = False
+        if enable_debug:
+            print(f'  depth:          {depth.shape} {depth.dtype}')
+            print(f'  depth_upsample: {depth_upsample.shape} {depth_upsample.dtype}')
+            image_cpu = image.detach().cpu().numpy()
+            print(f'  image_cpu:      {image_cpu.shape} {image_cpu.dtype}')
+            debug_path = osp.abspath(osp.join(output_dir, '../input_image'))
+            if not osp.exists(debug_path):
+                os.makedirs(debug_path)
+            np.save(osp.join(debug_path, f'{base_name}.npy'), image_cpu)
+            print(f'  intrinsics:\n{intrinsics}')
 
     time_end_run_model = time.time()
     time_diff = time_end_run_model - time_beg_run_model
     fps = np.float(len(files) - 2) / time_diff
-    print0(pcolor(f'fps: {fps:.3f}', 'yellow'))
-    pass
+    print0(pcolor(f'  fps: {fps:.3f}', 'yellow'))
+
+
+def synthetic_canvas(grid, frame_id, name, dataset_dir, model_names, is_first,  prev_min, prev_max, prev_mean):
+    name_color = osp.join(dataset_dir, 'cam_left', name + '.jpg')
+    color_img = cv2.imread(name_color)
+    cv2.putText(img=color_img, text=f'[{frame_id:4d}] {name}',
+        org=(30, 50), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+    grid.subplot(0, 0, color_img, f'cam_left')
+
+    for idx, item in enumerate(model_names):
+        idx_row = (idx + 1) // grid.grid_col
+        idx_col = (idx + 1) % grid.grid_col
+        name_depth = osp.join(dataset_dir, 'infer_depth', item, name + '.npy')
+        depth_img = np.load(name_depth)
+        # depth_vis = viz_inv_depth(depth_img.astype(np.float) / 1000., normalizer=10.0, filter_zeros=True) * 255
+        depth_vis = viz_inv_depth(depth_img.astype(np.float) / 1000., normalizer=0.01, filter_zeros=True) * 255
+
+        if is_first:
+            cv2.putText(img=depth_vis, text=f'min_depth:  {np.amin(depth_img):.6f}',
+                org=(30, 50), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+            cv2.putText(img=depth_vis, text=f'max_depth:  {np.amax(depth_img):.6f}',
+                org=(30, 100), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+            cv2.putText(img=depth_vis, text=f'mean_depth: {np.mean(depth_img):.6f}',
+                org=(30, 150), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+            prev_min[idx] = np.amin(depth_img)
+            prev_max[idx] = np.amax(depth_img)
+            prev_mean[idx] = np.mean(depth_img)
+
+        else:
+            cv2.putText(img=depth_vis, text=f'min_depth:  {np.amin(depth_img):.6f}  diff_to_prev: {np.amin(depth_img) - prev_min[idx]:.6f}',
+                org=(30, 50), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+            cv2.putText(img=depth_vis, text=f'max_depth:  {np.amax(depth_img):.6f}  diff_to_prev: {np.amax(depth_img) - prev_max[idx]:.6f}',
+                org=(30, 100), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+            cv2.putText(img=depth_vis, text=f'mean_depth: {np.mean(depth_img):.6f}  diff_to_prev: {np.mean(depth_img) - prev_mean[idx]:.6f}',
+                org=(30, 150), fontScale=1, color=(0, 0, 255), thickness=2, fontFace=cv2.LINE_AA)
+
+            prev_min[idx] = np.amin(depth_img)
+            prev_max[idx] = np.amax(depth_img)
+            prev_mean[idx] = np.mean(depth_img)
+
+        grid.subplot(idx_row, idx_col, depth_vis[:, :, ::-1], f'{item}')
+    return grid, prev_min, prev_max, prev_mean
+
+
+def depth_to_video(dataset_dir, model_names):
+    depth_dir = osp.join(dataset_dir, 'infer_depth', model_names[0])
+    if not osp.exists(depth_dir):
+        raise ValueError
+
+    base_names = []
+    for item in sorted(os.listdir(depth_dir)):
+        str_name, str_ext = osp.splitext(item)
+        if str_ext != '.npy':
+            raise ValueError
+        base_names.append(str_name)
+
+    print0(pcolor(f'{len(base_names):4d} in {dataset_dir}', 'yellow'))
+
+    video_name = dataset_dir + '_depth_demo.avi'
+    im_h, im_w = 720, 1280
+    n_row, n_col = 2, 3
+
+    grid = VizImageGrid(im_h, im_w, n_row, n_col)
+    canvas_row = grid.canvas_row
+    canvas_col = grid.canvas_col
+    fps = 1.0
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    video_writer = cv2.VideoWriter(video_name, fourcc, fps, (canvas_col, canvas_row))
+    print0(pcolor(f'  writing {video_name}', 'cyan'))
+
+    is_first = True
+    n_model = len(model_names)
+    prev_min = [0.] * n_model
+    prev_max = [0.] * n_model
+    prev_mean = [0.] * n_model
+
+    for frame_id, item in enumerate(base_names):
+        grid, prev_min, prev_max, prev_mean = synthetic_canvas(grid, frame_id, item, dataset_dir, model_names, is_first, prev_min, prev_max, prev_mean)
+
+        is_first = False
+        video_writer.write(grid.canvas)
+    video_writer.release()
 
 def main():
     logging.warning(f'main()')
@@ -175,6 +263,42 @@ def main():
     input_image_dir = '/home/sigma/slam/gazebo0629/0701_2022_sim/input_image'
     input_image_ref = '/home/sigma/slam/gazebo0629/0701_2022_sim/infer_video/tmp/input_image'
     compare_depth(input_image_dir, input_image_ref)
+
+
+def main_ex():
+    ckpt = OrderedDict()
+    ckpt['scannet'] = '/mnt/datasets_open/dro-sfm_data/models/indoor_scannet.ckpt'
+    ckpt['trex@24'] = '/home/sigma/slam/models/trex@24/SupModelMF_DepthPoseNet_it12-h-out_epoch=403_matterport0516-val_all_list-groundtruth-abs_rel_pp_gt=0.067.ckpt'
+    ckpt['fox@26'] = '/home/sigma/slam/models/fox@26/SupModelMF_DepthPoseNet_it12-h-out_epoch=484_matterport0516_ex-val_all_list-groundtruth-abs_rel_pp_gt=0.064.ckpt'
+    ckpt['lynx@27'] = '/home/sigma/slam/models/lynx@27/SupModelMF_DepthPoseNet_it12-h-out_epoch=116_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.265.ckpt'
+    ckpt['x@28'] = '/home/sigma/slam/models/x@28/SupModelMF_DepthPoseNet_it12-h-out_epoch=97_matterport0516_ex-test_all_list-groundtruth-abs_rel_pp_gt=0.273.ckpt'
+
+    root_dir = '/home/sigma/slam/gazebo0629'
+    datasets = ['0628_2022_line_sim', '0628_2022_sim', '0629_2022_sim', '0701_2022_sim']
+    model_names = list(ckpt.keys())
+
+    enable_infer_depth = False
+    if enable_infer_depth:
+        for item_model in model_names:
+            ckpt_file = ckpt[item_model]
+            for item_dataset in datasets:
+                path_dataset = osp.join(root_dir, item_dataset)
+                input_dir = osp.join(path_dataset, 'cam_left')
+                output_dir = osp.join(path_dataset, 'infer_depth', item_model)
+                if not osp.exists(input_dir):
+                    print0(pcolor(f'skip {input_dir}', 'yellow'))
+                    continue
+                if not osp.exists(output_dir):
+                    os.makedirs(output_dir)
+                infer_depth(ckpt_file, input_dir, output_dir)
+
+    enable_viz_depth = True
+    if enable_viz_depth:
+        for item_dataset in datasets:
+            path_dataset = osp.join(root_dir, item_dataset)
+            depth_to_video(path_dataset, model_names)
+
+
 
 class DepthMap:
     def __init__(self, depth_data, color_data, name, sample=1, scale=1.):
@@ -273,7 +397,8 @@ if __name__ == '__main__':
     time_beg_infer_depth = time.time()
 
     np.set_printoptions(precision=6, suppress=True)
-    main()
+    # main()
+    main_ex()
     # viz_depth()
 
     time_end_infer_depth = time.time()
