@@ -202,6 +202,15 @@ def infer_and_save_pose(input_file_refs, input_file, model_wrapper, image_shape,
 
     depth_upsample = cv2.resize(depth, image_raw_wh, interpolation=cv2.INTER_NEAREST)
     np.save(os.path.join(save_depth_root, f"{base_name}.npy"), depth_upsample)
+    print(f'  depth:          {depth.shape} {depth.dtype}')
+    print(f'  depth_upsample: {depth_upsample.shape} {depth_upsample.dtype}')
+    image_cpu = image.detach().cpu().numpy()
+    print(f'  image_cpu:      {image_cpu.shape} {image_cpu.dtype}')
+    debug_path = osp.abspath(osp.join(save_depth_root, '../input_image'))
+    if not osp.exists(debug_path):
+        os.makedirs(debug_path)
+    np.save(osp.join(debug_path, f'{base_name}.npy'), image_cpu)
+    print(f'  intrinsics:\n{intrinsics}')
 
     if data_type == 'matterport' or data_type == 'scannet':
         # ground truth depth
@@ -402,6 +411,7 @@ def init_model(args):
 
     # Parse arguments
     config, state_dict = parse_test_file(args.checkpoint)
+    print0(pcolor(f'model: {args.checkpoint}', 'red'))
 
     # If no image shape is provided, use the checkpoint one
     image_shape = args.image_shape
@@ -571,14 +581,17 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
 
     for idx_frame, fns in enumerate(list_of_files):
         fn1, fn2, fn3 = fns
+        print0(pcolor(f'{osp.basename(fn1)} vs {osp.basename(fn2)} vs {osp.basename(fn3)}', 'yellow'))
         logging.info(f'  frame {idx_frame:4d}\n    fn1={fn1},\n    fn2={fn2},\n    fn3={fn3}')
 
         has_1, gt_pose_1 = get_gt_pose(fn1, data_type)
         has_2, gt_pose_2 = get_gt_pose(fn2, data_type)
         has_3, gt_pose_3 = get_gt_pose(fn3, data_type)
+        '''
         if not has_1 or not has_2 or not has_3:
             logging.warning(f'skip frame {idx_frame:4d}')
             continue
+        '''
 
         has_depth, depth_gt = get_gt_depth(fn2, data_type)
         depth, pose21, pose23, intr, rgb = infer_and_save_pose([fn1, fn3], fn2, model_wrapper, 
@@ -693,9 +706,12 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
     for file in sorted(glob(os.path.join(save_depth_root, "*.npy"))):
         depth_npy_list.append(np.load(file))
 
-    print(f'writing {output_depths_npy}')
-    logging.info(f'writing {output_depths_npy}')
-    np.save(output_depths_npy, np.stack(depth_npy_list, axis=0))
+    if len(depth_npy_list) > 0:
+        print(f'writing {output_depths_npy}')
+        logging.info(f'writing {output_depths_npy}')
+        np.save(output_depths_npy, np.stack(depth_npy_list, axis=0))
+    else:
+        print0(pcolor(f'empty depth_npy_list', 'cyan'))
 
     # ======================================================================== #
     # Write Video
@@ -780,6 +796,9 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
         else:
             color_file = osp.join(name_dir, f'../../../../color/{name_base}')
 
+        if not osp.exists(color_file):
+            continue
+
         # subfig(0, 0)
         data_color = cv2.imread(color_file)
         base_name = osp.splitext(osp.basename(file))[0]
@@ -798,6 +817,8 @@ def inference(model_wrapper, image_shape, input, sample_rate, max_frames,
             cv2.putText(data_color, f'  time-diff next: {ts_diff:4d} ms', org=(gap_size, h_header+gap_size+70), fontScale=1, color=(0, 255, 255), thickness=2, fontFace=cv2.LINE_AA)
 
         cv2.putText(data_color, frame_text, org=(gap_size, h_header+gap_size), fontScale=1, color=(0, 0, 255), thickness=3, fontFace=cv2.LINE_AA)
+        # print(f'data_color: {type(data_color)} {data_color.shape}')
+        # print(f'image_hw: {image_hw}')
         canvas[h_header:h_header+image_hw[0], 0:image_hw[1], :] = data_color
 
         # subfig(1, 0)
@@ -943,5 +964,5 @@ if __name__ == '__main__':
     # g_video_info.print_info()
 
     time_end_infer_video = time.time()
-    logging.warning(f'elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')
-    print0(pcolor(f'\nelapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.\n', 'yellow'))
+    logging.warning(f'infer_depth.py elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.')
+    print0(pcolor(f'\ninfer_video.py elapsed {time_end_infer_video - time_beg_infer_video:.6f} seconds.\n', 'yellow'))

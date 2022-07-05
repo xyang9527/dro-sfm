@@ -87,6 +87,10 @@ class KneronFrame:
             im_h, im_w, _ = color_png.shape
             if im_h != grid.cell_row or im_w != grid.cell_col:
                 color_png = cv2.resize(color_png, (grid.cell_col, grid.cell_row))
+        else:
+            im_h, im_w, _ = color_png.shape
+            if im_h != grid.cell_row or im_w != grid.cell_col:
+                color_png = cv2.resize(color_png, (grid.cell_col, grid.cell_row))
 
         grid.subplot(0, 0, color_png, f'cam_left')
 
@@ -273,6 +277,7 @@ class KneronDataset:
         fps = 25.0
         if sys.platform == 'win32':
             fps = 1.0
+        fps = 1.0
 
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video_writer = cv2.VideoWriter(self.video_name, fourcc, fps, (canvas_col, canvas_row))
@@ -452,14 +457,43 @@ def main_ex():
     db.run()
 
 
+def main_latest():
+    logging.warning(f'main_latest()')
+    root_dir = '/home/sigma/slam/gazebo0629'
+    dataset_name = ['0701_2022_sim']
+
+    for item in dataset_name:
+        data_dir = osp.join(root_dir, item)
+        depth_dir = osp.join(data_dir, 'depth')
+        depth_vis_dir = osp.join(data_dir, 'depth_vis')
+        if not osp.exists(depth_dir):
+            continue
+        if not osp.exists(depth_vis_dir):
+            os.mkdir(depth_vis_dir)
+        for item_file in sorted(os.listdir(depth_dir)):
+            path_depth = osp.join(depth_dir, item_file)
+            path_depth_vis = osp.join(depth_vis_dir, item_file)
+            depth_png = np.array(Image.open(path_depth), dtype=int)
+            depth_vis = viz_inv_depth(depth_png.astype(np.float) / 1000.) * 255
+            cv2.imwrite(path_depth_vis, depth_vis[:, :, ::-1])
+
+    root_dir = '/home/sigma/slam/gazebo0629'
+    dataset_names = ['0701_2022_sim']
+    sub_dirs = [('cam_left', '.jpg'), ('depth', '.png')]
+    file_gt_pose = 'groundtruth.txt'
+    db = KneronDatabase(root_dir, dataset_names, sub_dirs, file_gt_pose)
+    db.run()
+
+
 if __name__ == '__main__':
     setup_log('kneron_config_dataset.log')
     time_beg_config_dataset = time.time()
     np.set_printoptions(precision=6, suppress=True)
 
-    main_tiny()
+    # main_tiny()
     # main()
     # main_ex()
+    main_latest()
 
 
     time_end_config_dataset = time.time()
